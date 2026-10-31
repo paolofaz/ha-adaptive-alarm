@@ -14,7 +14,6 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers import selector
-from homeassistant.helpers.translation import async_invalidate_translations
 
 from .const import (
     CONF_ARMING_DELAY, CONF_RECOVERY_POLICY, CONF_STORM_SENSOR,
@@ -60,9 +59,6 @@ class AdaptiveAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return AdaptiveAlarmOptionsFlow()
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
-        # A HACS update can leave flow translations cached from older releases.
-        # Refresh the server-side catalog before returning the initial form.
-        async_invalidate_translations(self.hass, [DOMAIN])
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
         if user_input is not None:
@@ -118,9 +114,6 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
         return ProtectionRules.from_dict(data)
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
-        # Explicitly invalidate stale server-side translations (older HACS
-        # installs had a different options form and no menu option labels).
-        async_invalidate_translations(self.hass, [DOMAIN])
         return self.async_show_menu(
             step_id="init",
             menu_options=list(OPTIONS_MENU_STEPS),

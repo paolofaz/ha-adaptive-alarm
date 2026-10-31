@@ -64,17 +64,20 @@ Configuration currently uses native multi-step Options Flow pages rather than a 
 
 [Architecture](docs/architecture.md) · [Safety](docs/safety.md) · [Trial plan](docs/test-plan.md)
 
-## Updating translations (v0.4.1)
+## v0.4.2 — stable Home Assistant config-flow hotfix
 
-A Home Assistant frontend using older translations can show **seven blank menu rows**
-while the options code uses the new seven-section editor. This happened in
-v0.4.0 when HACS installed the new code and an older translation catalog was
-still cached. In v0.4.1 we invalidate the Home Assistant translation cache
-during setup and when opening both configuration flows, and test both
-translations for complete menu keys.
+v0.4.1 accidentally imported `async_invalidate_translations`, an API
+available on the Home Assistant development branch but **not available in
+Home Assistant stable 2026.9/2026.10**. This could prevent the integration's
+configuration flow from loading and produce `Invalid handler specified`.
+The unsupported import was completely removed from both
+`config_flow.py` and `__init__.py`.
 
-**After updating via HACS, restart Home Assistant**, then close the browser
-tabs or Companion app and reopen them. If the menu remains blank, perform a
-hard refresh or clear only the Home Assistant frontend cache. The initial
-configuration now asks only for a name; the obsolete five-sensor description
-is removed. **Do not delete your existing integration or its entities.**
+Update to **v0.4.2** through HACS and fully restart Home Assistant. Keep the
+existing integration entry; **do not delete it**. The seven configuration
+menu labels and updated new-install description remain in both shipped
+translation files. Restart Home Assistant and refresh the frontend to replace
+cached translations.
+
+The integration remains simulation-only. The optional siren is stored as
+configuration metadata and is never activated.

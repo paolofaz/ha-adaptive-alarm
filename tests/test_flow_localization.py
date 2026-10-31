@@ -57,12 +57,14 @@ class FlowLocalizationTests(unittest.TestCase):
             self.assertNotIn("zone monitorate", text.lower())
             self.assertNotIn("monitored zones", text.lower())
 
-    def test_translation_invalidation_in_both_flows(self):
-        code = FLOW.read_text()
-        self.assertIn("async_invalidate_translations(self.hass, [DOMAIN])", code)
-        self.assertIn("menu_options=list(OPTIONS_MENU_STEPS)", code)
-        setup = (INTEGRATION / "__init__.py").read_text()
-        self.assertIn("async_invalidate_translations(hass, [DOMAIN])", setup)
+    def test_no_unreleased_home_assistant_translation_api_import(self):
+        # This helper exists on Home Assistant dev, but not in the
+        # 2026.9 / 2026.10 stable releases. Direct import caused
+        # "Invalid handler specified" when loading config_flow.py.
+        for source in (FLOW, INTEGRATION / "__init__.py"):
+            with self.subTest(source=source.name):
+                self.assertNotIn("async_invalidate_translations", source.read_text())
+        self.assertIn("menu_options=list(OPTIONS_MENU_STEPS)", FLOW.read_text())
 
 
 if __name__ == "__main__":
