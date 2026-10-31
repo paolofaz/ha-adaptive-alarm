@@ -3,15 +3,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Adaptive Alarm — anteprima sicura",
-        "description": "Seleziona serratura e cinque contatti minimi. Verrà creato un pannello simulato: nessun comando a sirena, RF o serratura.",
+        "title": "Adaptive Alarm (simulazione)",
+        "description": "Crea l'integrazione, poi premi Configura per definire contatti obbligatori, gruppi alternativi, sensori opzionali e sirena. Questa alpha NON comanda la sirena.",
         "data": {
-          "entry_contact": "Contatto porta ingresso",
-          "entry_lock": "Serratura ingresso",
-          "shutter_living": "Persiana sala",
-          "shutter_bath": "Persiana bagno",
-          "window_living": "Finestra sala",
-          "window_bath": "Finestra bagno"
+          "name": "Nome dell'integrazione"
         }
       }
     },
@@ -25,26 +20,89 @@
   "options": {
     "step": {
       "init": {
-        "title": "Adaptive Alarm — zone monitorate",
-        "description": "Associa automaticamente le vibrazioni soltanto alla porta e alle due finestre (mai alle persiane). Con ritardo di inserimento positivo la verifica minima avviene soltanto alla fine. Simulazione, nessun comando reale.",
+        "title": "Adaptive Alarm",
+        "menu_options": {
+          "mandatory": "Contatti obbligatori e serratura facoltativa",
+          "group": "Aggiungi o modifica gruppo alternativo",
+          "remove_group": "Rimuovi un gruppo alternativo",
+          "optional": "Contatti opzionali",
+          "vibrations": "Vibrazioni e relativo contatto fisico",
+          "siren": "Sirena opzionale (INATTIVA)",
+          "timing": "Tempi, temporale e recupero offline"
+        }
+      },
+      "mandatory": {
+        "title": "Contatti obbligatori e serratura facoltativa",
+        "description": "Tutti i contatti obbligatori devono essere chiusi alla fine dell'inserimento. La serratura è facoltativa: se configurata deve risultare bloccata. Occorre almeno un contatto obbligatorio oppure un gruppo alternativo per poter inserire.",
         "data": {
-          "extra_contacts": "Finestre e contatti aggiuntivi",
-          "storm_sensor": "Sensore temporale (facoltativo)",
-          "arming_delay": "Ritardo di inserimento (secondi)",
+          "mandatory": "Contatti sempre obbligatori (tutti chiusi)",
+          "lock": "Serratura facoltativa (deve essere bloccata)"
+        }
+      },
+      "group": {
+        "title": "Aggiungi o modifica gruppo alternativo",
+        "description": "Crea un gruppo OR con un nome: basta che uno dei suoi contatti sia chiuso. Tutti i gruppi devono essere soddisfatti. Ripeti il nome per modificarlo.",
+        "data": {
+          "name": "Nome gruppo (stesso nome = modifica)",
+          "contacts": "Contatti alternativi (almeno uno chiuso)"
+        }
+      },
+      "remove_group": {
+        "title": "Rimuovi un gruppo alternativo",
+        "description": "Elimina il gruppo di alternative selezionato.",
+        "data": {
+          "name": "Gruppo da rimuovere"
+        }
+      },
+      "optional": {
+        "title": "Contatti opzionali",
+        "description": "I contatti opzionali non impediscono l'inserimento; quelli chiusi al termine sono protetti per tutta la sessione.",
+        "data": {
+          "optional": "Altri contatti monitorati (non obbligatori)"
+        }
+      },
+      "vibrations": {
+        "title": "Vibrazioni e relativo contatto fisico",
+        "description": "Per ogni sensore scegli il contatto della porta/finestra su cui è fisicamente installato. Una persiana non sostituisce una finestra aperta. Disponibili tre coppie.",
+        "data": {
+          "sensor_1": "Sensore vibrazione 1",
+          "contact_1": "Contatto fisico associato alla vibrazione 1",
+          "sensor_2": "Sensore vibrazione 2",
+          "contact_2": "Contatto fisico associato alla vibrazione 2",
+          "sensor_3": "Sensore vibrazione 3",
+          "contact_3": "Contatto fisico associato alla vibrazione 3"
+        }
+      },
+      "siren": {
+        "title": "Sirena opzionale (INATTIVA)",
+        "description": "Memorizza una sirena o uno switch per una release futura. NON sarà inviato alcun comando, neppure allo scatto simulato. Durante le prove lascialo vuoto.",
+        "data": {
+          "siren": "Sirena facoltativa (solo configurazione, MAI attivata)"
+        }
+      },
+      "timing": {
+        "title": "Tempi, temporale e recupero offline",
+        "description": "Con ritardo positivo i requisiti vengono controllati SOLO alla fine; con ritardo zero la verifica è immediata.",
+        "data": {
+          "arming_delay": "Ritardo inserimento (secondi)",
           "vibration_profile": "Profilo vibrazioni",
-          "vibration_debounce": "Filtro impulsi ripetuti (secondi)",
-          "vibration_window": "Finestra di conferma vibrazioni (secondi)",
-          "recovery_policy": "Sensore protetto che ritorna online già aperto",
-          "vibration_entry": "Sensore vibrazione porta ingresso (facoltativo)",
-          "vibration_window_living": "Sensore vibrazione finestra sala (facoltativo)",
-          "vibration_window_bath": "Sensore vibrazione finestra bagno (facoltativo)"
+          "vibration_debounce": "Filtro impulsi (secondi)",
+          "vibration_window": "Finestra conferma vibrazioni (secondi)",
+          "recovery_policy": "Recupero sensori offline",
+          "storm_sensor": "Sensore temporale (facoltativo)"
         }
       }
     },
     "error": {
-      "duplicate_entities": "Utilizza entità distinte per contatti e vibrazioni.",
-      "unpaired_vibration": "Ogni sensore vibrazione richiede un contatto associato (e viceversa).",
-      "invalid_vibration_zone": "Il contatto associato deve essere tra quelli configurati nell'allarme."
+      "invalid_rules": "Sensori duplicati, gruppo non valido o regole incompatibili. Ogni contatto può comparire in un solo gruppo/elenco.",
+      "unpaired_vibration": "Ogni vibrazione richiede il proprio contatto fisico e viceversa.",
+      "invalid_vibration_zone": "Il contatto associato deve essere monitorato.",
+      "duplicate_entities": "Sensori vibrazione duplicati o in conflitto."
+    },
+    "abort": {
+      "active_session": "Disinserisci l'allarme prima di cambiare configurazione o parametri.",
+      "no_groups": "Non sono presenti gruppi alternativi da rimuovere.",
+      "unlink_vibration_first": "Scollega prima il sensore di vibrazione dalla zona che vuoi rimuovere, quindi modifica le regole."
     }
   }
 }

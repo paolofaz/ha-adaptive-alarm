@@ -28,7 +28,8 @@ from .const import (
     DEFAULT_ARMING_DELAY, DEFAULT_RECOVERY_POLICY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DOMAIN, EVENT_ADAPTIVE_ALARM,
 )
-from .engine import MinimumPaths, RecoveryPolicy, ZoneState, evaluate_eligibility
+from .engine import RecoveryPolicy, ZoneState, evaluate_eligibility
+from .engine.configurable import rules_for_config
 from .engine.runtime import AlarmMachine, Phase
 from .engine.vibration_links import validated_vibration_links
 
@@ -54,24 +55,23 @@ class AdaptiveAlarmController:
         self.hass = hass
         self.entry = entry
         d = entry.data
-        self.paths = MinimumPaths(
-            entry=d[CONF_ENTRY_CONTACT],
-            shutters=(d[CONF_SHUTTER_LIVING], d[CONF_SHUTTER_BATH]),
-            windows=(d[CONF_WINDOW_LIVING], d[CONF_WINDOW_BATH]),
-        )
-        self.lock_entity = d[CONF_ENTRY_LOCK]
-        extra = set(entry.options.get(CONF_EXTRA_CONTACTS, []))
-        self.zones = frozenset({
-            self.paths.entry, *self.paths.shutters, *self.paths.windows, *extra
-        })
-        self.vibration_zone_map = validated_vibration_links(
-            (
+        self.paths = rules_for_config(d, entry.options)
+        self.lock_entity = self.paths.lock
+        self.siren_entity = self.paths.siren  # inert metadata; no actuator services
+        self.zones = self.paths.known_contacts
+        if "vibration_links" in entry.options:
+            links = (
+                (v.get("sensor"), v.get("contact"))
+                for v in entry.options["vibration_links"]
+            )
+        else:
+            # Keep only old v0.3.1 explicit door/window link locations.
+            links = (
                 (entry.options[sensor_key], d[contact_key])
                 for sensor_key, contact_key in VIBRATION_ASSIGNMENTS
-                if entry.options.get(sensor_key)
-            ),
-            self.zones,
-        )
+                if entry.options.get(sensor_key) and d.get(contact_key)
+            )
+        self.vibration_zone_map = validated_vibration_links(links, self.zones)
         self.vibrations = frozenset(self.vibration_zone_map)
         self.storm_entity = entry.options.get(CONF_STORM_SENSOR)
         self.machine = AlarmMachine(self.paths, self.zones)
@@ -91,7 +91,7 @@ class AdaptiveAlarmController:
         return {zone: _contact_state(self.hass.states.get(zone)) for zone in self.zones}
 
     def _locked(self) -> bool:
-        return self.hass.states.is_state(self.lock_entity, "locked")
+        return not self.lock_entity or self.hass.states.is_state(self.lock_entity, "locked")
 
     @property
     def readiness(self):
@@ -127,11 +127,12 @@ class AdaptiveAlarmController:
         if recovery:
             _LOGGER.warning("Adaptive Alarm restart: %s", recovery)
         # Observe contacts and optional vibrations from one shared listener.
-        self._remove_callbacks.append(
-            async_track_state_change_event(
-                self.hass, list(self.zones | self.vibrations), self._on_state_event
+        if self.zones or self.vibrations:
+            self._remove_callbacks.append(
+                async_track_state_change_event(
+                    self.hass, list(self.zones | self.vibrations), self._on_state_event
+                )
             )
-        )
         if self.lock_entity:
             self._remove_callbacks.append(
                 async_track_state_change_event(

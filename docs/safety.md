@@ -1,22 +1,15 @@
-# Safety / security boundaries
+# Safety — 0.4.0 alpha
 
-This is **v0.3.1 alpha, SIMULATION ONLY**.
+The code is **simulation-only**, not an operational security system. Keep your existing physical alarm as the only controller of sirens or relays.
 
-- No service calls to sirens, lights, relays, locks, MQTT, Telegram or notifications.
-- RF guest unlock/disarm is not implemented; never upload personal codes.
-- The alarm control panel is for simulation. It does not protect the house, and can be disarmed through Home Assistant without a PIN. Do not confuse this with a certified or hardened alarm.
-- Keep the existing YAML-based alarm as the sole physical controller; never have two active programs driving the same siren.
-- Physical sensor states are only as reliable as the underlying radios, integrations and power supply.
-- Restoring the session after a crash does not prove when a physical opening actually happened while Home Assistant was down. The controller emits diagnostics instead of falsely reporting an intrusion.
-- An event bus consumer that you create yourself could still command a siren. Do **not** create one for this preview.
-- Do not upload `.storage`, secrets, `configuration.yaml` with credentials, individual household configuration, RF payloads or private tokens to issues.
-
-The integration is not evaluated or certified as a security system. Before a future operational release: integration tests on supported Home Assistant versions, hardware watchdog checks, secure disarm authorization, backup and rollback validation, and a complete end-to-end failure-mode review are necessary.
-
-- A sensor open or unavailable at the arming commit remains **excluded** throughout the session, regardless of later closures. This prevents wind-induced false alarms, but the contact is **not monitored for openings** until the next disarm and re-arm. Review the excluded-zone list.
-
-- A vibration sensor counts only when explicitly paired to a contact that is protected in the frozen session. Map sensors to the contact they physically monitor; never guess mappings.
-- The minimum arming condition admits mixed sala/bagno pairs. Door contact closed and door lock locked are always required.
-
-- A positive exit delay now permits starting the countdown before the entry door and lock are secure, but **the system is not armed** before the deadline and no arm is completed unless all minimum prerequisites are met at that instant. Users must check the final state.
-- A vibration sensor can only be associated with its dedicated physical door/window contact, never a shutter. Old unconstrained associations are not silently reused.
+- The siren selection is optional **inert metadata only**; it never calls services.
+- Leave the siren unselected during your trial. Do not bridge `adaptive_alarm_event` to real outputs.
+- No RF code, credential, MQTT or lock services are implemented.
+- Unknown/offline/missing required contacts are unsafe at the arming deadline.
+- No configured mandatory contact and no alternative groups: arm always rejected.
+- If your configured lock is unavailable or unlocked: arm rejected at the deadline.
+- The exit countdown is **not** protection. An invalid deadline cancels the attempt.
+- Adding/editing/removing rules during active or arming state is forbidden. Disarm first.
+- An excluded contact stays excluded for the whole session, even if wind closes and reopens it.
+- Configured vibration sensors must monitor the physical contact to which they are actually attached. Do not infer a window is protected when only a shutter is closed.
+- Siren power, feedback, backup and event duplication have not been certified or tested on physical equipment.

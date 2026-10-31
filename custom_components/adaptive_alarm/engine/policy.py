@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Mapping
 
+from .configurable import ProtectionRules
 from .model import (
     Eligibility,
     EventAction,
@@ -19,14 +20,30 @@ def _closed(states: Mapping[str, ZoneState], zone: str) -> bool:
 
 
 def evaluate_eligibility(
-    paths: MinimumPaths,
+    paths: MinimumPaths | ProtectionRules,
     states: Mapping[str, ZoneState],
     *,
     lock_locked: bool,
 ) -> Eligibility:
-    """Door and lock, plus one closed barrier in each room (four routes)."""
+    """Evaluate generic mandatory AND groups-of-OR, or legacy house paths."""
     routes: list[str] = []
     problems: list[str] = []
+    if isinstance(paths, ProtectionRules):
+        if not paths.configured:
+            problems.append("protection_not_configured")
+        for contact in paths.mandatory:
+            if not _closed(states, contact):
+                problems.append("mandatory_contact_not_closed:" + contact)
+        if not lock_locked:
+            problems.append("lock_not_locked_or_unavailable")
+        for group in paths.groups:
+            if any(_closed(states, contact) for contact in group.contacts):
+                routes.append(group.name)
+            else:
+                problems.append("alternative_group_not_covered:" + group.name)
+        if not paths.groups and paths.configured:
+            routes.append("mandatory")
+        return Eligibility(not problems, tuple(routes), tuple(problems))
     if not _closed(states, paths.entry):
         problems.append("entry_not_closed_or_unavailable")
     if not lock_locked:
@@ -41,7 +58,7 @@ def evaluate_eligibility(
 
 def new_session(
     identifier: str,
-    paths: MinimumPaths,
+    paths: MinimumPaths | ProtectionRules,
     states: Mapping[str, ZoneState],
     *,
     lock_locked: bool,

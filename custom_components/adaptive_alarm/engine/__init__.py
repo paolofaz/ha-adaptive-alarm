@@ -1,5 +1,6 @@
 """Deterministic domain policies with no Home Assistant imports."""
 
+from .configurable import AlternativeGroup, ProtectionRules
 from .model import (
     Eligibility,
     EventAction,
@@ -17,6 +18,8 @@ from .policy import (
 )
 
 __all__ = [
+    "AlternativeGroup",
+    "ProtectionRules",
     "Eligibility",
     "EventAction",
     "MinimumPaths",

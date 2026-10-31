@@ -1,15 +1,17 @@
-# Controlled trial — no physical outputs
+# Generic protection alpha — safe test plan
 
-1. Leave your existing alarm installed as the only system with siren access.
-2. Install this preview through HACS and add its six minimum entities.
-3. Confirm readiness is OFF if entry is open, lock is unlocked, or either sala OR bagno has no closed shutter/window. Verify separately all four allowed combinations: two shutters, two windows, sala window + bagno shutter, sala shutter + bagno window. Test `unknown`/`unavailable` as not closed.
-4. Set a 60s exit delay. With door open and lock unlocked, press Arm Away: it must enter **Arming**, not Armed Away. Close and lock the door before 60s and leave a valid sala/bagno route: at the deadline it must become Armed Away. Repeat leaving the door open or unlocked: at the deadline it must revert to **Disarmed**, show an `arm_rejected` reason and leave no session. With delay 0, it must reject immediately if a minimum requirement is absent.
-5. Open a secondary contact during arming and confirm it is excluded when commit happens. **The protection snapshot is taken at the end of the countdown, not when you press Arm.** Open a protected contact: only the simulated panel transitions to Triggered, not any physical device.
-6. Disarm, leave an extra window open and arm. Check that it remains excluded after closure for 5 seconds, a minute or longer. Reopen it: **no simulated trigger**. Disarm, close that window, and arm again: it is now protected, and opening it causes a simulated trigger.
-7. Make a protected sensor unavailable and recover it open. Confirm a critical diagnostic event; test the alternative recovery policy only in simulation.
-8. In Configure → Options, select the entry-door vibration, living-room **window** vibration and bathroom **window** vibration sensors in their dedicated fields. Arm with the living-room window open but its shutter closed; repeated impulses on the living-room **window** must **not** trigger. Re-arm after closing the window (even with shutter open): valid pulses must count and can trigger in Balanced. Repeat for bathroom and door, plus Cross, Cautious and storm profiles. Previous freely paired vibration options are deliberately ignored.
-9. Restart HA while armed and confirm the session ID, protected zone set and exclusions remain unchanged. Restart in Arming and confirm it does not silently continue the countdown.
-10. Manually test the Trigger command, restart, then verify the triggered state resumes **without a physical siren**.
-11. Inspect HA logs and the `adaptive_alarm_event` event stream. If an error occurs, remove/disable the preview rather than altering the production alarm.
+Leave the old hardware-controlling YAML alarm disarmed while physically opening its contacts. **Do not connect the simulated event bus to a siren.**
 
-This checklist is a proposed trial, **not a report that hardware tests have been performed**.
+1. After HACS update to v0.4.0 and restart, confirm the existing user's rules were preserved: mandatory porta, lock and Sala/Bagno alternative groups.
+2. Open Configure → Mandatory. Check the mandatory contacts and optional lock; the old values should be prefilled. Reopen Configure to review groups or add a new one.
+3. Verify your four Sala/Bagno combinations and verify readiness turns off if the door or optional lock is unsecured.
+4. With a positive exit delay, press Arm while the door is still open; close and lock it before the deadline. If requirements then hold, Armed Away is shown. Otherwise, arm is rejected with details in `fault`.
+5. Verify every closed contact is protected at commit and excluded contacts stay excluded, even after closing and reopening (wind case).
+6. In a separate test profile/installation, configure one mandatory front door and optional windows, **without groups or lock**, and verify it can arm. Empty rules must never arm.
+7. Add a new alternative group and edit it using the same group name; after disarming, removing it must change readiness as expected.
+8. With a vibration sensor associated with its actual window contact, ensure a window excluded at arm time ignores impulses, even if its shutter happens to be closed.
+9. In Options → Siren, leave empty. If you deliberately select a test siren entity for UI verification, **confirm that no physical action is sent** on trigger. Do not try this against your physical siren.
+10. Restart while armed (simulation only), confirm the protected zone set is restored exactly and never recreated from current sensor states.
+11. Try editing configuration while Arming/Armed Away/Triggered: the change must be refused until Disarm.
+
+These steps have not been executed on your actual HA runtime. GitHub CI only covers Python unit tests, manifest checks, HACS and hassfest.

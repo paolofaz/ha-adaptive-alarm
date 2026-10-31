@@ -25,12 +25,29 @@ class PackagingTests(unittest.TestCase):
             self.assertIn("config", translation)
 
     def test_no_physical_actuation_services(self):
-        source = (DOMAIN / "controller.py").read_text()
-        self.assertNotIn("services.async_call(", source)
-        self.assertNotIn("mqtt.publish", source)
-        self.assertNotIn("lock.unlock", source)
-        self.assertNotIn("switch.turn_on", source)
-        self.assertNotIn("siren.turn_on", source)
+        """Any future siren output requires an explicit, reviewed release."""
+        forbidden = (
+            "services.async_call(",
+            "mqtt.publish",
+            "lock.unlock",
+            "switch.turn_on",
+            "siren.turn_on",
+            'async_call("siren"',
+            'async_call("switch"',
+        )
+        for component in DOMAIN.rglob("*.py"):
+            source = component.read_text()
+            for phrase in forbidden:
+                with self.subTest(file=str(component), phrase=phrase):
+                    self.assertNotIn(phrase, source)
+
+    def test_siren_metadata_cannot_activate_outputs(self):
+        manifest = json.loads((DOMAIN / "manifest.json").read_text())
+        self.assertEqual(manifest["version"], "0.4.0")
+        panel = (DOMAIN / "alarm_control_panel.py").read_text()
+        controller = (DOMAIN / "controller.py").read_text()
+        self.assertIn('"siren_enabled": False', panel)
+        self.assertIn("self.siren_entity = self.paths.siren", controller)
 
 
 if __name__ == "__main__":
