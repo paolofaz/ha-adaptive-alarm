@@ -11,7 +11,7 @@ from enum import StrEnum
 from typing import Any, Mapping
 
 from .model import EventAction, MinimumPaths, RecoveryPolicy, Session, ZoneState
-from .policy import classify_opening, evaluate_eligibility, include_if_stable, new_session
+from .policy import classify_opening, evaluate_eligibility, new_session
 
 
 class Phase(StrEnum):
@@ -35,7 +35,6 @@ class AlarmMachine:
     session: Session | None = None
     arming_until: float | None = None
     fault: str = ""
-    closed_since: dict[str, float] = field(default_factory=dict)
     vibration_hits: list[tuple[float, str]] = field(default_factory=list)
     vibration_last: dict[str, float] = field(default_factory=dict)
     storm_grace_used: bool = False
@@ -66,7 +65,6 @@ class AlarmMachine:
         self.fault = ""
         self.phase = Phase.ARMING
         self.arming_until = now + delay
-        self.closed_since.clear()
         self._clear_vibration()
         events: list[dict[str, Any]] = [
             {"type": "arming", "seconds": delay, "routes": list(eligibility.routes)}
@@ -78,7 +76,7 @@ class AlarmMachine:
     def tick(
         self, states: Mapping[str, ZoneState], *, locked: bool, now: float,
     ) -> list[dict[str, Any]]:
-        """Commit arming and admit excluded contacts after stable closure."""
+        """Commit a frozen snapshot at the end of the exit delay."""
         events: list[dict[str, Any]] = []
         if self.phase == Phase.ARMING and self.arming_until is not None:
             if now >= self.arming_until:
@@ -97,24 +95,12 @@ class AlarmMachine:
                         lock_locked=locked,
                     )
                     self.phase = Phase.ARMED_AWAY
-                    self.closed_since.clear()
-                    events.append({
+                                events.append({
                         "type": "armed",
                         "routes": list(self.session.initial_routes),
                         "protected": sorted(self.session.protected_zones),
                         "excluded": sorted(self.session.excluded_zones),
                     })
-        if self.phase == Phase.ARMED_AWAY and self.session is not None:
-            for zone, since in list(self.closed_since.items()):
-                if states.get(zone) != ZoneState.CLOSED:
-                    self.closed_since.pop(zone, None)
-                    continue
-                if now - since >= 5.0:
-                    before = self.session
-                    self.session = include_if_stable(self.session, zone, ZoneState.CLOSED, now - since)
-                    self.closed_since.pop(zone, None)
-                    if self.session is not before:
-                        events.append({"type": "zone_added", "zone": zone})
         self._expire_vibrations(now, events)
         return events
 
@@ -126,14 +112,6 @@ class AlarmMachine:
         events: list[dict[str, Any]] = []
         if zone not in self.zones or self.phase != Phase.ARMED_AWAY or self.session is None:
             return events
-        if zone in self.session.excluded_zones:
-            if current == ZoneState.CLOSED:
-                self.closed_since.setdefault(zone, now)
-                return events
-            since = self.closed_since.pop(zone, None)
-            if previous == ZoneState.CLOSED and since is not None and now - since >= 5:
-                self.session = include_if_stable(self.session, zone, ZoneState.CLOSED, now - since)
-                events.append({"type": "zone_added", "zone": zone})
         action = classify_opening(self.session, zone, previous, current,
                                   recovery_policy=recovery_policy)
         if action == EventAction.TRIGGER:
@@ -158,7 +136,6 @@ class AlarmMachine:
         self.session = None
         self.arming_until = None
         self.fault = ""
-        self.closed_since.clear()
         self._clear_vibration()
         return [{"type": "disarmed"}]
 
