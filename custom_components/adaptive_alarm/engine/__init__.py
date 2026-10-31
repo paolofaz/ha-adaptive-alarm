@@ -11,7 +11,6 @@ from .model import (
 from .policy import (
     classify_opening,
     evaluate_eligibility,
-    include_if_stable,
     new_session,
     startup_faults,
 )
@@ -25,7 +24,6 @@ __all__ = [
     "ZoneState",
     "classify_opening",
     "evaluate_eligibility",
-    "include_if_stable",
     "new_session",
     "startup_faults",
 ]
