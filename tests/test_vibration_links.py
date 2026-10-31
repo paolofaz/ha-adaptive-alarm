@@ -2,6 +2,17 @@
 
 import unittest
 
+from custom_components.adaptive_alarm.const import (
+    CONF_ENTRY_CONTACT,
+    CONF_VIBRATION_ENTRY,
+    CONF_VIBRATION_WINDOW_BATH,
+    CONF_VIBRATION_WINDOW_LIVING,
+    CONF_WINDOW_BATH,
+    CONF_WINDOW_LIVING,
+    CONF_SHUTTER_BATH,
+    CONF_SHUTTER_LIVING,
+    VIBRATION_ASSIGNMENTS,
+)
 from custom_components.adaptive_alarm.engine.vibration_links import (
     VibrationConfigurationError,
     validated_vibration_links,
@@ -11,6 +22,20 @@ from custom_components.adaptive_alarm.engine.vibration_links import (
 class VibrationLinksTests(unittest.TestCase):
     def setUp(self):
         self.contacts = frozenset({"door", "sala", "bagno"})
+
+    def test_fixed_assignments_never_reference_shutters(self):
+        self.assertEqual(
+            VIBRATION_ASSIGNMENTS,
+            (
+                (CONF_VIBRATION_ENTRY, CONF_ENTRY_CONTACT),
+                (CONF_VIBRATION_WINDOW_LIVING, CONF_WINDOW_LIVING),
+                (CONF_VIBRATION_WINDOW_BATH, CONF_WINDOW_BATH),
+            ),
+        )
+        self.assertFalse(
+            {target for _, target in VIBRATION_ASSIGNMENTS}
+            & {CONF_SHUTTER_LIVING, CONF_SHUTTER_BATH}
+        )
 
     def test_empty(self):
         self.assertEqual(
