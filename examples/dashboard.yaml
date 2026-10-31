@@ -1,0 +1,19 @@
+# Example cards for a Lovelace view.
+# Replace the entity IDs with those actually created on your Home Assistant.
+type: vertical-stack
+cards:
+  - type: markdown
+    content: |
+      ## Adaptive Alarm — SIMULATION ONLY
+      No physical siren, RF or lock services are controlled by this preview.
+  - type: alarm-panel
+    entity: alarm_control_panel.adaptive_alarm
+    states:
+      - arm_away
+  - type: entities
+    title: Protection and diagnostics
+    entities:
+      - binary_sensor.adaptive_alarm_ready_to_arm
+      - sensor.adaptive_alarm_protected_zones
+      - sensor.adaptive_alarm_excluded_zones
+      - sensor.adaptive_alarm_health

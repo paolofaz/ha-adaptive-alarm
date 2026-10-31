@@ -1,0 +1,16 @@
+{
+  "domain": "adaptive_alarm",
+  "name": "Adaptive Alarm",
+  "codeowners": [
+    "@paolofaz"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/paolofaz/ha-adaptive-alarm",
+  "integration_type": "helper",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/paolofaz/ha-adaptive-alarm/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.2.0"
+}
