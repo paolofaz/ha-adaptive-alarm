@@ -54,20 +54,27 @@ class AlarmMachine:
         self, states: Mapping[str, ZoneState], *, locked: bool,
         now: float, delay: int = 60,
     ) -> list[dict[str, Any]]:
-        """Accept an arm request only if a minimum route is valid now."""
+        """Start an exit delay; final eligibility is checked at commit.
+
+        Zero-delay arming is checked immediately and never enters an invalid
+        armed state. Readiness remains a live diagnostic, not a gate for an
+        exit countdown while the homeowner is still leaving.
+        """
         if self.phase != Phase.DISARMED:
             return [{"type": "command_ignored", "reason": self.phase.value}]
-        eligibility = evaluate_eligibility(self.paths, states, lock_locked=locked)
-        if not eligibility.permitted:
-            return [{"type": "arm_rejected", "problems": list(eligibility.problems)}]
         if delay < 0 or delay > 600:
             raise ValueError("Invalid arming delay")
+        if delay == 0:
+            eligibility = evaluate_eligibility(self.paths, states, lock_locked=locked)
+            if not eligibility.permitted:
+                self.fault = "Arming rejected: " + ", ".join(eligibility.problems)
+                return [{"type": "arm_rejected", "problems": list(eligibility.problems)}]
         self.fault = ""
         self.phase = Phase.ARMING
         self.arming_until = now + delay
         self._clear_vibration()
         events: list[dict[str, Any]] = [
-            {"type": "arming", "seconds": delay, "routes": list(eligibility.routes)}
+            {"type": "arming", "seconds": delay, "validation": "at_commit"}
         ]
         if delay == 0:
             events.extend(self.tick(states, locked=locked, now=now))
@@ -85,7 +92,7 @@ class AlarmMachine:
                 self.arming_until = None
                 if not eligibility.permitted:
                     self.phase = Phase.DISARMED
-                    self.fault = "Minimum protection lost during arming"
+                    self.fault = "Arming rejected at deadline: " + ", ".join(eligibility.problems)
                     events.append(
                         {"type": "arm_rejected", "problems": list(eligibility.problems)}
                     )

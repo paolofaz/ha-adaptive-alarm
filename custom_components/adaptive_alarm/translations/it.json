@@ -26,7 +26,7 @@
     "step": {
       "init": {
         "title": "Adaptive Alarm — zone monitorate",
-        "description": "Abbina fino a tre sensori di vibrazione ciascuno a un contatto sorvegliato; i contatti esclusi non generano scatti. Nessun comando alla sirena: solo simulazione.",
+        "description": "Associa automaticamente le vibrazioni soltanto alla porta e alle due finestre (mai alle persiane). Con ritardo di inserimento positivo la verifica minima avviene soltanto alla fine. Simulazione, nessun comando reale.",
         "data": {
           "extra_contacts": "Finestre e contatti aggiuntivi",
           "storm_sensor": "Sensore temporale (facoltativo)",
@@ -35,12 +35,9 @@
           "vibration_debounce": "Filtro impulsi ripetuti (secondi)",
           "vibration_window": "Finestra di conferma vibrazioni (secondi)",
           "recovery_policy": "Sensore protetto che ritorna online già aperto",
-          "vibration_1": "Sensore vibrazione 1 (facoltativo)",
-          "vibration_1_zone": "Contatto sorvegliato dal sensore 1",
-          "vibration_2": "Sensore vibrazione 2 (facoltativo)",
-          "vibration_2_zone": "Contatto sorvegliato dal sensore 2",
-          "vibration_3": "Sensore vibrazione 3 (facoltativo)",
-          "vibration_3_zone": "Contatto sorvegliato dal sensore 3"
+          "vibration_entry": "Sensore vibrazione porta ingresso (facoltativo)",
+          "vibration_window_living": "Sensore vibrazione finestra sala (facoltativo)",
+          "vibration_window_bath": "Sensore vibrazione finestra bagno (facoltativo)"
         }
       }
     },

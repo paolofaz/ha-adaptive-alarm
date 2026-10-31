@@ -27,6 +27,12 @@ class AdaptiveDiagnostic(SensorEntity):
         self._attr_name = name
         self._attr_icon = icon
         self._attr_unique_id = f"{controller.entry.entry_id}_{kind}"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, controller.entry.entry_id)},
+            "name": "Adaptive Alarm",
+            "manufacturer": "Adaptive Alarm (community)",
+            "model": "Dry-run preview",
+        }
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
