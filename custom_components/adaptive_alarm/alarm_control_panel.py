@@ -71,6 +71,7 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
             "protected_zones": sorted(session.protected_zones) if session else [],
             "excluded_zones": sorted(session.excluded_zones) if session else [],
             "session_id": session.identifier if session else None,
+            "arming_until": self.controller.machine.arming_until,
         }
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:

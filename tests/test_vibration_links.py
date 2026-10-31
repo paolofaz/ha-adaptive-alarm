@@ -17,6 +17,13 @@ class VibrationLinksTests(unittest.TestCase):
             validated_vibration_links([(None, None)] * 3, self.contacts), {}
         )
 
+    def test_different_sensors_can_share_no_shutters(self):
+        self.assertEqual(
+            validated_vibration_links([("v_door", "door"), ("v_sala", "sala")],
+                                      self.contacts),
+            {"v_door": "door", "v_sala": "sala"},
+        )
+
     def test_complete_mapping(self):
         mapping = validated_vibration_links(
             [("v1", "door"), ("v2", "sala"), ("v3", "bagno")],

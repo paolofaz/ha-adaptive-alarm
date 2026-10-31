@@ -27,7 +27,7 @@ from .const import (
     CONF_STORM_SENSOR,
     CONF_VIBRATION_DEBOUNCE,
     CONF_VIBRATION_PROFILE,
-    VIBRATION_PAIRS,
+    VIBRATION_ASSIGNMENTS,
     CONF_VIBRATION_WINDOW,
     CONF_WINDOW_BATH,
     CONF_WINDOW_LIVING,
@@ -106,8 +106,9 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 try:
                     validated_vibration_links(
                         (
-                            (user_input.get(sensor_key), user_input.get(target_key))
-                            for sensor_key, target_key in VIBRATION_PAIRS
+                            (user_input[sensor_key], self.config_entry.data[contact_key])
+                            for sensor_key, contact_key in VIBRATION_ASSIGNMENTS
+                            if user_input.get(sensor_key)
                         ),
                         monitored,
                     )
@@ -171,13 +172,9 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 selector.SelectSelectorConfig(options=["notify", "trigger"])
             ),
         }
-        for sensor_key, target_key in VIBRATION_PAIRS:
+        for sensor_key, _contact_key in VIBRATION_ASSIGNMENTS:
             fields[vol.Optional(
                 sensor_key,
                 description={"suggested_value": options.get(sensor_key)},
-            )] = entity
-            fields[vol.Optional(
-                target_key,
-                description={"suggested_value": options.get(target_key)},
             )] = entity
         return vol.Schema(fields)

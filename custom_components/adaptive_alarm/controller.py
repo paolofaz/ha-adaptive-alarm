@@ -24,7 +24,7 @@ from .const import (
     CONF_SHUTTER_BATH, CONF_SHUTTER_LIVING, CONF_STORM_SENSOR,
     CONF_VIBRATION_DEBOUNCE, CONF_VIBRATION_PROFILE,
     CONF_VIBRATION_WINDOW, CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
-    VIBRATION_PAIRS,
+    VIBRATION_ASSIGNMENTS,
     DEFAULT_ARMING_DELAY, DEFAULT_RECOVERY_POLICY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DOMAIN, EVENT_ADAPTIVE_ALARM,
 )
@@ -66,8 +66,9 @@ class AdaptiveAlarmController:
         })
         self.vibration_zone_map = validated_vibration_links(
             (
-                (entry.options.get(sensor_key), entry.options.get(target_key))
-                for sensor_key, target_key in VIBRATION_PAIRS
+                (entry.options[sensor_key], d[contact_key])
+                for sensor_key, contact_key in VIBRATION_ASSIGNMENTS
+                if entry.options.get(sensor_key)
             ),
             self.zones,
         )

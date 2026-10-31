@@ -63,6 +63,68 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(engine.phase, Phase.DISARMED)
         self.assertIn("arm_rejected", [event["type"] for event in events])
 
+    def test_delayed_arm_can_start_before_door_is_locked(self):
+        e = AlarmMachine(PATHS, ZONES)
+        events = e.arm(snapshot(entry=O), locked=False, now=100, delay=60)
+        self.assertEqual(e.phase, Phase.ARMING)
+        self.assertEqual(events[0]["type"], "arming")
+        self.assertIsNone(e.session)
+        e.tick(snapshot(), locked=True, now=160)
+        self.assertEqual(e.phase, Phase.ARMED_AWAY)
+        self.assertIn("entry", e.session.protected_zones)
+
+    def test_delayed_arm_rejected_if_door_open_at_deadline(self):
+        e = AlarmMachine(PATHS, ZONES)
+        e.arm(snapshot(entry=O), locked=False, now=100, delay=60)
+        result = e.tick(snapshot(entry=O), locked=True, now=160)
+        self.assertEqual(e.phase, Phase.DISARMED)
+        self.assertIsNone(e.session)
+        self.assertEqual(result[0]["type"], "arm_rejected")
+        self.assertIn("entry_not_closed_or_unavailable", result[0]["problems"])
+        self.assertIn("entry_not_closed_or_unavailable", e.fault)
+
+    def test_immediate_arm_rejects_invalid_before_setting_arming(self):
+        e = AlarmMachine(PATHS, ZONES)
+        result = e.arm(snapshot(entry=O), locked=False, now=100, delay=0)
+        self.assertEqual(e.phase, Phase.DISARMED)
+        self.assertIsNone(e.session)
+        self.assertEqual([x["type"] for x in result], ["arm_rejected"])
+
+    def test_delayed_arm_can_be_cancelled_before_final_check(self):
+        e = AlarmMachine(PATHS, ZONES)
+        e.arm(snapshot(entry=O), locked=False, now=100, delay=60)
+        self.assertEqual(e.disarm(), [{"type": "disarmed"}])
+        self.assertEqual(e.tick(snapshot(), locked=True, now=200), [])
+        self.assertEqual(e.phase, Phase.DISARMED)
+
+    def test_delayed_arm_uses_only_final_snapshot(self):
+        e = AlarmMachine(PATHS, ZONES)
+        e.arm(snapshot(w_sala=O, sh_bagno=O), locked=False, now=100, delay=60)
+        final = snapshot(sh_sala=O, w_bagno=O)
+        events = e.tick(final, locked=True, now=160)
+        self.assertEqual(e.phase, Phase.ARMED_AWAY)
+        self.assertEqual(e.session.initial_routes, ("living_window_bath_shutter",))
+        self.assertIn("armed", [x["type"] for x in events])
+
+    def test_window_vibration_ignores_shutter_only_coverage(self):
+        e = armed(w_sala=O)
+        for i in range(5):
+            events = e.vibration(
+                "v_window_sala", now=200 + i * 4, protected_zone="w_sala"
+            )
+            self.assertEqual(events[0]["type"], "vibration_ignored")
+        self.assertEqual(e.phase, Phase.ARMED_AWAY)
+        self.assertNotIn("w_sala", e.session.protected_zones)
+        self.assertIn("sh_sala", e.session.protected_zones)
+
+    def test_window_vibration_counts_when_window_closed_without_shutter(self):
+        e = armed(sh_sala=O)
+        self.assertIn("w_sala", e.session.protected_zones)
+        self.assertNotIn("sh_sala", e.session.protected_zones)
+        e.vibration("v_window_sala", now=200, protected_zone="w_sala")
+        result = e.vibration("v_window_sala", now=204, protected_zone="w_sala")
+        self.assertIn("triggered", [x["type"] for x in result])
+
     def test_delay_final_validation(self):
         e = AlarmMachine(PATHS, ZONES)
         e.arm(snapshot(), locked=True, now=10, delay=60)
