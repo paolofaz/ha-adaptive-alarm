@@ -1,37 +1,39 @@
-# Architecture and development plan
+# Architecture — v0.2.0 alpha
 
-The integration will have **one** session state machine, not multiple
-independent Home Assistant automations modifying a session registry.
+## Boundaries
 
-## Contract
+1. **Pure domain model** (`engine/model.py`, `policy.py` and `runtime.py`): deterministic state transitions, immutable session snapshot and an explicit recovery policy. Zero Home Assistant imports.
+2. **Serialized Home Assistant adapter** (`controller.py`): one `asyncio.Lock` owns all state changes, reads real entity states, persists the session in Home Assistant's Store, publishes events and updates entity listeners.
+3. **UI and entities**: config flow with five mandatory contacts and a lock, options flow for additional zones/vibrations, `alarm_control_panel` and read-only diagnostics. No physical outputs.
+4. **Output adapters**: intentionally absent. An event is an observation, not a siren action.
 
-- Entry door contact = closed and entry lock = locked.
-- At least one pair is closed: living+bath shutters OR living+bath windows.
-- Unknown/unavailable readings never count as closed.
-- Every available closed contact is included at arm time.
-- An excluded contact can join after five stable seconds of closure.
-- Protection is monotone during a session. Openings of protected contacts
-  produce alarm events; offline recovery may notify or trigger by policy.
-- Restart must not replace the previously protected set with a new snapshot.
-- Disarm, arming, triggering, persistence and notifications must have explicit
-  failure and concurrency semantics.
+### Minimum eligibility
 
-## Layers
+`entry_contact_closed AND lock_locked AND ((shutter_living_closed AND shutter_bath_closed) OR (window_living_closed AND window_bath_closed))`.
 
-1. **Domain policies** (`engine/`): immutable state and pure decisions.
-2. **State machine** (future): one event queue with monotonic session updates,
-   generation IDs, persistence, migration and fault reconciliation.
-3. **Home Assistant adapter** (future): sensor subscriptions, alarm panel,
-   configuration/options flow, storage, entities and diagnostics.
-4. **Optional reactions** (future): user automations for lights and notifications.
+### State phases
 
-## Next milestones
+`disarmed → arming → armed_away → triggered → disarmed`. Aborted arming returns to disarmed with fault detail. Invalid restored state enters `fault` (panel state unknown), never silently `disarmed`. An explicitly requested disarm clears the fault.
 
-1. Full state machine and replayable event-sequence tests.
-2. Storage format, recovery and interruption tests.
-3. UI options: extra sensors, vibrations, thresholds, diagnostic policies.
-4. Read-only diagnostic sensors.
-5. Alarm panel in simulation mode (no physical outputs).
-6. Physical actuators only after end-to-end tests and a written safe migration.
+An exit-delay deadline is stored as a UTC epoch timestamp, and reconciliation is driven by a periodic timer. If Home Assistant restarts during the exit delay, it cancels the incomplete attempt; if it restarts while armed or triggered, it restores the same protected-zone set and reports problematic protected contacts without silently rebuilding the set.
 
-This preview includes only the pure policies and a config flow for minimum paths.
+### Storage
+
+The Store document contains a versioned schema, phase, active session identifier, zone catalogue, protected set, initial route(s), arming deadline and fault text. The adapter serializes mutation and schedules storage before emitting state-change events. The state-machine internals do not invoke physical services. Current storage is **best effort**, not a tamper-proof transaction log.
+
+### Event model
+
+Physical contact updates and vibration impulses enter one controller under an async lock. Every tick serializes with sensor events. A five-second pending closure can be admitted during a physical opening without waiting for the scheduled timer; a zone opened before five seconds stays excluded.
+
+`adaptive_alarm_event` is diagnostic and must not be used as a real siren command until the actuation design and safety reviews are complete.
+
+## Incomplete by design (future milestones)
+
+- A user-configurable secure disarm policy for real deployment.
+- Explicit associations between vibrations and physical zones.
+- Siren output confirmation, tamper/power/battery supervision.
+- Real-runtime Home Assistant fixtures, interrupted-store tests and startup races.
+- A fully supervised migration away from the YAML package.
+- RF guest access needs stronger security than the legacy static radio codes and is **not implemented**.
+
+The current integration is useful for **safe behavioral trials** in parallel with the existing working alarm, not as its replacement.

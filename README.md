@@ -1,69 +1,74 @@
 # Adaptive Alarm
 
-Adaptive Alarm is a Home Assistant custom integration project designed around **adaptive protection zones**.
+**Adaptive protection for Home Assistant** · HACS-installable · Open source (MIT)
 
-> **DEVELOPMENT PREVIEW — NOT AN OPERATIONAL ALARM.** This first version can be installed as a custom HACS integration and configured through Home Assistant. It **does not yet create an alarm panel, activate a siren, arm/disarm a security system or read physical sensors**.
+> **v0.2.0 alpha — SIMULATION ONLY.** This integration can be installed and its alarm panel can be armed/disarmed to test the behavior of real sensors, but **it cannot control a siren, light, lock, radio receiver, MQTT device or other physical actuator. It is NOT an operational security system.** Keep your existing alarm running while testing, and do not automate its outputs from these preview events.
 
-## Why adaptive?
+## Install with HACS
 
-Instead of separate Full/Night modes, a single arm request should be permitted only when:
-
-- the entry door is closed **and** the entry lock is locked; and
-- **either** both living-room and bathroom shutters are closed;
-- **or** both living-room and bathroom windows are closed.
-
-Every available, closed contact can be protected in the session. Contacts excluded at arm time can join after five seconds of stable closure. A protected contact is never silently excluded during the session.
-
-This behavior is based on the previous **Allarme Casa v3.3 YAML design**, which is a reference specification, not an already validated implementation.
-
-## Install via HACS (development preview)
-
-Once this pull request is merged to `main`:
-
-1. In HACS open the menu **Custom repositories**.
-2. Add `https://github.com/paolofaz/ha-adaptive-alarm` with category **Integration**.
-3. Download **Adaptive Alarm** and restart Home Assistant if prompted.
+1. Open HACS in Home Assistant → menu (three dots) → **Custom repositories**.
+2. Enter `https://github.com/paolofaz/ha-adaptive-alarm`, select **Integration**, and add it.
+3. Download **Adaptive Alarm**; restart Home Assistant.
 4. Go to **Settings → Devices & services → Add integration → Adaptive Alarm**.
-5. Select the five minimum-route contacts and the entry lock.
+5. Configure the entry-door contact, door lock, living-room and bathroom shutters, living-room and bathroom windows.
+6. Under **Configure → Options**, select optional other contacts and vibration sensors, with timings and recovery policy.
+7. Add `alarm_control_panel.adaptive_alarm` (actual entity ID may differ) to an Alarm panel card. You may select Away and Disarm only; triggering is for simulation tests.
 
-**The integration is currently only a configuration preview.** Do not expect it to expose an alarm entity or control anything.
+The GitHub repository is public, and only the one custom component under `custom_components/adaptive_alarm/` is installed. If HACS does not offer the repository yet, ensure you have the latest version of HACS or install from its custom repository menu. A public GitHub release is not required for a custom repository on HACS; the default branch version is used until releases exist.
 
-> HACS may not be able to access a **private** GitHub repository with the credentials used by your Home Assistant instance. If you want to keep development private, test using an authorized GitHub setup or copy `custom_components/adaptive_alarm` to an isolated development Home Assistant instance. Consider making the repository public only when you are ready; remove any private data before doing so.
+## The adaptive contract
 
-## Run core tests
+You can arm when **the entry contact is closed**, **the door lock is locked**, **and** one of these minimum coverage routes holds:
 
-This project deliberately keeps its policy engine free of Home Assistant imports:
+- **Route A:** living-room **and** bathroom shutters closed.
+- **Route B:** living-room **and** bathroom windows closed.
 
-```sh
+Both routes may be valid. A missing, unknown or unavailable contact is never considered closed.
+
+The exit delay is 60 seconds by default. Eligibility is checked at both the initial arm request **and** the final commit. The session records every currently closed configured contact as protected. Initially open/offline extra contacts are excluded, and are individually included after five seconds of stable closure. Once protected, a zone is never silently excluded within that session.
+
+A normal transition from closed to open on a protected sensor causes a simulated trigger. Offline recovery that reports open is configurable (default: critical notice; optional: simulated trigger). The session is persisted in Home Assistant storage so a restart does not rebuild the exclusion list.
+
+## Native entities
+
+| Type | Entity name | Behavior |
+| --- | --- | --- |
+| Alarm control panel | Adaptive Alarm | Away / Disarm, plus manual simulated trigger |
+| Binary sensor | Ready to arm | Whether a minimum route is satisfied right now |
+| Sensor | Protected zones | Count of protected contacts |
+| Sensor | Excluded zones | Count of excluded contacts |
+| Sensor | Health | Ready, not ready, OK, degraded, triggered or critical |
+
+The alarm entity attributes include its session identifier, protected and excluded entity IDs, satisfied minimum routes and fault text. This may reveal sensitive room names to anyone who already has access to those Home Assistant entities; set Home Assistant permissions accordingly.
+
+## Vibration engine (optional)
+
+Configure vibration binary sensors in Options. A transition from `off` to `on` counts as an impulse. Profiles:
+
+- `balanced`: two valid impulses within the window.
+- `cross`: two different sensors or three impulses on one sensor.
+- `cautious`: three valid impulses.
+
+Default debounce is three seconds per sensor and confirmation window 60 seconds. If the optional thunderstorm sensor is active, one grace allowance applies to repeated impulses from one sensor; confirmation from a different sensor bypasses this allowance.
+
+**Vibration-to-perimeter-zone association is not yet configurable.** Leave vibration sensors unselected if you are not deliberately testing their behavior. There is no physical siren control even if a simulated trigger occurs.
+
+## Debugging and safe notifications
+
+Every meaningful state transition emits a Home Assistant event of type `adaptive_alarm_event`, carrying `entry_id`, `type`, and relevant zone/cause/route details. Examples of `type`: `arming`, `armed`, `arm_rejected`, `zone_added`, `zone_fault`, `protected_zone_abnormal`, `vibration_prealert`, `vibration_storm_grace`, `triggered`, `triggered_restored`, `disarmed`. Use **Developer tools → Events** to listen for this event during trials. **Do not connect this preview event directly to a physical siren.**
+
+See [Example dashboard](examples/dashboard.yaml), [Architecture](docs/architecture.md), [Safety](docs/safety.md), and [Test plan](docs/test-plan.md).
+
+## Local tests
+
+```bash
 python -m unittest discover -s tests -v
 ```
 
-## Structure
+GitHub CI also runs Home Assistant's `hassfest` and HACS repository validation. These cannot replace an actual Home Assistant runtime or a controlled physical test.
 
-```text
-custom_components/
-  adaptive_alarm/
-    __init__.py
-    manifest.json
-    config_flow.py
-    const.py
-    engine/
-      model.py
-      policy.py
-    translations/
-      en.json
-      it.json
-.github/workflows/
-  tests.yml
-  validate.yml
-docs/
-  architecture.md
-  safety.md
-tests/
-```
+## Personal data / RF
 
-## Development policy
+**No RF codes, MQTT credential, personal address or household-specific entity IDs are stored in the project.** The optional guest RF workflow from the old YAML project is intentionally not implemented in this alpha.
 
-All actuation (sirens, lock commands, notifications, alarm panel) stays **out of scope** until the state machine, recovery after restart, persistence, concurrent event handling and integration tests are complete. Never run two controllers against the same physical siren. RF code-based disarming is not planned for the first safe operational release.
-
-License: MIT.
+License: MIT. Repository: [paolofaz/ha-adaptive-alarm](https://github.com/paolofaz/ha-adaptive-alarm).
