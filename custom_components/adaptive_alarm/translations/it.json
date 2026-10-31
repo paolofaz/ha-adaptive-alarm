@@ -3,8 +3,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Adaptive Alarm (simulazione)",
-        "description": "Crea l'integrazione, poi premi Configura per definire contatti obbligatori, gruppi alternativi, sensori opzionali e sirena. Questa alpha NON comanda la sirena.",
+        "title": "Adaptive Alarm — nuova configurazione",
+        "description": "Inserisci soltanto il nome dell'integrazione. Dopo la creazione, apri Configura per scegliere contatti obbligatori, gruppi alternativi, sensori opzionali, vibrazioni e sirena inattiva. Nessun comando fisico verrà inviato.",
         "data": {
           "name": "Nome dell'integrazione"
         }
@@ -20,7 +20,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Adaptive Alarm",
+        "title": "Configurazione Adaptive Alarm",
         "menu_options": {
           "mandatory": "Contatti obbligatori e serratura facoltativa",
           "group": "Aggiungi o modifica gruppo alternativo",
@@ -29,6 +29,16 @@
           "vibrations": "Vibrazioni e relativo contatto fisico",
           "siren": "Sirena opzionale (INATTIVA)",
           "timing": "Tempi, temporale e recupero offline"
+        },
+        "description": "Scegli la sezione da modificare. Ogni modifica viene salvata separatamente. Le uscite fisiche, inclusa la sirena, restano disabilitate.",
+        "menu_option_descriptions": {
+          "mandatory": "Definisci i contatti sempre obbligatori e l'eventuale serratura.",
+          "group": "Crea o modifica un gruppo in cui basta almeno un sensore chiuso.",
+          "remove_group": "Elimina un gruppo di alternative esistente.",
+          "optional": "Aggiungi contatti che non impediscono l'inserimento.",
+          "vibrations": "Associa fino a tre vibrazioni ai rispettivi contatti fisici.",
+          "siren": "Selezione facoltativa, senza comandare la sirena.",
+          "timing": "Imposta ritardi, filtri vibrazioni, temporale e recupero."
         }
       },
       "mandatory": {
