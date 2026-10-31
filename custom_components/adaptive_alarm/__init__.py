@@ -14,13 +14,9 @@ from .const import DOMAIN
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Start controller and register platforms; clean up if setup fails."""
     from homeassistant.const import Platform
-    from homeassistant.helpers.translation import async_invalidate_translations
 
     from .controller import AdaptiveAlarmController
 
-    # Invalidate translations when HA reloads the custom integration after an
-    # HACS update, preventing stale option-menu labels from remaining cached.
-    async_invalidate_translations(hass, [DOMAIN])
 
     platforms = (Platform.ALARM_CONTROL_PANEL, Platform.BINARY_SENSOR, Platform.SENSOR)
     controller = AdaptiveAlarmController(hass, entry)
