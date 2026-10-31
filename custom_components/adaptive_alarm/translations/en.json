@@ -1,0 +1,22 @@
+{
+  "title": "Adaptive Alarm",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Adaptive Alarm (development preview)",
+        "description": "Select the minimum-route contacts and lock. This preview does not activate an alarm or siren.",
+        "data": {
+          "entry_contact": "Entry door contact",
+          "entry_lock": "Entry door lock",
+          "shutter_living": "Living room shutter",
+          "shutter_bath": "Bathroom shutter",
+          "window_living": "Living room window",
+          "window_bath": "Bathroom window"
+        }
+      }
+    },
+    "error": {
+      "duplicate_entities": "Each contact must use a different entity."
+    }
+  }
+}

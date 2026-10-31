@@ -1,0 +1,22 @@
+{
+  "title": "Adaptive Alarm",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Adaptive Alarm (anteprima di sviluppo)",
+        "description": "Seleziona i contatti dei percorsi minimi e la serratura. Questa anteprima non attiva alcun allarme o sirena.",
+        "data": {
+          "entry_contact": "Contatto porta ingresso",
+          "entry_lock": "Serratura ingresso",
+          "shutter_living": "Persiana sala",
+          "shutter_bath": "Persiana bagno",
+          "window_living": "Finestra sala",
+          "window_bath": "Finestra bagno"
+        }
+      }
+    },
+    "error": {
+      "duplicate_entities": "Ogni contatto deve usare un'entità diversa."
+    }
+  }
+}
