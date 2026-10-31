@@ -66,6 +66,8 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
         session = self.controller.machine.session
         return {
             "simulation_only": True,
+            "siren_configured": bool(self.controller.siren_entity),
+            "siren_enabled": False,
             "fault": self.controller.machine.fault or None,
             "minimum_routes": list(session.initial_routes) if session else [],
             "protected_zones": sorted(session.protected_zones) if session else [],

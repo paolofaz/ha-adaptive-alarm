@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Mapping
 
+from .configurable import ProtectionRules
 from .model import EventAction, MinimumPaths, RecoveryPolicy, Session, ZoneState
 from .policy import classify_opening, evaluate_eligibility, new_session
 
@@ -29,7 +30,7 @@ class AlarmMachine:
     No physical actuation. Callers persist snapshot before publishing events.
     """
 
-    paths: MinimumPaths
+    paths: MinimumPaths | ProtectionRules
     zones: frozenset[str]
     phase: Phase = Phase.DISARMED
     session: Session | None = None
@@ -42,7 +43,11 @@ class AlarmMachine:
     vibration_filtered: int = 0
 
     def __post_init__(self) -> None:
-        required = {self.paths.entry, *self.paths.shutters, *self.paths.windows}
+        required = (
+            set(self.paths.known_contacts)
+            if isinstance(self.paths, ProtectionRules)
+            else {self.paths.entry, *self.paths.shutters, *self.paths.windows}
+        )
         if not required.issubset(self.zones):
             raise ValueError("Required contacts not present in zone catalogue")
 
@@ -238,11 +243,16 @@ class AlarmMachine:
                 )
                 if not session.known_zones.issubset(self.zones):
                     raise ValueError("Configured zone set changed while active")
-                expected_routes = {
-                    route for route, pair in self.paths.route_pairs()
-                    if {self.paths.entry, *pair}.issubset(session.protected_zones)
+                protected_snapshot = {
+                    zone: (
+                        ZoneState.CLOSED if zone in session.protected_zones
+                        else ZoneState.OPEN
+                    ) for zone in session.known_zones
                 }
-                if not expected_routes or not set(session.initial_routes).issubset(expected_routes):
+                validity = evaluate_eligibility(
+                    self.paths, protected_snapshot, lock_locked=True
+                )
+                if not validity.permitted or set(session.initial_routes) != set(validity.routes):
                     raise ValueError("Session minimum protection missing")
             if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) and session is None:
                 raise ValueError("Active state without a session")
