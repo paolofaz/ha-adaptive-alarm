@@ -56,28 +56,63 @@ class RuntimeTests(unittest.TestCase):
         e.tick(snapshot(), locked=False, now=70)
         self.assertEqual(e.phase, Phase.DISARMED)
 
-    def test_dynamic_closure(self):
-        e = armed()
-        e.observed("studio", O, C, now=200)
-        self.assertNotIn("studio", e.session.protected_zones)
-        e.tick(snapshot(studio=C), locked=True, now=204.9)
-        self.assertNotIn("studio", e.session.protected_zones)
-        events = e.tick(snapshot(studio=C), locked=True, now=205)
-        self.assertIn("studio", e.session.protected_zones)
-        self.assertEqual(events[0]["type"], "zone_added")
+    def test_excluded_window_wind_close_then_reopen_never_triggers(self):
+        """An initially open window stays excluded, even after a long closure."""
+        for duration in (0.1, 4.9, 5, 60, 3600, 86400):
+            with self.subTest(duration=duration):
+                e = armed()
+                original = e.snapshot()
+                self.assertEqual(e.observed("studio", O, C, now=200), [])
+                self.assertEqual(
+                    e.tick(snapshot(studio=C), locked=True, now=200 + duration), []
+                )
+                self.assertEqual(
+                    e.observed("studio", C, O, now=201 + duration), []
+                )
+                self.assertEqual(e.phase, Phase.ARMED_AWAY)
+                self.assertEqual(e.snapshot(), original)
 
-    def test_race_exact_five_second_boundary(self):
-        e = armed()
-        e.observed("studio", O, C, now=200)
-        result = e.observed("studio", C, O, now=205)
-        self.assertEqual([v["type"] for v in result], ["zone_added", "triggered"])
-        self.assertEqual(e.phase, Phase.TRIGGERED)
-
-    def test_four_point_nine_does_not_trigger(self):
-        e = armed()
-        e.observed("studio", O, C, now=200)
-        self.assertEqual(e.observed("studio", C, O, now=204.9), [])
+    def test_minimum_contact_excluded_under_other_valid_route_stays_excluded(self):
+        e = armed(w_sala=O, w_bagno=O)
+        self.assertNotIn("w_sala", e.session.protected_zones)
+        self.assertEqual(e.observed("w_sala", O, C, now=200), [])
+        self.assertEqual(
+            e.tick(snapshot(w_sala=C, w_bagno=O), locked=True, now=500), []
+        )
+        self.assertEqual(e.observed("w_sala", C, O, now=501), [])
         self.assertEqual(e.phase, Phase.ARMED_AWAY)
+        self.assertEqual(
+            e.session.excluded_zones,
+            frozenset({"studio", "w_sala", "w_bagno"}),
+        )
+
+    def test_exclusion_preserved_after_restart_and_closed_contact(self):
+        e = armed()
+        restarted = AlarmMachine(PATHS, ZONES)
+        restarted.restore(e.snapshot())
+        self.assertEqual(restarted.observed("studio", O, C, now=200), [])
+        self.assertEqual(
+            restarted.tick(snapshot(studio=C), locked=True, now=100000), []
+        )
+        self.assertEqual(restarted.observed("studio", C, O, now=100001), [])
+        self.assertEqual(restarted.phase, Phase.ARMED_AWAY)
+
+    def test_disarm_rearm_recalculates_frozen_zone_set(self):
+        e = armed()
+        self.assertIn("studio", e.session.excluded_zones)
+        e.disarm()
+        e.arm(snapshot(studio=C), locked=True, now=300, delay=0)
+        self.assertIn("studio", e.session.protected_zones)
+        self.assertEqual(
+            e.observed("studio", C, O, now=350)[0]["type"], "triggered"
+        )
+
+    def test_protected_contact_remains_protected(self):
+        e = armed(studio=C)
+        self.assertIn("studio", e.session.protected_zones)
+        self.assertEqual(
+            e.observed("studio", C, O, now=250)[0]["type"], "triggered"
+        )
 
     def test_protected_offline_and_return(self):
         e = armed()
