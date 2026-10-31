@@ -22,8 +22,9 @@ from .const import (
     CONF_ARMING_DELAY, CONF_ENTRY_CONTACT, CONF_ENTRY_LOCK,
     CONF_EXTRA_CONTACTS, CONF_RECOVERY_POLICY,
     CONF_SHUTTER_BATH, CONF_SHUTTER_LIVING, CONF_STORM_SENSOR,
-    CONF_VIBRATION_DEBOUNCE, CONF_VIBRATION_PROFILE, CONF_VIBRATION_SENSORS,
+    CONF_VIBRATION_DEBOUNCE, CONF_VIBRATION_PROFILE,
     CONF_VIBRATION_WINDOW, CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
+    VIBRATION_PAIRS,
     DEFAULT_ARMING_DELAY, DEFAULT_RECOVERY_POLICY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DOMAIN, EVENT_ADAPTIVE_ALARM,
 )
@@ -62,7 +63,14 @@ class AdaptiveAlarmController:
         self.zones = frozenset({
             self.paths.entry, *self.paths.shutters, *self.paths.windows, *extra
         })
-        self.vibrations = frozenset(entry.options.get(CONF_VIBRATION_SENSORS, []))
+        self.vibration_zone_map = {
+            entry.options[sensor_key]: entry.options[target_key]
+            for sensor_key, target_key in VIBRATION_PAIRS
+            if entry.options.get(sensor_key) and entry.options.get(target_key)
+            and entry.options[target_key] in self.zones
+            and entry.options[sensor_key] not in self.zones
+        }
+        self.vibrations = frozenset(self.vibration_zone_map)
         self.storm_entity = entry.options.get(CONF_STORM_SENSOR)
         self.machine = AlarmMachine(self.paths, self.zones)
         self._store: Store[dict[str, Any]] = Store(
@@ -175,6 +183,7 @@ class AdaptiveAlarmController:
             await self._apply(
                 lambda: self.machine.vibration(
                     zone, now=now,
+                    protected_zone=self.vibration_zone_map[zone],
                     profile=self.entry.options.get(
                         CONF_VIBRATION_PROFILE, DEFAULT_VIBRATION_PROFILE
                     ),
@@ -224,7 +233,12 @@ class AdaptiveAlarmController:
         """Handle countdown and prealarm expiry; session zones remain frozen."""
         await self._apply(
             lambda: self.machine.tick(
-                self._states(), locked=self._locked(), now=time.time()
+                self._states(), locked=self._locked(), now=time.time(),
+                vibration_window=float(
+                    self.entry.options.get(
+                        CONF_VIBRATION_WINDOW, DEFAULT_VIBRATION_WINDOW
+                    )
+                ),
             )
         )
         # Detect missed transitions, but never manufacture an intrusion after startup.

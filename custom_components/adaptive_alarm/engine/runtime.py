@@ -75,8 +75,9 @@ class AlarmMachine:
 
     def tick(
         self, states: Mapping[str, ZoneState], *, locked: bool, now: float,
+        vibration_window: float = 60,
     ) -> list[dict[str, Any]]:
-        """Commit a frozen snapshot at the end of the exit delay."""
+        """Commit a frozen snapshot and expire vibration history on its own timer."""
         events: list[dict[str, Any]] = []
         if self.phase == Phase.ARMING and self.arming_until is not None:
             if now >= self.arming_until:
@@ -101,7 +102,7 @@ class AlarmMachine:
                         "protected": sorted(self.session.protected_zones),
                         "excluded": sorted(self.session.excluded_zones),
                     })
-        self._expire_vibrations(now, events)
+        self._expire_vibrations(now, events, window=vibration_window)
         return events
 
     def observed(
@@ -140,15 +141,22 @@ class AlarmMachine:
         return [{"type": "disarmed"}]
 
     def vibration(
-        self, zone: str, *, now: float, profile: str = "balanced",
+        self, zone: str, *, now: float, protected_zone: str | None = None,
+        profile: str = "balanced",
         debounce: float = 3, window: float = 60, storm: bool = False,
     ) -> list[dict[str, Any]]:
         """Score impulses under a configured profile with one storm allowance.
 
         A cross-sensor confirmation is never suppressed by a storm allowance.
         """
-        if self.phase != Phase.ARMED_AWAY:
+        if self.phase != Phase.ARMED_AWAY or self.session is None:
             return []
+        if protected_zone not in self.session.protected_zones:
+            return [{
+                "type": "vibration_ignored",
+                "zone": zone,
+                "reason": "linked_contact_not_protected",
+            }]
         if now - self.vibration_last.get(zone, float("-inf")) < debounce:
             self.vibration_filtered += 1
             return [{"type": "vibration_filtered", "zone": zone}]

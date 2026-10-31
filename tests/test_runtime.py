@@ -187,40 +187,84 @@ class RuntimeTests(unittest.TestCase):
         another.restore(saved)
         self.assertEqual(another.phase, Phase.FAULT)
 
+    def test_unpaired_or_excluded_vibration_cannot_trigger(self):
+        engine = armed()
+        for i in range(10):
+            self.assertEqual(
+                engine.vibration("unpaired", now=200 + i * 4),
+                [{"type": "vibration_ignored", "zone": "unpaired",
+                  "reason": "linked_contact_not_protected"}],
+            )
+            self.assertEqual(
+                engine.vibration("v_studio", protected_zone="studio", now=200 + i * 4),
+                [{"type": "vibration_ignored", "zone": "v_studio",
+                  "reason": "linked_contact_not_protected"}],
+            )
+        self.assertEqual(engine.vibration_hits, [])
+        self.assertEqual(engine.phase, Phase.ARMED_AWAY)
+
+    def test_vibration_only_counts_if_its_specific_contact_is_protected(self):
+        engine = armed(w_sala=O)
+        self.assertEqual(
+            engine.vibration("v_living_window", protected_zone="w_sala", now=200)[0]["type"],
+            "vibration_ignored",
+        )
+        self.assertEqual(
+            engine.vibration("v_living_shutter", protected_zone="sh_sala", now=201)[0]["type"],
+            "vibration_prealert",
+        )
+        self.assertEqual(
+            engine.vibration("v_living_window", protected_zone="w_sala", now=202)[0]["type"],
+            "vibration_ignored",
+        )
+        self.assertEqual(engine.phase, Phase.ARMED_AWAY)
+        self.assertEqual(
+            engine.vibration("v_living_shutter", protected_zone="sh_sala", now=205)[0]["type"],
+            "triggered",
+        )
+
+    def test_vibration_timer_uses_selected_window(self):
+        engine = armed()
+        engine.vibration("v1", protected_zone="entry", now=200)
+        engine.tick(snapshot(), locked=True, now=216, vibration_window=15)
+        self.assertEqual(engine.vibration_hits, [])
+        engine.vibration("v1", protected_zone="entry", now=217)
+        self.assertEqual(engine.phase, Phase.ARMED_AWAY)
+
     def test_both_vibration_hits_trigger(self):
         e = armed()
-        self.assertEqual(e.vibration("vib_entry", now=200)[0]["type"], "vibration_prealert")
-        self.assertEqual(e.vibration("vib_entry", now=201)[0]["type"], "vibration_filtered")
-        events = e.vibration("vib_entry", now=204)
+        self.assertEqual(e.vibration("vib_entry", now=200, protected_zone="entry")[0]["type"], "vibration_prealert")
+        self.assertEqual(e.vibration("vib_entry", now=201, protected_zone="entry")[0]["type"], "vibration_filtered")
+        events = e.vibration("vib_entry", now=204, protected_zone="entry")
         self.assertTrue(any(x["type"] == "triggered" for x in events))
 
     def test_cross_profile(self):
         e = armed()
-        e.vibration("v1", now=200, profile="cross")
-        self.assertEqual(e.vibration("v1", now=204, profile="cross"), [])
-        events = e.vibration("v2", now=205, profile="cross")
+        e.vibration("v1", protected_zone="entry", now=200, profile="cross")
+        self.assertEqual(e.vibration("v1", protected_zone="entry", now=204, profile="cross"), [])
+        events = e.vibration("v2", protected_zone="sh_sala", now=205, profile="cross")
         self.assertTrue(any(x["type"] == "triggered" for x in events))
 
     def test_temporale_grazia(self):
         e = armed()
-        e.vibration("v1", now=200, storm=True)
-        result = e.vibration("v1", now=204, storm=True)
+        e.vibration("v1", protected_zone="entry", now=200, storm=True)
+        result = e.vibration("v1", protected_zone="entry", now=204, storm=True)
         self.assertIn("vibration_storm_grace", [x["type"] for x in result])
-        later = e.vibration("v1", now=208, storm=True)
+        later = e.vibration("v1", protected_zone="entry", now=208, storm=True)
         self.assertEqual(e.phase, Phase.TRIGGERED)
         self.assertIn("triggered", [x["type"] for x in later])
 
     def test_cautious_profile(self):
         e = armed()
-        e.vibration("v1", now=200, profile="cautious")
-        e.vibration("v1", now=204, profile="cautious")
+        e.vibration("v1", protected_zone="entry", now=200, profile="cautious")
+        e.vibration("v1", protected_zone="entry", now=204, profile="cautious")
         self.assertEqual(e.phase, Phase.ARMED_AWAY)
-        e.vibration("v1", now=208, profile="cautious")
+        e.vibration("v1", protected_zone="entry", now=208, profile="cautious")
         self.assertEqual(e.phase, Phase.TRIGGERED)
 
     def test_disarm_does_not_keep_pending(self):
         e = armed()
-        e.vibration("v1", now=200)
+        e.vibration("v1", protected_zone="entry", now=200)
         e.disarm()
         self.assertEqual(e.phase, Phase.DISARMED)
         self.assertFalse(e.vibration_hits)
