@@ -1,29 +1,39 @@
-"""Adaptive Alarm adapter (development preview only).
+"""Adaptive Alarm: HACS-installable, simulation-only integration.
 
-No entities, listeners, services or actuators are registered in this version.
-The policy engine is intentionally independent of Home Assistant.
+No physical actuators, codes, RF, MQTT, lock or siren services are invoked.
 """
 
 from __future__ import annotations
 
-import logging
-from typing import TYPE_CHECKING
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
 
-if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
+from .const import DOMAIN
+from .controller import AdaptiveAlarmController
 
-_LOGGER = logging.getLogger(__name__)
+PLATFORMS = [Platform.ALARM_CONTROL_PANEL, Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Load the preview config entry without interacting with the alarm."""
-    _LOGGER.warning(
-        "Adaptive Alarm preview loaded: no alarm entities or actuators are enabled"
-    )
+    """Set up one serialized alarm engine, then expose read-only diagnostics."""
+    controller = AdaptiveAlarmController(hass, entry)
+    await controller.async_start()
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = controller
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(async_update_options))
     return True
 
 
+async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload configured zone catalogue and thresholds."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload the preview."""
+    """Stop listeners only after all HA entities unload."""
+    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        return False
+    await hass.data[DOMAIN][entry.entry_id].async_stop()
+    hass.data[DOMAIN].pop(entry.entry_id, None)
     return True
