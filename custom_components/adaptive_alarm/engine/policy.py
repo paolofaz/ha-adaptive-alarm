@@ -24,17 +24,16 @@ def evaluate_eligibility(
     *,
     lock_locked: bool,
 ) -> Eligibility:
-    """Entry closed + lock locked + either shutter pair or window pair closed."""
+    """Door and lock, plus one closed barrier in each room (four routes)."""
     routes: list[str] = []
     problems: list[str] = []
     if not _closed(states, paths.entry):
         problems.append("entry_not_closed_or_unavailable")
     if not lock_locked:
         problems.append("lock_not_locked_or_unavailable")
-    if all(_closed(states, zone) for zone in paths.shutters):
-        routes.append("shutters")
-    if all(_closed(states, zone) for zone in paths.windows):
-        routes.append("windows")
+    for name, pair in paths.route_pairs():
+        if all(_closed(states, zone) for zone in pair):
+            routes.append(name)
     if not routes:
         problems.append("no_minimum_path")
     return Eligibility(not problems, tuple(routes), tuple(problems))

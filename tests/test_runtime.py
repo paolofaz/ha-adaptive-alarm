@@ -33,12 +33,35 @@ class RuntimeTests(unittest.TestCase):
         for values in itertools.product((C, O, U), repeat=5):
             for locked in (True, False):
                 expected = locked and values[0] == C and (
-                    values[1] == C and values[2] == C
-                    or values[3] == C and values[4] == C
+                    (values[1] == C or values[3] == C)
+                    and (values[2] == C or values[4] == C)
                 )
                 e = AlarmMachine(PATHS, ZONES)
                 e.arm(dict(zip(names, values)), locked=locked, now=0, delay=0)
                 self.assertEqual(e.phase == Phase.ARMED_AWAY, expected)
+
+    def test_mixed_route_survives_restart(self):
+        engine = armed(sh_sala=O, w_bagno=O)
+        self.assertEqual(
+            engine.session.initial_routes, ("living_window_bath_shutter",)
+        )
+        restored = AlarmMachine(PATHS, ZONES)
+        self.assertEqual(restored.restore(engine.snapshot())[0]["type"], "armed_restored")
+        self.assertEqual(restored.phase, Phase.ARMED_AWAY)
+        self.assertEqual(restored.session.initial_routes, engine.session.initial_routes)
+
+    def test_arming_revalidates_mixed_route_at_commit(self):
+        engine = AlarmMachine(PATHS, ZONES)
+        engine.arm(snapshot(sh_sala=O, w_bagno=O), locked=True, now=10, delay=60)
+        engine.tick(snapshot(sh_sala=O, w_bagno=O), locked=True, now=70)
+        self.assertEqual(engine.phase, Phase.ARMED_AWAY)
+
+    def test_arming_rejects_when_one_room_loses_all_barriers(self):
+        engine = AlarmMachine(PATHS, ZONES)
+        engine.arm(snapshot(), locked=True, now=10, delay=60)
+        events = engine.tick(snapshot(sh_sala=O, w_sala=O), locked=True, now=70)
+        self.assertEqual(engine.phase, Phase.DISARMED)
+        self.assertIn("arm_rejected", [event["type"] for event in events])
 
     def test_delay_final_validation(self):
         e = AlarmMachine(PATHS, ZONES)

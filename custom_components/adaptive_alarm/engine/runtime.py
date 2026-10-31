@@ -224,9 +224,8 @@ class AlarmMachine:
                 if not session.known_zones.issubset(self.zones):
                     raise ValueError("Configured zone set changed while active")
                 expected_routes = {
-                    route for route, pair in (
-                        ("shutters", self.paths.shutters), ("windows", self.paths.windows)
-                    ) if {self.paths.entry, *pair}.issubset(session.protected_zones)
+                    route for route, pair in self.paths.route_pairs()
+                    if {self.paths.entry, *pair}.issubset(session.protected_zones)
                 }
                 if not expected_routes or not set(session.initial_routes).issubset(expected_routes):
                     raise ValueError("Session minimum protection missing")
