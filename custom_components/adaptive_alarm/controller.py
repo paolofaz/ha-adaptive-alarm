@@ -111,6 +111,9 @@ class AdaptiveAlarmController:
         """Load persisted state, attach listeners, then reconcile faults."""
         stored = await self._store.async_load()
         recovery = self.machine.restore(stored)
+        # Interrupted arming must not reappear as arming after another restart.
+        if stored is not None and self.machine.snapshot() != stored:
+            await self._store.async_save(self.machine.snapshot())
         if recovery:
             _LOGGER.warning("Adaptive Alarm restart: %s", recovery)
         # Observe contacts and optional vibrations from one shared listener.
@@ -166,6 +169,8 @@ class AdaptiveAlarmController:
                 )
             )
             await self._refresh_faults()
+            # Readiness is derived from actual states, even while disarmed.
+            self._events([])
         elif zone in self.vibrations and getattr(new_state, "state", None) == "on" and getattr(old_state, "state", None) == "off":
             await self._apply(
                 lambda: self.machine.vibration(
@@ -186,11 +191,12 @@ class AdaptiveAlarmController:
                     ),
                 )
             )
-        elif zone == self.lock_entity and self.machine.active:
-            if getattr(new_state, "state", None) != "locked":
+        elif zone == self.lock_entity:
+            if self.machine.active and getattr(new_state, "state", None) != "locked":
                 await self._apply(
                     lambda: [{"type": "lock_fault", "state": getattr(new_state, "state", None)}]
                 )
+            self._events([])
 
     async def _refresh_faults(self) -> None:
         """Publish new non-closed protected contacts once per fault episode."""
