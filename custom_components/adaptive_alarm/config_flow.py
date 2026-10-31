@@ -39,7 +39,8 @@ def _lock():
 class AdaptiveAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """The integration can be added without a premature house-specific schema."""
 
-    VERSION = 2
+    VERSION = 1
+    MINOR_VERSION = 1  # Preserve existing v0.3 config-entry major version
 
     @staticmethod
     @callback

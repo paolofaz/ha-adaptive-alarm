@@ -41,6 +41,8 @@ def evaluate_eligibility(
                 routes.append(group.name)
             else:
                 problems.append("alternative_group_not_covered:" + group.name)
+        if not paths.groups and paths.configured:
+            routes.append("mandatory")
         return Eligibility(not problems, tuple(routes), tuple(problems))
     if not _closed(states, paths.entry):
         problems.append("entry_not_closed_or_unavailable")
