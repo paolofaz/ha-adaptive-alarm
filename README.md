@@ -2,7 +2,7 @@
 
 **Adaptive protection for Home Assistant** · HACS-installable · Open source (MIT)
 
-> **v0.2.0 alpha — SIMULATION ONLY.** This integration can be installed and its alarm panel can be armed/disarmed to test the behavior of real sensors, but **it cannot control a siren, light, lock, radio receiver, MQTT device or other physical actuator. It is NOT an operational security system.** Keep your existing alarm running while testing, and do not automate its outputs from these preview events.
+> **v0.2.1 alpha — SIMULATION ONLY.** This integration can be installed and its alarm panel can be armed/disarmed to test the behavior of real sensors, but **it cannot control a siren, light, lock, radio receiver, MQTT device or other physical actuator. It is NOT an operational security system.** Keep your existing alarm running while testing, and do not automate its outputs from these preview events.
 
 ## Install with HACS
 
@@ -25,7 +25,7 @@ You can arm when **the entry contact is closed**, **the door lock is locked**, *
 
 Both routes may be valid. A missing, unknown or unavailable contact is never considered closed.
 
-The exit delay is 60 seconds by default. Eligibility is checked at both the initial arm request **and** the final commit. The session records every currently closed configured contact as protected. Initially open/offline extra contacts are excluded, and are individually included after five seconds of stable closure. Once protected, a zone is never silently excluded within that session.
+The exit delay is 60 seconds by default. Eligibility is checked at both the initial arm request **and** the final commit. **Protection is frozen at the end of the exit delay:** every closed contact is protected and every open/offline contact is excluded for the *entire* session, even if it later closes and reopens (e.g. wind). To include a previously excluded contact, **disarm and re-arm** after closing it. Protected contacts remain protected until disarm.
 
 A normal transition from closed to open on a protected sensor causes a simulated trigger. Offline recovery that reports open is configurable (default: critical notice; optional: simulated trigger). The session is persisted in Home Assistant storage so a restart does not rebuild the exclusion list.
 
@@ -35,11 +35,11 @@ A normal transition from closed to open on a protected sensor causes a simulated
 | --- | --- | --- |
 | Alarm control panel | Adaptive Alarm | Away / Disarm, plus manual simulated trigger |
 | Binary sensor | Ready to arm | Whether a minimum route is satisfied right now |
-| Sensor | Protected zones | Count of protected contacts |
-| Sensor | Excluded zones | Count of excluded contacts |
+| Sensor | Protected zones | Count of protected contacts; `zones` attribute lists their entity IDs |
+| Sensor | Excluded zones | Count of excluded contacts; `zones` attribute lists their entity IDs |
 | Sensor | Health | Ready, not ready, OK, degraded, triggered or critical |
 
-The alarm entity attributes include its session identifier, protected and excluded entity IDs, satisfied minimum routes and fault text. This may reveal sensitive room names to anyone who already has access to those Home Assistant entities; set Home Assistant permissions accordingly.
+The alarm entity attributes include its session identifier, protected and excluded entity IDs, satisfied minimum routes and fault text. The two numeric zone-count sensors also expose their entity-ID lists in the `zones` attribute and `session_frozen: true`. This may reveal sensitive room names to anyone who already has access to those Home Assistant entities; set Home Assistant permissions accordingly.
 
 ## Vibration engine (optional)
 
@@ -55,7 +55,7 @@ Default debounce is three seconds per sensor and confirmation window 60 seconds.
 
 ## Debugging and safe notifications
 
-Every meaningful state transition emits a Home Assistant event of type `adaptive_alarm_event`, carrying `entry_id`, `type`, and relevant zone/cause/route details. Examples of `type`: `arming`, `armed`, `arm_rejected`, `zone_added`, `zone_fault`, `protected_zone_abnormal`, `vibration_prealert`, `vibration_storm_grace`, `triggered`, `triggered_restored`, `disarmed`. Use **Developer tools → Events** to listen for this event during trials. **Do not connect this preview event directly to a physical siren.**
+Every meaningful state transition emits a Home Assistant event of type `adaptive_alarm_event`, carrying `entry_id`, `type`, and relevant zone/cause/route details. Examples of `type`: `arming`, `armed`, `arm_rejected`, `zone_fault`, `protected_zone_abnormal`, `vibration_prealert`, `vibration_storm_grace`, `triggered`, `triggered_restored`, `disarmed`. Use **Developer tools → Events** to listen for this event during trials. **Do not connect this preview event directly to a physical siren.**
 
 See [Example dashboard](examples/dashboard.yaml), [Architecture](docs/architecture.md), [Safety](docs/safety.md), and [Test plan](docs/test-plan.md).
 

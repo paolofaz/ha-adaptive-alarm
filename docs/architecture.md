@@ -1,4 +1,4 @@
-# Architecture — v0.2.0 alpha
+# Architecture — v0.2.1 alpha
 
 ## Boundaries
 
@@ -23,7 +23,7 @@ The Store document contains a versioned schema, phase, active session identifier
 
 ### Event model
 
-Physical contact updates and vibration impulses enter one controller under an async lock. Every tick serializes with sensor events. A five-second pending closure can be admitted during a physical opening without waiting for the scheduled timer; a zone opened before five seconds stays excluded.
+Physical contact updates and vibration impulses enter one controller under an async lock. Every tick serializes with sensor events. **Zone membership is frozen at the end of the arming countdown:** contacts open or offline at commit stay excluded, even if later closed for hours. Previously excluded contacts only become protected after disarming and starting a new session. Restart restores the same saved zone set.
 
 `adaptive_alarm_event` is diagnostic and must not be used as a real siren command until the actuation design and safety reviews are complete.
 

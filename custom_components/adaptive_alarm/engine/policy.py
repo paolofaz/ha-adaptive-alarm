@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Mapping
 
 from .model import (
@@ -13,9 +12,6 @@ from .model import (
     Session,
     ZoneState,
 )
-
-CLOSURE_SECONDS = 5.0
-
 
 def _closed(states: Mapping[str, ZoneState], zone: str) -> bool:
     """Unavailable, unknown and missing are never considered closed."""
@@ -68,24 +64,6 @@ def new_session(
     )
 
 
-def include_if_stable(
-    session: Session,
-    zone: str,
-    state: ZoneState,
-    closed_for_seconds: float,
-) -> Session:
-    """A zone may join after five stable seconds but never leave automatically."""
-    if zone not in session.known_zones:
-        raise ValueError("Unknown zone")
-    if (
-        state != ZoneState.CLOSED
-        or closed_for_seconds < CLOSURE_SECONDS
-        or zone in session.protected_zones
-    ):
-        return session
-    return replace(session, protected_zones=session.protected_zones | {zone})
-
-
 def classify_opening(
     session: Session,
     zone: str,
@@ -93,20 +71,15 @@ def classify_opening(
     current: ZoneState,
     *,
     recovery_policy: RecoveryPolicy = RecoveryPolicy.NOTIFY,
-    closed_before_open_seconds: float = 0.0,
     startup: bool = False,
 ) -> EventAction:
-    """Classify an observation, including offline recovery and a pending inclusion.
+    """Classify an observation using the frozen protected-zone set.
 
     Startup observations are not proof of an intrusion.
     """
     if zone not in session.known_zones:
         return EventAction.IGNORE
-    protected = zone in session.protected_zones or (
-        previous == ZoneState.CLOSED
-        and closed_before_open_seconds >= CLOSURE_SECONDS
-    )
-    if not protected:
+    if zone not in session.protected_zones:
         return EventAction.IGNORE
     if current == ZoneState.UNAVAILABLE:
         return EventAction.CRITICAL_NOTICE

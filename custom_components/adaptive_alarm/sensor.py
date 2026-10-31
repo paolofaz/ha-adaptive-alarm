@@ -52,6 +52,13 @@ class AdaptiveDiagnostic(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
+        session = self.controller.machine.session
+        if self.kind == "protected":
+            zones = session.protected_zones if session else frozenset()
+            return {"zones": sorted(zones), "session_frozen": True}
+        if self.kind == "excluded":
+            zones = session.excluded_zones if session else frozenset()
+            return {"zones": sorted(zones), "session_frozen": True}
         if self.kind == "health":
             return {
                 "fault": self.controller.machine.fault or None,
