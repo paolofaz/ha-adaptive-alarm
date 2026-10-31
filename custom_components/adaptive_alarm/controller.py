@@ -30,6 +30,7 @@ from .const import (
 )
 from .engine import MinimumPaths, RecoveryPolicy, ZoneState, evaluate_eligibility
 from .engine.runtime import AlarmMachine, Phase
+from .engine.vibration_links import validated_vibration_links
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,13 +64,13 @@ class AdaptiveAlarmController:
         self.zones = frozenset({
             self.paths.entry, *self.paths.shutters, *self.paths.windows, *extra
         })
-        self.vibration_zone_map = {
-            entry.options[sensor_key]: entry.options[target_key]
-            for sensor_key, target_key in VIBRATION_PAIRS
-            if entry.options.get(sensor_key) and entry.options.get(target_key)
-            and entry.options[target_key] in self.zones
-            and entry.options[sensor_key] not in self.zones
-        }
+        self.vibration_zone_map = validated_vibration_links(
+            (
+                (entry.options.get(sensor_key), entry.options.get(target_key))
+                for sensor_key, target_key in VIBRATION_PAIRS
+            ),
+            self.zones,
+        )
         self.vibrations = frozenset(self.vibration_zone_map)
         self.storm_entity = entry.options.get(CONF_STORM_SENSOR)
         self.machine = AlarmMachine(self.paths, self.zones)

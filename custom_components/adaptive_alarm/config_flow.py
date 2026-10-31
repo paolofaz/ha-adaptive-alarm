@@ -11,6 +11,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
+from .engine.vibration_links import (
+    VibrationConfigurationError,
+    validated_vibration_links,
+)
+
 from .const import (
     CONF_ARMING_DELAY,
     CONF_ENTRY_CONTACT,
@@ -93,27 +98,21 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             required = set(self.config_entry.data.values())
             extras = set(user_input.get(CONF_EXTRA_CONTACTS, []))
-            contacts = required | extras
-            vibration_sensors = [
-                user_input[sensor_key]
-                for sensor_key, _ in VIBRATION_PAIRS
-                if user_input.get(sensor_key)
-            ]
+            monitored = (required - {self.config_entry.data[CONF_ENTRY_LOCK]}) | extras
             errors: dict[str, str] = {}
-            if required & extras or len(vibration_sensors) != len(set(vibration_sensors)):
-                errors["base"] = "duplicate_entities"
-            elif contacts & set(vibration_sensors):
+            if required & extras:
                 errors["base"] = "duplicate_entities"
             else:
-                for sensor_key, target_key in VIBRATION_PAIRS:
-                    sensor = user_input.get(sensor_key)
-                    target = user_input.get(target_key)
-                    if bool(sensor) != bool(target):
-                        errors["base"] = "unpaired_vibration"
-                        break
-                    if target and target not in contacts:
-                        errors["base"] = "invalid_vibration_zone"
-                        break
+                try:
+                    validated_vibration_links(
+                        (
+                            (user_input.get(sensor_key), user_input.get(target_key))
+                            for sensor_key, target_key in VIBRATION_PAIRS
+                        ),
+                        monitored,
+                    )
+                except VibrationConfigurationError as exc:
+                    errors["base"] = str(exc)
             if errors:
                 return self.async_show_form(
                     step_id="init", data_schema=self._schema(), errors=errors

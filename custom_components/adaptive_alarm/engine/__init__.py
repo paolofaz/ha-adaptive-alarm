@@ -8,6 +8,7 @@ from .model import (
     Session,
     ZoneState,
 )
+from .vibration_links import validated_vibration_links
 from .policy import (
     classify_opening,
     evaluate_eligibility,
@@ -26,4 +27,5 @@ __all__ = [
     "evaluate_eligibility",
     "new_session",
     "startup_faults",
+    "validated_vibration_links",
 ]
