@@ -54,7 +54,7 @@ class Eligibility:
 
 @dataclass(frozen=True)
 class Session:
-    """One immutable snapshot of protected and excluded zones."""
+    """Frozen protected/excluded zone snapshot for one armed session."""
 
     identifier: str
     known_zones: frozenset[str]
