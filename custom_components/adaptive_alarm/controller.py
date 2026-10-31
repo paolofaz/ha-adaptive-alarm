@@ -221,7 +221,7 @@ class AdaptiveAlarmController:
                 self._events(events)
 
     async def async_tick(self) -> None:
-        """Handle countdown, inclusion deadlines, and prealarm expiry."""
+        """Handle countdown and prealarm expiry; session zones remain frozen."""
         await self._apply(
             lambda: self.machine.tick(
                 self._states(), locked=self._locked(), now=time.time()
