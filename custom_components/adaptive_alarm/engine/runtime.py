@@ -95,7 +95,7 @@ class AlarmMachine:
                         lock_locked=locked,
                     )
                     self.phase = Phase.ARMED_AWAY
-                                events.append({
+                    events.append({
                         "type": "armed",
                         "routes": list(self.session.initial_routes),
                         "protected": sorted(self.session.protected_zones),
