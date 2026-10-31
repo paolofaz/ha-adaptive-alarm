@@ -11,6 +11,8 @@ permissions:
 
 jobs:
   hacs:
+    # HACS validation explicitly rejects private repositories.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
