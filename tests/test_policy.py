@@ -10,7 +10,6 @@ from custom_components.adaptive_alarm.engine import (
     ZoneState,
     classify_opening,
     evaluate_eligibility,
-    include_if_stable,
     new_session,
     startup_faults,
 )
@@ -99,18 +98,15 @@ class SessionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             new_session("bad", P, states(door=O), lock_locked=True)
 
-    def test_monotonic_inclusion(self):
+    def test_frozen_snapshot_does_not_reclassify_excluded_zones(self):
         session = new_session("episode-2", P, states(), lock_locked=True)
-        self.assertEqual(include_if_stable(session, "studio", C, 4.9), session)
-        later = include_if_stable(session, "studio", C, 5.0)
-        self.assertIn("studio", later.protected_zones)
-        self.assertTrue(session.protected_zones.issubset(later.protected_zones))
-        self.assertEqual(include_if_stable(later, "studio", O, 100), later)
-
-    def test_unknown_zone_rejected(self):
-        session = new_session("x", P, states(), lock_locked=True)
-        with self.assertRaises(ValueError):
-            include_if_stable(session, "garage", C, 5)
+        self.assertIn("studio", session.excluded_zones)
+        for previous in (C, O, U):
+            with self.subTest(previous=previous):
+                self.assertEqual(
+                    classify_opening(session, "studio", previous, O),
+                    EventAction.IGNORE,
+                )
 
     def test_opening_protected_triggers(self):
         session = new_session("x", P, states(), lock_locked=True)
@@ -122,17 +118,6 @@ class SessionTests(unittest.TestCase):
     def test_excluded_opening_does_not_trigger(self):
         session = new_session("x", P, states(), lock_locked=True)
         self.assertEqual(classify_opening(session, "studio", O, O), EventAction.IGNORE)
-
-    def test_pending_stable_inclusion_not_lost(self):
-        session = new_session("x", P, states(), lock_locked=True)
-        self.assertEqual(
-            classify_opening(session, "studio", C, O, closed_before_open_seconds=4.9),
-            EventAction.IGNORE,
-        )
-        self.assertEqual(
-            classify_opening(session, "studio", C, O, closed_before_open_seconds=5.0),
-            EventAction.TRIGGER,
-        )
 
     def test_offline_recovery_policy(self):
         session = new_session("x", P, states(), lock_locked=True)
