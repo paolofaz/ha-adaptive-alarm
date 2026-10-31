@@ -1,6 +1,6 @@
 # Safety / security boundaries
 
-This is **v0.3.0 alpha, SIMULATION ONLY**.
+This is **v0.3.1 alpha, SIMULATION ONLY**.
 
 - No service calls to sirens, lights, relays, locks, MQTT, Telegram or notifications.
 - RF guest unlock/disarm is not implemented; never upload personal codes.
@@ -17,3 +17,6 @@ The integration is not evaluated or certified as a security system. Before a fut
 
 - A vibration sensor counts only when explicitly paired to a contact that is protected in the frozen session. Map sensors to the contact they physically monitor; never guess mappings.
 - The minimum arming condition admits mixed sala/bagno pairs. Door contact closed and door lock locked are always required.
+
+- A positive exit delay now permits starting the countdown before the entry door and lock are secure, but **the system is not armed** before the deadline and no arm is completed unless all minimum prerequisites are met at that instant. Users must check the final state.
+- A vibration sensor can only be associated with its dedicated physical door/window contact, never a shutter. Old unconstrained associations are not silently reused.

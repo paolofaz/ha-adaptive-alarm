@@ -1,4 +1,4 @@
-# Architecture — v0.3.0 alpha
+# Architecture — v0.3.1 alpha
 
 ## Boundaries
 
@@ -23,7 +23,7 @@ The Store document contains a versioned schema, phase, active session identifier
 
 ### Event model
 
-Physical contact updates and vibration impulses enter one controller under an async lock. Vibration is accepted only if its explicitly associated contact belongs to the active session's protected set; legacy unpaired sensor IDs are ignored. Every tick serializes with sensor events. **Zone membership is frozen at the end of the arming countdown:** contacts open or offline at commit stay excluded, even if later closed for hours. Previously excluded contacts only become protected after disarming and starting a new session. Restart restores the same saved zone set.
+Physical contact updates and vibration impulses enter one controller under an async lock. Vibration is accepted only if its physical door/window contact is in the active session's protected set. Legacy freely paired and unpaired sensors are ignored until reconfigured using the location-specific fields. Every tick serializes with sensor events. **Zone membership is frozen at the end of the arming countdown:** contacts open or offline at commit stay excluded, even if later closed for hours. Previously excluded contacts only become protected after disarming and starting a new session. Restart restores the same saved zone set.
 
 `adaptive_alarm_event` is diagnostic and must not be used as a real siren command until the actuation design and safety reviews are complete.
 
@@ -37,3 +37,14 @@ Physical contact updates and vibration impulses enter one controller under an as
 - RF guest access needs stronger security than the legacy static radio codes and is **not implemented**.
 
 The current integration is useful for **safe behavioral trials** in parallel with the existing working alarm, not as its replacement.
+
+### Exit-delay gate (v0.3.1)
+
+- With a delay greater than zero, Arm Away enters `arming` regardless of the present readiness indication. The system is **not armed** during this countdown.
+- At the deadline the entry contact must be closed, the lock must be locked, and one valid sala/bagno route must exist. If the requirements fail, abort and publish `arm_rejected` with diagnostic reasons. The panel remains disarmed and the failed requirement is exposed as `fault`.
+- With delay zero, reject immediately when requirements fail. A valid request commits immediately.
+- Arming cancelled by Disarm or interrupted by a Home Assistant restart must never silently activate later.
+
+### Vibration placement (v0.3.1)
+
+Sensor source options are exclusively `vibration_entry`, `vibration_window_living`, `vibration_window_bath`; their paired contacts are those configured in the original setup. No shutter mappings are allowed. Ignore old `vibration_1/2/3` options rather than silently rewire them. The engine accepts valid impulses only when the mapped contact is protected in the frozen session.
