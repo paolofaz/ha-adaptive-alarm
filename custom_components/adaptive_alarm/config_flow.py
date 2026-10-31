@@ -11,6 +11,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
+from .engine.vibration_links import (
+    VibrationConfigurationError,
+    validated_vibration_links,
+)
+
 from .const import (
     CONF_ARMING_DELAY,
     CONF_ENTRY_CONTACT,
@@ -22,7 +27,7 @@ from .const import (
     CONF_STORM_SENSOR,
     CONF_VIBRATION_DEBOUNCE,
     CONF_VIBRATION_PROFILE,
-    CONF_VIBRATION_SENSORS,
+    VIBRATION_PAIRS,
     CONF_VIBRATION_WINDOW,
     CONF_WINDOW_BATH,
     CONF_WINDOW_LIVING,
@@ -93,12 +98,24 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             required = set(self.config_entry.data.values())
             extras = set(user_input.get(CONF_EXTRA_CONTACTS, []))
-            vibrations = set(user_input.get(CONF_VIBRATION_SENSORS, []))
-            if required & extras or extras & vibrations or required & vibrations:
+            monitored = (required - {self.config_entry.data[CONF_ENTRY_LOCK]}) | extras
+            errors: dict[str, str] = {}
+            if required & extras:
+                errors["base"] = "duplicate_entities"
+            else:
+                try:
+                    validated_vibration_links(
+                        (
+                            (user_input.get(sensor_key), user_input.get(target_key))
+                            for sensor_key, target_key in VIBRATION_PAIRS
+                        ),
+                        monitored,
+                    )
+                except VibrationConfigurationError as exc:
+                    errors["base"] = str(exc)
+            if errors:
                 return self.async_show_form(
-                    step_id="init",
-                    data_schema=self._schema(),
-                    errors={"base": "duplicate_entities"},
+                    step_id="init", data_schema=self._schema(), errors=errors
                 )
             return self.async_create_entry(title="", data=user_input)
         return self.async_show_form(step_id="init", data_schema=self._schema())
@@ -108,14 +125,13 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
         multiple = selector.EntitySelector(
             selector.EntitySelectorConfig(domain="binary_sensor", multiple=True)
         )
-        return vol.Schema({
+        entity = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="binary_sensor")
+        )
+        fields: dict[Any, Any] = {
             vol.Optional(
                 CONF_EXTRA_CONTACTS,
                 default=list(options.get(CONF_EXTRA_CONTACTS, [])),
-            ): multiple,
-            vol.Optional(
-                CONF_VIBRATION_SENSORS,
-                default=list(options.get(CONF_VIBRATION_SENSORS, [])),
             ): multiple,
             vol.Optional(
                 CONF_STORM_SENSOR,
@@ -154,4 +170,14 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(options=["notify", "trigger"])
             ),
-        })
+        }
+        for sensor_key, target_key in VIBRATION_PAIRS:
+            fields[vol.Optional(
+                sensor_key,
+                description={"suggested_value": options.get(sensor_key)},
+            )] = entity
+            fields[vol.Optional(
+                target_key,
+                description={"suggested_value": options.get(target_key)},
+            )] = entity
+        return vol.Schema(fields)

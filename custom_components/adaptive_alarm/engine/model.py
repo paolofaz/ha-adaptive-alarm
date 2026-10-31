@@ -31,7 +31,7 @@ class EventAction(StrEnum):
 
 @dataclass(frozen=True)
 class MinimumPaths:
-    """Entry and two alternative pairs of minimum-protection contacts."""
+    """Entry and four admissible sala/bagno coverage combinations."""
 
     entry: str
     shutters: tuple[str, str]
@@ -41,6 +41,15 @@ class MinimumPaths:
         contacts = (self.entry, *self.shutters, *self.windows)
         if any(not contact for contact in contacts) or len(set(contacts)) != 5:
             raise ValueError("Five distinct nonempty contacts are required")
+
+    def route_pairs(self) -> tuple[tuple[str, tuple[str, str]], ...]:
+        """Coverage must include one sala and one bagno barrier."""
+        return (
+            ("shutters", self.shutters),
+            ("windows", self.windows),
+            ("living_window_bath_shutter", (self.windows[0], self.shutters[1])),
+            ("living_shutter_bath_window", (self.shutters[0], self.windows[1])),
+        )
 
 
 @dataclass(frozen=True)

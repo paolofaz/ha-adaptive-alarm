@@ -26,21 +26,28 @@
     "step": {
       "init": {
         "title": "Adaptive Alarm — zone monitorate",
-        "description": "Contatti aggiuntivi e sensori di vibrazione. Le uscite fisiche rimangono disabilitate (solo simulazione).",
+        "description": "Abbina fino a tre sensori di vibrazione ciascuno a un contatto sorvegliato; i contatti esclusi non generano scatti. Nessun comando alla sirena: solo simulazione.",
         "data": {
           "extra_contacts": "Finestre e contatti aggiuntivi",
-          "vibration_sensors": "Sensori di vibrazione (facoltativi)",
           "storm_sensor": "Sensore temporale (facoltativo)",
           "arming_delay": "Ritardo di inserimento (secondi)",
           "vibration_profile": "Profilo vibrazioni",
           "vibration_debounce": "Filtro impulsi ripetuti (secondi)",
           "vibration_window": "Finestra di conferma vibrazioni (secondi)",
-          "recovery_policy": "Sensore protetto che ritorna online già aperto"
+          "recovery_policy": "Sensore protetto che ritorna online già aperto",
+          "vibration_1": "Sensore vibrazione 1 (facoltativo)",
+          "vibration_1_zone": "Contatto sorvegliato dal sensore 1",
+          "vibration_2": "Sensore vibrazione 2 (facoltativo)",
+          "vibration_2_zone": "Contatto sorvegliato dal sensore 2",
+          "vibration_3": "Sensore vibrazione 3 (facoltativo)",
+          "vibration_3_zone": "Contatto sorvegliato dal sensore 3"
         }
       }
     },
     "error": {
-      "duplicate_entities": "Utilizza entità distinte per contatti e vibrazioni."
+      "duplicate_entities": "Utilizza entità distinte per contatti e vibrazioni.",
+      "unpaired_vibration": "Ogni sensore vibrazione richiede un contatto associato (e viceversa).",
+      "invalid_vibration_zone": "Il contatto associato deve essere tra quelli configurati nell'allarme."
     }
   }
 }

@@ -48,9 +48,22 @@ class EligibilityTests(unittest.TestCase):
 
     def test_both_routes(self):
         self.assertEqual(
-            evaluate_eligibility(P, states(), lock_locked=True).routes,
-            ("shutters", "windows"),
+            len(evaluate_eligibility(P, states(), lock_locked=True).routes), 4
         )
+
+    def test_mixed_living_window_bath_shutter(self):
+        result = evaluate_eligibility(
+            P, states(shutter_living=O, window_bath=O), lock_locked=True
+        )
+        self.assertTrue(result.permitted)
+        self.assertEqual(result.routes, ("living_window_bath_shutter",))
+
+    def test_mixed_living_shutter_bath_window(self):
+        result = evaluate_eligibility(
+            P, states(window_living=O, shutter_bath=O), lock_locked=True
+        )
+        self.assertTrue(result.permitted)
+        self.assertEqual(result.routes, ("living_shutter_bath_window",))
 
     def test_never_accept_unlocked_or_unknown_door(self):
         for door in (O, U):
@@ -66,8 +79,8 @@ class EligibilityTests(unittest.TestCase):
                     lock_locked
                     and data["door"] == C
                     and (
-                        data["shutter_living"] == C and data["shutter_bath"] == C
-                        or data["window_living"] == C and data["window_bath"] == C
+                        (data["shutter_living"] == C or data["window_living"] == C)
+                        and (data["shutter_bath"] == C or data["window_bath"] == C)
                     )
                 )
                 with self.subTest(states=data, locked=lock_locked):

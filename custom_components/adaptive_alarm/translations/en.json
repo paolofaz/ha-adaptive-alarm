@@ -26,21 +26,28 @@
     "step": {
       "init": {
         "title": "Adaptive Alarm — monitored zones",
-        "description": "Extra contacts and vibration sensors. All outputs remain disabled (simulation-only).",
+        "description": "Pair up to three vibration sensors with specific monitored contacts. Excluded contacts cannot trigger the alarm. Simulation only; no siren commands.",
         "data": {
           "extra_contacts": "Additional window and contact sensors",
-          "vibration_sensors": "Vibration sensors (optional)",
           "storm_sensor": "Thunderstorm binary sensor (optional)",
           "arming_delay": "Exit delay (seconds)",
           "vibration_profile": "Vibration profile",
           "vibration_debounce": "Ignore repeated impulses within (seconds)",
           "vibration_window": "Vibration confirmation window (seconds)",
-          "recovery_policy": "Protected sensor returns online already open"
+          "recovery_policy": "Protected sensor returns online already open",
+          "vibration_1": "Vibration sensor 1 (optional)",
+          "vibration_1_zone": "Contact protected by sensor 1",
+          "vibration_2": "Vibration sensor 2 (optional)",
+          "vibration_2_zone": "Contact protected by sensor 2",
+          "vibration_3": "Vibration sensor 3 (optional)",
+          "vibration_3_zone": "Contact protected by sensor 3"
         }
       }
     },
     "error": {
-      "duplicate_entities": "Select distinct entities for contacts and vibration."
+      "duplicate_entities": "Select distinct entities for contacts and vibration.",
+      "unpaired_vibration": "Each vibration sensor requires one linked contact (and vice versa).",
+      "invalid_vibration_zone": "The linked contact must be one of the monitored alarm contacts."
     }
   }
 }
