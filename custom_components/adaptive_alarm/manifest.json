@@ -1,10 +1,10 @@
 {
   "domain": "adaptive_alarm",
   "name": "Adaptive Alarm",
-  "config_flow": true,
   "codeowners": [
     "@paolofaz"
   ],
+  "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/paolofaz/ha-adaptive-alarm",
   "integration_type": "helper",
