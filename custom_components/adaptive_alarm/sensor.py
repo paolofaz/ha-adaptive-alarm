@@ -66,9 +66,19 @@ class AdaptiveDiagnostic(SensorEntity):
             zones = session.excluded_zones if session else frozenset()
             return {"zones": sorted(zones), "session_frozen": True}
         if self.kind == "health":
+            rules = self.controller.paths
             return {
                 "fault": self.controller.machine.fault or None,
                 "simulation_only": True,
+                "siren_configured": bool(self.controller.siren_entity),
+                "siren_enabled": False,
+                "requirements_configured": rules.configured,
+                "mandatory_contacts": list(rules.mandatory),
+                "alternative_groups": {
+                    group.name: list(group.contacts) for group in rules.groups
+                },
+                "optional_contacts": list(rules.optional),
+                "lock_configured": bool(rules.lock),
                 "protected_zone_problems": sorted(self.controller._active_faults),
             }
         return {}

@@ -106,6 +106,43 @@ class GenericRulesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ProtectionRules(siren="light.wrong")
 
+    def test_restore_existing_arm_session_preserves_protected_snapshot(self):
+        from custom_components.adaptive_alarm.engine.model import MinimumPaths
+        old_paths = MinimumPaths(
+            entry="binary_sensor.entry",
+            shutters=("binary_sensor.sala_shutter", "binary_sensor.bath_shutter"),
+            windows=("binary_sensor.sala_window", "binary_sensor.bath_window"),
+        )
+        readings = {sensor: C for sensor in rules().known_contacts}
+        readings["binary_sensor.garage"] = O
+        old = AlarmMachine(old_paths, rules().known_contacts)
+        old.arm(readings, locked=True, now=100, delay=0)
+        old_snapshot = old.snapshot()
+        self.assertIn("shutters", old.session.initial_routes)
+        newer = AlarmMachine(rules(), rules().known_contacts)
+        events = newer.restore(old_snapshot)
+        self.assertEqual(newer.phase, Phase.ARMED_AWAY)
+        self.assertEqual(newer.session.protected_zones, old.session.protected_zones)
+        self.assertEqual(newer.session.excluded_zones, old.session.excluded_zones)
+        self.assertEqual(set(newer.session.initial_routes), {"Sala", "Bagno"})
+        self.assertEqual(events[0]["type"], "armed_restored")
+
+    def test_existing_triggered_session_retains_state(self):
+        from custom_components.adaptive_alarm.engine.model import MinimumPaths
+        old_paths = MinimumPaths(
+            entry="binary_sensor.entry",
+            shutters=("binary_sensor.sala_shutter", "binary_sensor.bath_shutter"),
+            windows=("binary_sensor.sala_window", "binary_sensor.bath_window"),
+        )
+        readings = {sensor: C for sensor in rules().known_contacts}
+        old = AlarmMachine(old_paths, rules().known_contacts)
+        old.arm(readings, locked=True, now=100, delay=0)
+        old.trigger("contact")
+        newer = AlarmMachine(rules(), rules().known_contacts)
+        result = newer.restore(old.snapshot())
+        self.assertEqual(newer.phase, Phase.TRIGGERED)
+        self.assertEqual(result, [{"type": "triggered_restored"}])
+
     def test_siren_is_inert_metadata(self):
         p = ProtectionRules(mandatory=("binary_sensor.door",), siren="switch.test_siren")
         self.assertEqual(p.to_dict()["siren"], "switch.test_siren")

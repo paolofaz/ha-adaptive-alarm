@@ -101,7 +101,8 @@
     },
     "abort": {
       "active_session": "Disinserisci l'allarme prima di cambiare configurazione o parametri.",
-      "no_groups": "Non sono presenti gruppi alternativi da rimuovere."
+      "no_groups": "Non sono presenti gruppi alternativi da rimuovere.",
+      "unlink_vibration_first": "Scollega prima il sensore di vibrazione dalla zona che vuoi rimuovere, quindi modifica le regole."
     }
   }
 }

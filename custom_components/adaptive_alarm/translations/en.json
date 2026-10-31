@@ -101,7 +101,8 @@
     },
     "abort": {
       "active_session": "Disarm the alarm before changing protection rules or settings.",
-      "no_groups": "No alternative groups to remove."
+      "no_groups": "No alternative groups to remove.",
+      "unlink_vibration_first": "Unlink the vibration sensor from that contact before removing it from the protection rules."
     }
   }
 }

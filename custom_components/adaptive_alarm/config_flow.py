@@ -81,6 +81,15 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             return self.async_abort(reason="active_session")
         opts = dict(self.config_entry.options)
         if protection is not None:
+            # Do not persist a rule edit that strands an existing vibration
+            # sensor on an unknown/removed contact. Explicitly unlink it first.
+            try:
+                validated_vibration_links(
+                    ((v["sensor"], v["contact"]) for v in self._links()),
+                    protection.known_contacts,
+                )
+            except (VibrationConfigurationError, KeyError):
+                return self.async_abort(reason="unlink_vibration_first")
             opts["protection"] = protection.to_dict()
         elif "protection" not in opts:
             opts["protection"] = self._rules().to_dict()
