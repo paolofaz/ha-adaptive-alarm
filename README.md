@@ -1,4 +1,4 @@
-# Adaptive Alarm v0.4.0-alpha
+# Adaptive Alarm v0.4.1-alpha
 
 **HACS-installable, simulation-only, programmable AND/OR intrusion policy.**
 
@@ -63,3 +63,18 @@ The project also runs hassfest and HACS checks. Neither CI nor the dry-run simul
 Configuration currently uses native multi-step Options Flow pages rather than a custom Lovelace configuration panel. Additional rule operators and siren control are future work, not silently enabled in this release.
 
 [Architecture](docs/architecture.md) · [Safety](docs/safety.md) · [Trial plan](docs/test-plan.md)
+
+## Updating translations (v0.4.1)
+
+A Home Assistant frontend using older translations can show **seven blank menu rows**
+while the options code uses the new seven-section editor. This happened in
+v0.4.0 when HACS installed the new code and an older translation catalog was
+still cached. In v0.4.1 we invalidate the Home Assistant translation cache
+during setup and when opening both configuration flows, and test both
+translations for complete menu keys.
+
+**After updating via HACS, restart Home Assistant**, then close the browser
+tabs or Companion app and reopen them. If the menu remains blank, perform a
+hard refresh or clear only the Home Assistant frontend cache. The initial
+configuration now asks only for a name; the obsolete five-sensor description
+is removed. **Do not delete your existing integration or its entities.**

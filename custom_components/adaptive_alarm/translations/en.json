@@ -3,8 +3,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Adaptive Alarm (simulation)",
-        "description": "Create an alarm configuration first; configure mandatory sensors, alternative groups, optional zones and siren afterward via Configure. This alpha NEVER operates a siren.",
+        "title": "Adaptive Alarm — new configuration",
+        "description": "Enter only the integration name. After setup, open Configure to select required contacts, alternative groups, optional sensors, vibrations and an inactive siren. No physical commands are sent.",
         "data": {
           "name": "Integration name"
         }
@@ -20,7 +20,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Adaptive Alarm",
+        "title": "Adaptive Alarm configuration",
         "menu_options": {
           "mandatory": "Mandatory contacts and optional lock",
           "group": "Add or edit an alternative group",
@@ -29,6 +29,16 @@
           "vibrations": "Vibration sensors and their physical contacts",
           "siren": "Optional siren (INERT / DISABLED)",
           "timing": "Timing, storm and recovery policy"
+        },
+        "description": "Choose a section to configure. Each change is saved separately. Physical outputs, including the siren, remain disabled.",
+        "menu_option_descriptions": {
+          "mandatory": "Set required contacts and an optional lock.",
+          "group": "Add or edit a group where any one closed contact is sufficient.",
+          "remove_group": "Delete an existing alternative group.",
+          "optional": "Add contacts that do not block arming.",
+          "vibrations": "Pair up to three vibration sensors with physical contacts.",
+          "siren": "Optional siren selection, without any actuation.",
+          "timing": "Configure delays, vibration filters, storm and recovery."
         }
       },
       "mandatory": {
