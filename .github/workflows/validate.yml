@@ -20,6 +20,8 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          # Repository topics are managed separately in GitHub settings.
+          ignore: topics
   hassfest:
     runs-on: ubuntu-latest
     steps:
