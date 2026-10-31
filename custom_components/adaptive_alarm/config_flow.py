@@ -1,4 +1,4 @@
-"""Initial native UI flow for the two alternative minimum paths."""
+"""Native configuration and options flows for the simulated alarm."""
 
 from __future__ import annotations
 
@@ -7,30 +7,50 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_ARMING_DELAY,
     CONF_ENTRY_CONTACT,
     CONF_ENTRY_LOCK,
+    CONF_EXTRA_CONTACTS,
+    CONF_RECOVERY_POLICY,
     CONF_SHUTTER_BATH,
     CONF_SHUTTER_LIVING,
+    CONF_STORM_SENSOR,
+    CONF_VIBRATION_DEBOUNCE,
+    CONF_VIBRATION_PROFILE,
+    CONF_VIBRATION_SENSORS,
+    CONF_VIBRATION_WINDOW,
     CONF_WINDOW_BATH,
     CONF_WINDOW_LIVING,
+    DEFAULT_ARMING_DELAY,
     DEFAULT_NAME,
+    DEFAULT_RECOVERY_POLICY,
+    DEFAULT_VIBRATION_DEBOUNCE,
+    DEFAULT_VIBRATION_PROFILE,
+    DEFAULT_VIBRATION_WINDOW,
     DOMAIN,
 )
 
 
 class AdaptiveAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Collect the minimum safety path entities. No commands are sent."""
+    """Choose the fixed minimum-route contacts in the setup flow."""
 
     VERSION = 1
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Select contacts and the lock."""
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry):
+        """Expose native configuration for additional zones and vibration."""
+        return AdaptiveAlarmOptionsFlow()
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
+        """Create a single alarm instance, with no actuators configured."""
+        await self.async_set_unique_id(DOMAIN)
+        self._abort_if_unique_id_configured()
         errors: dict[str, str] = {}
         if user_input is not None:
             contacts = [
@@ -48,9 +68,7 @@ class AdaptiveAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         binary = selector.EntitySelector(
             selector.EntitySelectorConfig(domain="binary_sensor")
         )
-        lock = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="lock")
-        )
+        lock = selector.EntitySelector(selector.EntitySelectorConfig(domain="lock"))
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
@@ -65,3 +83,75 @@ class AdaptiveAlarmConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
         )
+
+
+class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
+    """Optional extra contacts, vibration filters, delays and fault reaction."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None):
+        """Present a single page of meaningful operational settings."""
+        if user_input is not None:
+            required = set(self.config_entry.data.values())
+            extras = set(user_input.get(CONF_EXTRA_CONTACTS, []))
+            vibrations = set(user_input.get(CONF_VIBRATION_SENSORS, []))
+            if required & extras or extras & vibrations or required & vibrations:
+                return self.async_show_form(
+                    step_id="init",
+                    data_schema=self._schema(),
+                    errors={"base": "duplicate_entities"},
+                )
+            return self.async_create_entry(title="", data=user_input)
+        return self.async_show_form(step_id="init", data_schema=self._schema())
+
+    def _schema(self):
+        options = self.config_entry.options
+        multiple = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="binary_sensor", multiple=True)
+        )
+        return vol.Schema({
+            vol.Optional(
+                CONF_EXTRA_CONTACTS,
+                default=list(options.get(CONF_EXTRA_CONTACTS, [])),
+            ): multiple,
+            vol.Optional(
+                CONF_VIBRATION_SENSORS,
+                default=list(options.get(CONF_VIBRATION_SENSORS, [])),
+            ): multiple,
+            vol.Optional(
+                CONF_STORM_SENSOR,
+                description={"suggested_value": options.get(CONF_STORM_SENSOR)},
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="binary_sensor")
+            ),
+            vol.Required(
+                CONF_ARMING_DELAY, default=options.get(
+                    CONF_ARMING_DELAY, DEFAULT_ARMING_DELAY
+                )
+            ): vol.All(vol.Coerce(int), vol.Range(min=0, max=600)),
+            vol.Required(
+                CONF_VIBRATION_PROFILE, default=options.get(
+                    CONF_VIBRATION_PROFILE, DEFAULT_VIBRATION_PROFILE
+                )
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["balanced", "cross", "cautious"]
+                )
+            ),
+            vol.Required(
+                CONF_VIBRATION_DEBOUNCE, default=options.get(
+                    CONF_VIBRATION_DEBOUNCE, DEFAULT_VIBRATION_DEBOUNCE
+                )
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=20)),
+            vol.Required(
+                CONF_VIBRATION_WINDOW, default=options.get(
+                    CONF_VIBRATION_WINDOW, DEFAULT_VIBRATION_WINDOW
+                )
+            ): vol.All(vol.Coerce(int), vol.Range(min=10, max=180)),
+            vol.Required(
+                CONF_RECOVERY_POLICY, default=options.get(
+                    CONF_RECOVERY_POLICY, DEFAULT_RECOVERY_POLICY
+                )
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=["notify", "trigger"])
+            ),
+        })

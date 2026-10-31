@@ -3,8 +3,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Adaptive Alarm (development preview)",
-        "description": "Select the minimum-route contacts and lock. This preview does not activate an alarm or siren.",
+        "title": "Adaptive Alarm — safe preview",
+        "description": "Select the entry lock and five contacts. Only a simulated alarm panel will be created: no siren, RF or lock services are called.",
         "data": {
           "entry_contact": "Entry door contact",
           "entry_lock": "Entry door lock",
@@ -16,7 +16,31 @@
       }
     },
     "error": {
-      "duplicate_entities": "Each contact must use a different entity."
+      "duplicate_entities": "Contacts must use different entities."
+    },
+    "abort": {
+      "already_configured": "Adaptive Alarm has already been configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Adaptive Alarm — monitored zones",
+        "description": "Extra contacts and vibration sensors. All outputs remain disabled (simulation-only).",
+        "data": {
+          "extra_contacts": "Additional window and contact sensors",
+          "vibration_sensors": "Vibration sensors (optional)",
+          "storm_sensor": "Thunderstorm binary sensor (optional)",
+          "arming_delay": "Exit delay (seconds)",
+          "vibration_profile": "Vibration profile",
+          "vibration_debounce": "Ignore repeated impulses within (seconds)",
+          "vibration_window": "Vibration confirmation window (seconds)",
+          "recovery_policy": "Protected sensor returns online already open"
+        }
+      }
+    },
+    "error": {
+      "duplicate_entities": "Select distinct entities for contacts and vibration."
     }
   }
 }

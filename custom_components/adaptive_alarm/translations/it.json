@@ -3,8 +3,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Adaptive Alarm (anteprima di sviluppo)",
-        "description": "Seleziona i contatti dei percorsi minimi e la serratura. Questa anteprima non attiva alcun allarme o sirena.",
+        "title": "Adaptive Alarm — anteprima sicura",
+        "description": "Seleziona serratura e cinque contatti minimi. Verrà creato un pannello simulato: nessun comando a sirena, RF o serratura.",
         "data": {
           "entry_contact": "Contatto porta ingresso",
           "entry_lock": "Serratura ingresso",
@@ -16,7 +16,31 @@
       }
     },
     "error": {
-      "duplicate_entities": "Ogni contatto deve usare un'entità diversa."
+      "duplicate_entities": "I contatti devono utilizzare entità diverse."
+    },
+    "abort": {
+      "already_configured": "Adaptive Alarm è già configurato."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Adaptive Alarm — zone monitorate",
+        "description": "Contatti aggiuntivi e sensori di vibrazione. Le uscite fisiche rimangono disabilitate (solo simulazione).",
+        "data": {
+          "extra_contacts": "Finestre e contatti aggiuntivi",
+          "vibration_sensors": "Sensori di vibrazione (facoltativi)",
+          "storm_sensor": "Sensore temporale (facoltativo)",
+          "arming_delay": "Ritardo di inserimento (secondi)",
+          "vibration_profile": "Profilo vibrazioni",
+          "vibration_debounce": "Filtro impulsi ripetuti (secondi)",
+          "vibration_window": "Finestra di conferma vibrazioni (secondi)",
+          "recovery_policy": "Sensore protetto che ritorna online già aperto"
+        }
+      }
+    },
+    "error": {
+      "duplicate_entities": "Utilizza entità distinte per contatti e vibrazioni."
     }
   }
 }
