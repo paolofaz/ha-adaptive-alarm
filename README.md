@@ -2,7 +2,7 @@
 
 **Adaptive protection for Home Assistant** · HACS-installable · Open source (MIT)
 
-> **v0.2.1 alpha — SIMULATION ONLY.** This integration can be installed and its alarm panel can be armed/disarmed to test the behavior of real sensors, but **it cannot control a siren, light, lock, radio receiver, MQTT device or other physical actuator. It is NOT an operational security system.** Keep your existing alarm running while testing, and do not automate its outputs from these preview events.
+> **v0.3.0 alpha — SIMULATION ONLY.** This integration can be installed and its alarm panel can be armed/disarmed to test the behavior of real sensors, but **it cannot control a siren, light, lock, radio receiver, MQTT device or other physical actuator. It is NOT an operational security system.** Keep your existing alarm running while testing, and do not automate its outputs from these preview events.
 
 ## Install with HACS
 
@@ -20,10 +20,12 @@ The GitHub repository is public, and only the one custom component under `custom
 
 You can arm when **the entry contact is closed**, **the door lock is locked**, **and** one of these minimum coverage routes holds:
 
-- **Route A:** living-room **and** bathroom shutters closed.
-- **Route B:** living-room **and** bathroom windows closed.
+- **Route A:** living-room shutter + bathroom shutter.
+- **Route B:** living-room window + bathroom window.
+- **Route C:** living-room window + bathroom shutter.
+- **Route D:** living-room shutter + bathroom window.
 
-Both routes may be valid. A missing, unknown or unavailable contact is never considered closed.
+In other words, **entry door closed AND lock locked AND (sala shutter OR sala window) AND (bagno shutter OR bagno window)**. Several routes may be valid at once. A missing, unknown or unavailable contact never counts as closed. You do **not** need to recreate the integration: previously configured entities remain in use.
 
 The exit delay is 60 seconds by default. Eligibility is checked at both the initial arm request **and** the final commit. **Protection is frozen at the end of the exit delay:** every closed contact is protected and every open/offline contact is excluded for the *entire* session, even if it later closes and reopens (e.g. wind). To include a previously excluded contact, **disarm and re-arm** after closing it. Protected contacts remain protected until disarm.
 
@@ -43,7 +45,9 @@ The alarm entity attributes include its session identifier, protected and exclud
 
 ## Vibration engine (optional)
 
-Configure vibration binary sensors in Options. A transition from `off` to `on` counts as an impulse. Profiles:
+In **Configure → Options**, you can now define up to **three vibration sensor/contact pairs** (`Vibration 1/2/3` and its linked contact). Choose **exactly one monitored contact** for each vibration sensor: e.g. entry vibration → entry contact, sala vibration → actual shutter/window to which it belongs, bagno vibration → actual shutter/window. An incomplete pair is rejected; pulses from sensors linked to excluded contacts **do not count**. Vibration sensors configured under the old unpaired option are intentionally not enabled until they receive explicit associations.
+
+A transition from `off` to `on` counts as an impulse. Profiles:
 
 - `balanced`: two valid impulses within the window.
 - `cross`: two different sensors or three impulses on one sensor.
@@ -51,7 +55,7 @@ Configure vibration binary sensors in Options. A transition from `off` to `on` c
 
 Default debounce is three seconds per sensor and confirmation window 60 seconds. If the optional thunderstorm sensor is active, one grace allowance applies to repeated impulses from one sensor; confirmation from a different sensor bypasses this allowance.
 
-**Vibration-to-perimeter-zone association is not yet configurable.** Leave vibration sensors unselected if you are not deliberately testing their behavior. There is no physical siren control even if a simulated trigger occurs.
+**Important:** one vibration sensor currently has one associated contact. If it physically monitors multiple elements, select the one it is actually mounted on; do not infer that it protects both. Vibration detection is simulated and does not activate a physical siren.
 
 ## Debugging and safe notifications
 

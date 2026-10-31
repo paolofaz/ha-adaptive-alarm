@@ -1,6 +1,6 @@
 # Safety / security boundaries
 
-This is **v0.2.1 alpha, SIMULATION ONLY**.
+This is **v0.3.0 alpha, SIMULATION ONLY**.
 
 - No service calls to sirens, lights, relays, locks, MQTT, Telegram or notifications.
 - RF guest unlock/disarm is not implemented; never upload personal codes.
@@ -14,3 +14,6 @@ This is **v0.2.1 alpha, SIMULATION ONLY**.
 The integration is not evaluated or certified as a security system. Before a future operational release: integration tests on supported Home Assistant versions, hardware watchdog checks, secure disarm authorization, backup and rollback validation, and a complete end-to-end failure-mode review are necessary.
 
 - A sensor open or unavailable at the arming commit remains **excluded** throughout the session, regardless of later closures. This prevents wind-induced false alarms, but the contact is **not monitored for openings** until the next disarm and re-arm. Review the excluded-zone list.
+
+- A vibration sensor counts only when explicitly paired to a contact that is protected in the frozen session. Map sensors to the contact they physically monitor; never guess mappings.
+- The minimum arming condition admits mixed sala/bagno pairs. Door contact closed and door lock locked are always required.

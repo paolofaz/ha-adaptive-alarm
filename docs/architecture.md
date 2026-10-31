@@ -1,4 +1,4 @@
-# Architecture — v0.2.1 alpha
+# Architecture — v0.3.0 alpha
 
 ## Boundaries
 
@@ -9,7 +9,7 @@
 
 ### Minimum eligibility
 
-`entry_contact_closed AND lock_locked AND ((shutter_living_closed AND shutter_bath_closed) OR (window_living_closed AND window_bath_closed))`.
+`entry_contact_closed AND lock_locked AND (shutter_living_closed OR window_living_closed) AND (shutter_bath_closed OR window_bath_closed)`.
 
 ### State phases
 
@@ -23,14 +23,14 @@ The Store document contains a versioned schema, phase, active session identifier
 
 ### Event model
 
-Physical contact updates and vibration impulses enter one controller under an async lock. Every tick serializes with sensor events. **Zone membership is frozen at the end of the arming countdown:** contacts open or offline at commit stay excluded, even if later closed for hours. Previously excluded contacts only become protected after disarming and starting a new session. Restart restores the same saved zone set.
+Physical contact updates and vibration impulses enter one controller under an async lock. Vibration is accepted only if its explicitly associated contact belongs to the active session's protected set; legacy unpaired sensor IDs are ignored. Every tick serializes with sensor events. **Zone membership is frozen at the end of the arming countdown:** contacts open or offline at commit stay excluded, even if later closed for hours. Previously excluded contacts only become protected after disarming and starting a new session. Restart restores the same saved zone set.
 
 `adaptive_alarm_event` is diagnostic and must not be used as a real siren command until the actuation design and safety reviews are complete.
 
 ## Incomplete by design (future milestones)
 
 - A user-configurable secure disarm policy for real deployment.
-- Explicit associations between vibrations and physical zones.
+- More than three vibration/contact pairs and optionally one-to-many associations. Current three vibration slots require a specific protected contact per sensor.
 - Siren output confirmation, tamper/power/battery supervision.
 - Real-runtime Home Assistant fixtures, interrupted-store tests and startup races.
 - A fully supervised migration away from the YAML package.
