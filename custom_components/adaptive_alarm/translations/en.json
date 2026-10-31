@@ -3,15 +3,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Adaptive Alarm — safe preview",
-        "description": "Select the entry lock and five contacts. Only a simulated alarm panel will be created: no siren, RF or lock services are called.",
+        "title": "Adaptive Alarm (simulation)",
+        "description": "Create an alarm configuration first; configure mandatory sensors, alternative groups, optional zones and siren afterward via Configure. This alpha NEVER operates a siren.",
         "data": {
-          "entry_contact": "Entry door contact",
-          "entry_lock": "Entry door lock",
-          "shutter_living": "Living room shutter",
-          "shutter_bath": "Bathroom shutter",
-          "window_living": "Living room window",
-          "window_bath": "Bathroom window"
+          "name": "Integration name"
         }
       }
     },
@@ -25,26 +20,88 @@
   "options": {
     "step": {
       "init": {
-        "title": "Adaptive Alarm — monitored zones",
-        "description": "Vibrations automatically belong only to the entry door and two windows (never shutters). With a positive exit delay, final eligibility is checked at the deadline only. Simulation: no physical commands.",
+        "title": "Adaptive Alarm",
+        "menu_options": {
+          "mandatory": "Mandatory contacts and optional lock",
+          "group": "Add or edit an alternative group",
+          "remove_group": "Remove an alternative group",
+          "optional": "Optional contacts",
+          "vibrations": "Vibration sensors and their physical contacts",
+          "siren": "Optional siren (INERT / DISABLED)",
+          "timing": "Timing, storm and recovery policy"
+        }
+      },
+      "mandatory": {
+        "title": "Mandatory contacts and optional lock",
+        "description": "All mandatory contacts must be closed at the end of arming. A lock is optional and, if chosen, must be locked. The integration cannot arm without at least one mandatory contact or alternative group.",
         "data": {
-          "extra_contacts": "Additional window and contact sensors",
-          "storm_sensor": "Thunderstorm binary sensor (optional)",
+          "mandatory": "Required binary contacts (all closed)",
+          "lock": "Optional door lock (must be locked)"
+        }
+      },
+      "group": {
+        "title": "Add or edit an alternative group",
+        "description": "Define a named OR group: at least one of its contacts must be closed. Every configured group must pass. Use the same group name again to edit it.",
+        "data": {
+          "name": "Group name (same name edits)",
+          "contacts": "Alternative contacts (at least one closed)"
+        }
+      },
+      "remove_group": {
+        "title": "Remove an alternative group",
+        "description": "Remove the selected OR group.",
+        "data": {
+          "name": "Group to remove"
+        }
+      },
+      "optional": {
+        "title": "Optional contacts",
+        "description": "Optional contacts do not prevent arming, but closed ones are frozen into the protected session.",
+        "data": {
+          "optional": "Other monitored contacts (not required to arm)"
+        }
+      },
+      "vibrations": {
+        "title": "Vibration sensors and their physical contacts",
+        "description": "For each sensor, select the exact door/window contact where it is physically mounted. A shutter cannot stand in for an open window. Three slots are available.",
+        "data": {
+          "sensor_1": "Vibration sensor 1",
+          "contact_1": "Physical contact monitored by vibration 1",
+          "sensor_2": "Vibration sensor 2",
+          "contact_2": "Physical contact monitored by vibration 2",
+          "sensor_3": "Vibration sensor 3",
+          "contact_3": "Physical contact monitored by vibration 3"
+        }
+      },
+      "siren": {
+        "title": "Optional siren (INERT / DISABLED)",
+        "description": "Save an optional siren or switch entity for future use. NO service calls will be made, even when simulated triggering occurs. Leave empty during testing.",
+        "data": {
+          "siren": "Optional siren (configuration only, NEVER activated)"
+        }
+      },
+      "timing": {
+        "title": "Timing, storm and recovery policy",
+        "description": "A positive exit delay checks minimum conditions ONLY at the deadline; delay zero checks immediately.",
+        "data": {
           "arming_delay": "Exit delay (seconds)",
           "vibration_profile": "Vibration profile",
-          "vibration_debounce": "Ignore repeated impulses within (seconds)",
+          "vibration_debounce": "Vibration debounce (seconds)",
           "vibration_window": "Vibration confirmation window (seconds)",
-          "recovery_policy": "Protected sensor returns online already open",
-          "vibration_entry": "Entry-door vibration sensor (optional)",
-          "vibration_window_living": "Living-room window vibration sensor (optional)",
-          "vibration_window_bath": "Bathroom window vibration sensor (optional)"
+          "recovery_policy": "Return-online policy",
+          "storm_sensor": "Storm sensor (optional)"
         }
       }
     },
     "error": {
-      "duplicate_entities": "Select distinct entities for contacts and vibration.",
-      "unpaired_vibration": "Each vibration sensor requires one linked contact (and vice versa).",
-      "invalid_vibration_zone": "The linked contact must be one of the monitored alarm contacts."
+      "invalid_rules": "Duplicate sensors, invalid group or incompatible rule. Each contact may appear only once across mandatory/alternative/optional lists.",
+      "unpaired_vibration": "Every vibration sensor must have a physical contact (and vice versa).",
+      "invalid_vibration_zone": "Linked physical contact must be in monitored contacts.",
+      "duplicate_entities": "Duplicate or conflicting vibration sources."
+    },
+    "abort": {
+      "active_session": "Disarm the alarm before changing protection rules or settings.",
+      "no_groups": "No alternative groups to remove."
     }
   }
 }
