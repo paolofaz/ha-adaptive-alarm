@@ -146,11 +146,11 @@
       },
       "deterrent": {
         "title": "Luci deterrenti al primo colpo (opzionali)",
-        "description": "Se abiliti le luci, il primo colpo valido può inviare light.turn_on soltanto alle luci inizialmente spente. Lo spegnimento temporizzato è un consenso SEPARATO, OFF per impostazione predefinita e conservativo: non spegne luci già accese o modificate manualmente, né durante l'allarme simulato. Dopo un riavvio lascia le luci accese e richiede controllo manuale. Non comanda la sirena.",
+        "description": "Per accendere le luci al primo colpo, abilita l'accensione e seleziona una o più entità light. Per farle SPEGNERE dopo un tempo, devi attivare anche «Spegnimento automatico»: è una seconda opzione distinta e per impostazione predefinita OFF. Imposta il ritardo (predefinito 120 s). Adaptive Alarm osserva fino a 15 secondi la conferma di accensione da Home Assistant; se non la riceve, NON spegne la luce automaticamente e segnala il motivo. Non spegne luci che erano già accese, modificate manualmente o durante l'allarme simulato. Dopo un riavvio lo spegnimento non viene ripreso automaticamente. Sirena sempre inattiva.",
         "data": {
           "deterrent_enabled": "Abilita davvero l'accensione delle luci al preallarme",
           "deterrent_lights": "Luci deterrenti (solo dominio light)",
-          "deterrent_auto_off": "Abilita spegnimento automatico sicuro delle luci",
+          "deterrent_auto_off": "Abilita ANCHE spegnimento automatico dopo il tempo impostato",
           "deterrent_off_delay": "Spegnimento dopo (secondi, 15–3600)"
         }
       },

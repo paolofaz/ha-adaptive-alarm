@@ -85,3 +85,33 @@ All notification targets and lighting outputs default to disabled on existing in
 - **Offline contact faults** now also send phone notifications when external notifications are enabled. The offline recovery option **notify** means *report a recovered-but-open protected contact without triggering*, not "configure phone push". **trigger** means *raise simulated alarm if a protected contact returns online already open*. Ordinary `closed → open` on a protected contact still triggers regardless of this option.
 - Timing fields have visible numeric inputs, with explanations for debounce, the hit confirmation window, the 2-or-3 threshold, and the offline-return policy. Recovery choices are localized in IT/EN while their stored identifiers remain unchanged.
 - No physical siren, switch, lock, RF or MQTT actions are added; lighting and push remain opt-in as in v0.6.0.
+
+## v0.6.2 — delayed light-state acknowledgement bug fix
+
+The v0.6.0–0.6.1 timer could leave lights on even when auto-off was enabled:
+`light.turn_on` had completed, but the light entity could still be `off` at
+the instant the integration checked its state. Because no ownership record
+was created, no automatic light-off was subsequently scheduled.
+
+Starting in v0.6.2, if the light was OFF before the integration's own
+opt-in `light.turn_on` request, the adapter monitors its Home Assistant
+state for up to **15 seconds**, including delayed `off → on` events.
+Only a confirmed transition with the unchanged original OFF-state timestamp
+creates a temporary auto-off lease. State change, different episode, no
+confirmation within the window, or HA restart => **fail safe: do not send
+light.turn_off**. On an unconfirmed timer, the integration emits
+`deterrent_light_tracking_unconfirmed` and an optional phone notification.
+The Health sensor exposes `deterrent_auto_off_enabled`,
+`deterrent_lights_waiting_for_on` and
+`deterrent_lights_awaiting_auto_off` for troubleshooting.
+
+IMPORTANT: **light turn-on** and **automatic light turn-off** are two separate
+settings. Auto-off is OFF by default, including after upgrading from v0.5.x.
+If auto-off remains disabled, the light will correctly stay on by design.
+With auto-off enabled, default timer is 120 seconds. Never delete your
+integration entry to update; HACS update + Home Assistant restart suffices.
+
+During a simulated alarm `triggered` the light-off timer remains suspended;
+disarm to permit conservative cleanup. It is not possible to prove physical
+actuation or perfect command ownership from HA state alone; users should
+still supervise real light behavior.

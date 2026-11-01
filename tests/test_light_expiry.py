@@ -2,7 +2,9 @@
 
 import unittest
 
-from custom_components.adaptive_alarm.engine.light_expiry import LightLease, may_turn_off
+from custom_components.adaptive_alarm.engine.light_expiry import (
+    LIGHT_ACK_TIMEOUT, LightLease, PendingLight, confirm_transition, may_turn_off,
+)
 
 
 class LightLeaseTests(unittest.TestCase):
@@ -29,6 +31,65 @@ class LightLeaseTests(unittest.TestCase):
                     self.lease, state=state, last_updated=updated,
                     alarm_triggered=triggered, current_episode=episode,
                 ))
+
+    def test_late_state_change_can_be_acknowledged(self):
+        pending = PendingLight(
+            entity_id="light.sala",
+            baseline_updated="2026-11-01T10:00:00+00:00",
+            ack_deadline=115,
+            off_deadline=220,
+            episode="episode-1",
+        )
+        lease = confirm_transition(
+            pending, now=106,
+            old_state="off",
+            old_updated="2026-11-01T10:00:00+00:00",
+            new_state="on",
+            new_updated="2026-11-01T10:00:06+00:00",
+            current_episode="episode-1",
+        )
+        self.assertIsNotNone(lease)
+        self.assertEqual(lease.deadline, 220)
+        self.assertTrue(may_turn_off(
+            lease, state="on", last_updated=lease.last_updated,
+            current_episode="episode-1", alarm_triggered=False,
+        ))
+
+    def test_pending_lease_is_rejected_if_incorrect_or_late(self):
+        pending = PendingLight(
+            entity_id="light.sala",
+            baseline_updated="start",
+            ack_deadline=115,
+            off_deadline=220,
+            episode="episode-1",
+        )
+        valid = {
+            "now": 105,
+            "old_state": "off",
+            "old_updated": "start",
+            "new_state": "on",
+            "new_updated": "finish",
+            "current_episode": "episode-1",
+        }
+        changes = [
+            {"now": 116},
+            {"old_state": "on"},
+            {"old_updated": "someone_changed_the_light"},
+            {"new_state": "off"},
+            {"new_state": "unavailable"},
+            {"new_updated": "start"},
+            {"new_updated": None},
+            {"current_episode": "episode-2"},
+            {"current_episode": None},
+        ]
+        for change in changes:
+            with self.subTest(change=change):
+                self.assertIsNone(confirm_transition(
+                    pending, **(valid | change)
+                ))
+
+    def test_ack_window_is_bounded(self):
+        self.assertEqual(LIGHT_ACK_TIMEOUT, 15)
 
     def test_serialization_and_reject_siren(self):
         self.assertEqual(LightLease.from_dict(self.lease.to_dict()), self.lease)

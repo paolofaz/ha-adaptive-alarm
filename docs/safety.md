@@ -39,3 +39,16 @@ This is an early preview, **not a certified or operational security alarm**. Kee
 - HA restart / integration reload cancels pending ownership rather than guessing. Notification warns that lights may need manual shutdown. Some real lights report delayed changes and may therefore remain on: this is intentional and safer than turning off an unrelated light.
 - Auto-off duration defaults to 120 s if separately enabled, adjustable between 15 and 3600 s; it cannot be enabled through the siren field. Light.turn_off is the only additional physical action in this version.
 - Threshold 1 is explicitly forbidden by the engine. All tests must reject it.
+
+## v0.6.2 — asynchronous light acknowledgement
+
+Previous light turn-on service completion is not proof the light entity
+is already reporting ON. Starting in v0.6.2, the controller watches
+for up to 15 seconds for a verified state transition from the sampled OFF
+state after its own activation request. Pending evidence by itself gives
+NO authority to turn off a light. Only a confirmed ON lease that remains
+unchanged until expiry may turn it OFF. A missing, reordered, delayed beyond
+15 s, or conflicting transition causes a warning and never a blind OFF.
+A successful request does not establish secure physical command provenance;
+external manual changes can occur even during the acknowledgement window.
+Sirens and switches still have zero actuation paths.

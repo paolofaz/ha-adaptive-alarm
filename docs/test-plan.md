@@ -45,3 +45,23 @@ This checklist is a plan for your on-site testing, not a report of physical test
 10. Force one missing notify target and a working second target: delivery requests continue to the second target; a `notification_failed` diagnostic event records the failure.
 
 This checklist requires **physical Home Assistant testing**, not just unit tests or HACS/hassfest validators.
+
+## v0.6.2 — delayed state acknowledgement regression
+
+1. Ensure **both** deterrent light activation and the separate **safe
+   automatic turn-off** toggle are enabled. Set 30 s for the test.
+2. Starting with a light OFF, trigger one valid vibration prealert.
+   If Home Assistant reports the light ON 1–5 s after service completion,
+   the `deterrent_light_tracking_confirmed` diagnostic event must appear,
+   and the Health sensor should list it in `deterrent_lights_awaiting_auto_off`.
+3. After 30 s, if the light was not altered, verify
+   `deterrent_light_off_requested` and actual light OFF.
+4. With auto-off disabled, verify the light intentionally remains ON.
+5. With a light originally ON, no automatic turn-off may occur.
+6. Artificially delay the ON state confirmation beyond 15 s; the integration
+   must emit `deterrent_light_tracking_unconfirmed` and leave the light
+   alone, with a phone warning when configured.
+7. Change brightness or toggle the light manually while a timer exists:
+   no automatic turn-off may occur. Triggered simulated alarm must postpone
+   turn-off until disarm; restart must invalidate prior ownership.
+8. Siren remains inert. Use only a harmless test light for live testing.
