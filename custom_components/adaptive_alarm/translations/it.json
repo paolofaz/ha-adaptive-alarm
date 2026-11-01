@@ -49,7 +49,7 @@
       },
       "mandatory": {
         "title": "Contatti obbligatori e serratura facoltativa",
-        "description": "Tutti i contatti indicati sotto sono obbligatori. La serratura è facoltativa ma, se selezionata, deve essere bloccata. **Anche tutti i gruppi sono obbligatori**: in ciascun gruppo basta almeno UN contatto chiuso.\\n\\n**Gruppi già configurati (sola lettura):** {groups_summary}\\n\\nPer aggiungere o modificare un gruppo torna al menu e scegli «Aggiungi o modifica gruppo obbligatorio». Non è necessario duplicare i contatti dei gruppi nell'elenco dei contatti obbligatori.",
+        "description": "Tutti i contatti indicati sotto sono obbligatori. La serratura è facoltativa ma, se selezionata, deve essere bloccata. **Anche tutti i gruppi sono obbligatori**: in ciascun gruppo basta almeno UN contatto chiuso.\n\n**Gruppi già configurati (sola lettura):** {groups_summary}\n\nPer aggiungere o modificare un gruppo torna al menu e scegli «Aggiungi o modifica gruppo obbligatorio». Non è necessario duplicare i contatti dei gruppi nell'elenco dei contatti obbligatori.",
         "data": {
           "mandatory": "Contatti sempre obbligatori (tutti chiusi)",
           "lock": "Serratura facoltativa (deve essere bloccata)"
@@ -99,7 +99,7 @@
       },
       "timing": {
         "title": "Tempi, soglia vibrazioni e recupero offline",
-        "description": "Queste impostazioni valgono durante l'inserimento e quando l'allarme è attivo. I colpi vengono contati solo sullo STESSO sensore e solo se il relativo contatto era protetto. Un solo colpo genera il preallarme; 2 o 3 colpi validi entro la finestra fanno scattare l'allarme simulato.\\n\\n**Recupero offline** riguarda soltanto un contatto PROTETTO che, dopo essere risultato non disponibile, torna online già aperto. Non riguarda i destinatari delle notifiche sul telefono.",
+        "description": "Queste impostazioni valgono durante l'inserimento e quando l'allarme è attivo. I colpi vengono contati solo sullo STESSO sensore e solo se il relativo contatto era protetto. Un solo colpo genera il preallarme; 2 o 3 colpi validi entro la finestra fanno scattare l'allarme simulato.\n\n**Recupero offline** riguarda soltanto un contatto PROTETTO che, dopo essere risultato non disponibile, torna online già aperto. Non riguarda i destinatari delle notifiche sul telefono.",
         "data": {
           "arming_delay": "Ritardo inserimento (secondi)",
           "vibration_debounce": "Filtro colpi ripetuti (secondi)",

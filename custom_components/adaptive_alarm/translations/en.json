@@ -49,7 +49,7 @@
       },
       "mandatory": {
         "title": "Mandatory contacts and optional lock",
-        "description": "Every contact below is mandatory. The lock is optional, but if selected must be locked. **Every alternative group is also required**: at least ONE contact in each group must be closed.\\n\\n**Configured groups (read-only):** {groups_summary}\\n\\nTo add or edit a group return to the menu and choose Add or edit required group. Do not duplicate group members in the mandatory contacts list.",
+        "description": "Every contact below is mandatory. The lock is optional, but if selected must be locked. **Every alternative group is also required**: at least ONE contact in each group must be closed.\n\n**Configured groups (read-only):** {groups_summary}\n\nTo add or edit a group return to the menu and choose Add or edit required group. Do not duplicate group members in the mandatory contacts list.",
         "data": {
           "mandatory": "Required binary contacts (all closed)",
           "lock": "Optional door lock (must be locked)"
@@ -99,7 +99,7 @@
       },
       "timing": {
         "title": "Timing, vibration threshold and recovery",
-        "description": "These settings control arming and vibration evaluation. Hits count only from the SAME sensor when its linked contact is protected. One hit generates a prealert; 2 or 3 valid hits within the confirmation window trigger the simulated alarm.\\n\\n**Offline recovery** applies only when a PROTECTED contact comes back online already open after being unavailable. It does not configure phone notification destinations.",
+        "description": "These settings control arming and vibration evaluation. Hits count only from the SAME sensor when its linked contact is protected. One hit generates a prealert; 2 or 3 valid hits within the confirmation window trigger the simulated alarm.\n\n**Offline recovery** applies only when a PROTECTED contact comes back online already open after being unavailable. It does not configure phone notification destinations.",
         "data": {
           "arming_delay": "Exit delay (seconds)",
           "vibration_debounce": "Repeated-hit filter (seconds)",
