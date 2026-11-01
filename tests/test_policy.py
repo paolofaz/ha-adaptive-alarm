@@ -132,25 +132,33 @@ class SessionTests(unittest.TestCase):
         session = new_session("x", P, states(), lock_locked=True)
         self.assertEqual(classify_opening(session, "studio", O, O), EventAction.IGNORE)
 
-    def test_offline_recovery_policy(self):
+    def test_protected_open_after_offline_always_triggers(self):
         session = new_session("x", P, states(), lock_locked=True)
+        for policy in (RecoveryPolicy.NOTIFY, RecoveryPolicy.TRIGGER):
+            with self.subTest(policy=policy):
+                self.assertEqual(
+                    classify_opening(
+                        session, "door", U, O, recovery_policy=policy,
+                    ),
+                    EventAction.TRIGGER,
+                )
         self.assertEqual(
-            classify_opening(session, "door", U, O),
-            EventAction.CRITICAL_NOTICE,
+            classify_opening(session, "door", C, U),
+            EventAction.IGNORE,
         )
         self.assertEqual(
-            classify_opening(session, "door", U, O, recovery_policy=RecoveryPolicy.TRIGGER),
-            EventAction.TRIGGER,
+            classify_opening(session, "door", U, C),
+            EventAction.IGNORE,
         )
 
-    def test_startup_never_guesses_intrusion(self):
+    def test_protected_contact_open_at_startup_also_triggers(self):
         session = new_session("x", P, states(), lock_locked=True)
         self.assertEqual(
             classify_opening(
                 session, "door", C, O,
-                recovery_policy=RecoveryPolicy.TRIGGER, startup=True
+                recovery_policy=RecoveryPolicy.NOTIFY, startup=True,
             ),
-            EventAction.CRITICAL_NOTICE,
+            EventAction.TRIGGER,
         )
         self.assertEqual(
             startup_faults(session, {"door": O}),
