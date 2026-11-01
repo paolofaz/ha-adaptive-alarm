@@ -34,8 +34,18 @@ CONF_RECOVERY_POLICY = "recovery_policy"
 
 DEFAULT_ARMING_DELAY = 60
 DEFAULT_VIBRATION_PROFILE = "balanced"
-DEFAULT_VIBRATION_WINDOW = 60
+DEFAULT_VIBRATION_WINDOW = 20
 DEFAULT_VIBRATION_DEBOUNCE = 3
 DEFAULT_RECOVERY_POLICY = "notify"
 
 EVENT_ADAPTIVE_ALARM = "adaptive_alarm_event"
+
+# New per-device confirmation, independent of deprecated global profiles.
+CONF_VIBRATION_THRESHOLD = "vibration_threshold"
+DEFAULT_VIBRATION_THRESHOLD = 2
+
+# Output opt-in: ONLY light-domain entities and ONLY on first valid prealert.
+# Sirens, switches, locks and RF remain permanently inert.
+CONF_DETERRENT_LIGHTS = "deterrent_lights"
+CONF_DETERRENT_ENABLED = "deterrent_enabled"
+DEFAULT_DETERRENT_ENABLED = False

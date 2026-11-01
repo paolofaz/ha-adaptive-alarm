@@ -38,7 +38,6 @@ class AlarmMachine:
     fault: str = ""
     vibration_hits: list[tuple[float, str]] = field(default_factory=list)
     vibration_last: dict[str, float] = field(default_factory=dict)
-    storm_grace_used: bool = False
     vibration_prealarms: int = 0
     vibration_filtered: int = 0
 
@@ -154,12 +153,12 @@ class AlarmMachine:
 
     def vibration(
         self, zone: str, *, now: float, protected_zone: str | None = None,
-        profile: str = "balanced",
-        debounce: float = 3, window: float = 60, storm: bool = False,
+        threshold: int = 2, debounce: float = 3, window: float = 20,
     ) -> list[dict[str, Any]]:
-        """Score impulses under a configured profile with one storm allowance.
+        """Confirm ONLY repeated rising edges from the same physical sensor.
 
-        A cross-sensor confirmation is never suppressed by a storm allowance.
+        The first valid hit emits a prealert. A different sensor never adds
+        confidence to this source, even in the same time window.
         """
         if self.phase != Phase.ARMED_AWAY or self.session is None:
             return []
@@ -169,6 +168,8 @@ class AlarmMachine:
                 "zone": zone,
                 "reason": "linked_contact_not_protected",
             }]
+        if threshold not in (2, 3) or debounce < 0 or window <= 0:
+            raise ValueError("Invalid vibration confirmation settings")
         if now - self.vibration_last.get(zone, float("-inf")) < debounce:
             self.vibration_filtered += 1
             return [{"type": "vibration_filtered", "zone": zone}]
@@ -176,34 +177,40 @@ class AlarmMachine:
         events: list[dict[str, Any]] = []
         self._expire_vibrations(now, events, window=window)
         self.vibration_hits.append((now, zone))
-        n = len(self.vibration_hits)
-        cross = len({name for _, name in self.vibration_hits}) >= 2
-        threshold = 3 if profile == "cautious" else 2
-        if profile == "cross" and not cross:
-            threshold = 3
+        n = sum(1 for _, source in self.vibration_hits if source == zone)
         if n == 1:
             self.vibration_prealarms += 1
-            events.append({"type": "vibration_prealert", "zone": zone})
-        if n >= threshold:
-            if storm and not cross and not self.storm_grace_used:
-                self.storm_grace_used = True
-                self.vibration_hits = [(now, zone)]
-                events.append({"type": "vibration_storm_grace", "zone": zone})
-            else:
-                events.extend(self.trigger(f"vibration:{zone}"))
+            events.append({
+                "type": "vibration_prealert",
+                "zone": zone,
+                "protected_contact": protected_zone,
+                "threshold": threshold,
+            })
+        elif n >= threshold:
+            events.extend(self.trigger(f"vibration:{zone}"))
+        else:
+            events.append({
+                "type": "vibration_progress",
+                "zone": zone,
+                "count": n,
+                "threshold": threshold,
+            })
         return events
 
     def _expire_vibrations(
-        self, now: float, events: list[dict[str, Any]], *, window: float = 60,
+        self, now: float, events: list[dict[str, Any]], *, window: float = 20,
     ) -> None:
-        if self.vibration_hits and now - self.vibration_hits[0][0] >= window:
-            self._clear_vibration()
+        kept = [
+            (seen, source) for seen, source in self.vibration_hits
+            if 0 <= now - seen < window
+        ]
+        if len(kept) < len(self.vibration_hits):
+            self.vibration_hits = kept
             events.append({"type": "vibration_expired"})
 
     def _clear_vibration(self) -> None:
         self.vibration_hits.clear()
         self.vibration_last.clear()
-        self.storm_grace_used = False
 
     def snapshot(self) -> dict[str, Any]:
         """Persist critical state in one structured value."""
