@@ -21,7 +21,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import (
     CONF_ARMING_DELAY, CONF_ENTRY_CONTACT, CONF_ENTRY_LOCK,
-    CONF_EXTRA_CONTACTS, CONF_RECOVERY_POLICY,
+    CONF_EXTRA_CONTACTS,
     CONF_SHUTTER_BATH, CONF_SHUTTER_LIVING, CONF_STORM_SENSOR,
     CONF_VIBRATION_DEBOUNCE, CONF_VIBRATION_PROFILE,
     CONF_VIBRATION_WINDOW, CONF_VIBRATION_THRESHOLD, DEFAULT_VIBRATION_THRESHOLD,
@@ -30,10 +30,10 @@ from .const import (
     CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
     CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
     VIBRATION_ASSIGNMENTS,
-    DEFAULT_ARMING_DELAY, DEFAULT_RECOVERY_POLICY, DEFAULT_VIBRATION_DEBOUNCE,
+    DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DOMAIN, EVENT_ADAPTIVE_ALARM,
 )
-from .engine import RecoveryPolicy, ZoneState, evaluate_eligibility
+from .engine import ZoneState, evaluate_eligibility
 from .engine.configurable import rules_for_config
 from .engine.runtime import AlarmMachine, Phase
 from .engine.presentation import prealert_text, trigger_text, fault_text
@@ -181,6 +181,9 @@ class AdaptiveAlarmController:
             await self._store.async_save(self.machine.snapshot())
         if recovery:
             _LOGGER.warning("Adaptive Alarm restart: %s", recovery)
+        # Publish the restored state BEFORE startup reconciliation may escalate
+        # an already-OPEN protected contact to TRIGGERED.
+        self._events(recovery)
         # Observe contacts and optional vibrations from one shared listener.
         if self.zones or self.vibrations:
             self._remove_callbacks.append(
@@ -208,8 +211,14 @@ class AdaptiveAlarmController:
             )
         )
         if self.machine.phase == Phase.ARMED_AWAY:
+            # Z2M may have finished restoring an OPEN state before listeners
+            # subscribed. Never miss that alarm or a pending CLOSED contact.
+            current = self._states()
+            restored_events = await self._apply(
+                lambda: self.machine.reconcile(current, now=time.time())
+            )
+            await self._notify_events(restored_events)
             await self._refresh_faults()
-        self._events(recovery)
 
     async def async_stop(self) -> None:
         """Release callbacks; leave persisted session untouched."""
@@ -284,12 +293,9 @@ class AdaptiveAlarmController:
         if zone in self.zones:
             previous = _contact_state(old_state)
             current = _contact_state(new_state)
-            policy = RecoveryPolicy(
-                self.entry.options.get(CONF_RECOVERY_POLICY, DEFAULT_RECOVERY_POLICY)
-            )
             emitted = await self._apply(
                 lambda: self.machine.observed(
-                    zone, previous, current, now=now, recovery_policy=policy
+                    zone, previous, current, now=now
                 )
             )
             await self._notify_events(emitted)
@@ -583,17 +589,21 @@ class AdaptiveAlarmController:
 
     async def async_tick(self) -> None:
         """Handle countdown and prealarm expiry; session zones remain frozen."""
-        await self._apply(
+        states = self._states()
+        now = time.time()
+        events = await self._apply(
             lambda: self.machine.tick(
-                self._states(), locked=self._locked(), now=time.time(),
+                states, locked=self._locked(), now=now,
                 vibration_window=float(
                     self.entry.options.get(
                         CONF_VIBRATION_WINDOW, DEFAULT_VIBRATION_WINDOW
                     )
                 ),
-            )
+            ) + self.machine.reconcile(states, now=now)
         )
-        # Detect missed transitions, but never manufacture an intrusion after startup.
+        # Reconciling OPEN protected contacts also recovers a missed state
+        # event, including right after a restart. Siren remains simulated.
+        await self._notify_events(events)
         await self._refresh_faults()
         await self._expire_deterrent_lights()
 

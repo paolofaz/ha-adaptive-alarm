@@ -65,3 +65,30 @@ This checklist requires **physical Home Assistant testing**, not just unit tests
    no automatic turn-off may occur. Triggered simulated alarm must postpone
    turn-off until disarm; restart must invalidate prior ownership.
 8. Siren remains inert. Use only a harmless test light for live testing.
+
+## v0.7.0 — restored alarm and unavailable Zigbee2MQTT sensors
+
+1. Arm with contacts CLOSED, verify panel `protected_zones`. Restart HA while
+   Z2M sensors are temporarily `unavailable`: no contact may be silently
+   moved into `excluded_zones`. The alarm stays `armed_away` and Health may
+   report `degraded`, but no automatic trigger or siren.
+2. Let protected sensors return CLOSED: verify no alarm or prealarm. Open one
+   afterward: immediate simulated trigger and a cause-specific phone push.
+3. Restart armed, then return one previously protected sensor OPEN (or leave it
+   OPEN before HA listener attaches): it must trigger regardless of any old
+   saved `recovery_policy=notify`.
+4. Re-arm with an OPTIONAL contact initially `unavailable`: it must appear in
+   `pending_zones`. First return CLOSED enrolls it into `protected_zones`.
+   Open it next: trigger. Repeat with first return OPEN: move to
+   `excluded_zones` and never enroll it later in the same session.
+5. Re-arm with a mandatory contact unavailable, or every contact of a required
+   OR group unavailable: **must refuse arming** at the exit deadline.
+6. A window deliberately OPEN at arming remains excluded even if it later
+   closes and re-opens (wind scenario). A paired vibration sensor is ignored
+   unless its physical contact is protected.
+7. Verify legacy v0.6.2 snapshots restore: protected/excluded remain unchanged
+   with zero new pending, and user is not asked to recreate configuration.
+8. Confirm push, deterrent lights, safe auto-off and the inactive physical
+   siren are unchanged.
+
+Use only simulation; physical siren remains unused in this release.

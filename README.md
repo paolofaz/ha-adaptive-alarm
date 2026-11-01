@@ -115,3 +115,40 @@ During a simulated alarm `triggered` the light-off timer remains suspended;
 disarm to permit conservative cleanup. It is not possible to prove physical
 actuation or perfect command ownership from HA state alone; users should
 still supervise real light behavior.
+
+## v0.7.0 — stable protection across Home Assistant / Zigbee2MQTT outages
+
+An active alarm uses a **persisted session** with three distinct sets:
+
+- **Protected:** closed when arming (or later explicitly enrolled from Pending).
+  A protected contact NEVER loses protection when it goes unavailable, including
+  during HA/Z2M restart. If it comes back **closed**, monitoring simply
+  resumes. If it comes back **open**, **simulated alarm triggers immediately**
+  and the phone notification names that contact. Previous `notify` versus
+  `trigger` recovery policy is no longer selectable or applied.
+- **Pending:** a contact was **unknown/unavailable at the instant arming
+  completed**. Provided mandatory contacts and every required alternative group
+  were already satisfied by other closed contacts, this one may join on its
+  **FIRST reported closed state**. First reported open permanently excludes
+  it for the episode. Pending survives HA restart; after joining, protection
+  also survives HA restart.
+- **Excluded:** a contact was **already open at arming**, or Pending first
+  reported open. It stays excluded even if closed and later reopened. This
+  protects the deliberate open-window / wind exception.
+
+**Hard boundary:** a missing mandatory contact or an uncovered mandatory OR
+group still REJECTS arming at the deadline; we never treat an unknown contact
+as a closed minimum barrier. The lock requirement still applies. Existing
+sessions saved by v0.6.2 are restored without inventing Pending entries
+(previously excluded contacts remain excluded until next disarm/re-arm).
+
+The panel and Health sensor now expose `pending_zones` in addition to
+`protected_zones` and `excluded_zones`. Recoveries can emit
+`zone_enrolled` and `zone_excluded` diagnostic events. Temporary offline
+does not itself trigger or send a push. The Health sensor may show a degraded
+state until connectivity is restored.
+
+A restored protected contact that is already OPEN before the HA listener is
+registered is detected by a post-start reconciliation and notified. Periodic
+reconciliation also prevents lost state-change events from silently leaving
+a protected zone open. Physical siren remains **inert**.

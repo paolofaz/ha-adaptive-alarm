@@ -69,13 +69,20 @@ class Session:
     known_zones: frozenset[str]
     protected_zones: frozenset[str]
     initial_routes: tuple[str, ...]
+    # Contacts UNKNOWN at arming, not open. They may join protection ONLY
+    # on their FIRST available CLOSED observation, never after an OPEN.
+    pending_zones: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         if not self.identifier or not self.protected_zones.issubset(self.known_zones):
             raise ValueError("Invalid alarm session")
+        if not self.pending_zones.issubset(self.known_zones):
+            raise ValueError("Unknown pending zones")
+        if self.pending_zones & self.protected_zones:
+            raise ValueError("A zone cannot be protected and pending")
         if not self.initial_routes:
             raise ValueError("A session must have a minimum route")
 
     @property
     def excluded_zones(self) -> frozenset[str]:
-        return self.known_zones - self.protected_zones
+        return self.known_zones - self.protected_zones - self.pending_zones

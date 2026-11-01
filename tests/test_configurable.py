@@ -28,6 +28,64 @@ def rules():
 
 
 class GenericRulesTests(unittest.TestCase):
+    def test_generic_unknown_enrollment_preserves_minimum(self):
+        p = rules()
+        states = {zone: C for zone in p.known_contacts}
+        states["binary_sensor.sala_window"] = U
+        states["binary_sensor.bath_window"] = U
+        states["binary_sensor.garage"] = U
+        e = AlarmMachine(p, p.known_contacts)
+        e.arm(states, locked=True, now=100, delay=0)
+        self.assertEqual(e.phase, Phase.ARMED_AWAY)
+        self.assertEqual(e.session.pending_zones, frozenset({
+            "binary_sensor.sala_window", "binary_sensor.bath_window",
+            "binary_sensor.garage",
+        }))
+        self.assertEqual(e.observed(
+            "binary_sensor.sala_window", U, C, now=101
+        )[0]["type"], "zone_enrolled")
+        self.assertEqual(e.observed(
+            "binary_sensor.bath_window", U, O, now=102
+        )[0]["type"], "zone_excluded")
+        self.assertEqual(e.observed(
+            "binary_sensor.garage", U, C, now=103
+        )[0]["type"], "zone_enrolled")
+        later = AlarmMachine(p, p.known_contacts)
+        later.restore(e.snapshot())
+        self.assertEqual(later.phase, Phase.ARMED_AWAY)
+        self.assertIn("binary_sensor.sala_window", later.session.protected_zones)
+        self.assertIn("binary_sensor.garage", later.session.protected_zones)
+        self.assertIn("binary_sensor.bath_window", later.session.excluded_zones)
+
+    def test_unknown_mandatory_never_satisfies_minimum(self):
+        p = rules()
+        states = {zone: C for zone in p.known_contacts}
+        states["binary_sensor.entry"] = U
+        e = AlarmMachine(p, p.known_contacts)
+        e.arm(states, locked=True, now=100, delay=0)
+        self.assertEqual(e.phase, Phase.DISARMED)
+        self.assertIsNone(e.session)
+
+    def test_no_group_coverage_never_arms_even_with_pending(self):
+        p = rules()
+        states = {zone: C for zone in p.known_contacts}
+        states["binary_sensor.sala_window"] = U
+        states["binary_sensor.sala_shutter"] = U
+        e = AlarmMachine(p, p.known_contacts)
+        e.arm(states, locked=True, now=100, delay=0)
+        self.assertEqual(e.phase, Phase.DISARMED)
+
+    def test_corrupt_pending_mandatory_snapshot_fails_closed(self):
+        p = rules()
+        states = {zone: C for zone in p.known_contacts}
+        e = AlarmMachine(p, p.known_contacts)
+        e.arm(states, locked=True, now=100, delay=0)
+        corrupted = e.snapshot()
+        corrupted["session"]["pending_zones"] = ["binary_sensor.entry"]
+        recovered = AlarmMachine(p, p.known_contacts)
+        recovered.restore(corrupted)
+        self.assertEqual(recovered.phase, Phase.FAULT)
+
     def test_legacy_migration_preserves_house_rules(self):
         data = {
             "entry_contact": "binary_sensor.entry", "entry_lock": "lock.entry",

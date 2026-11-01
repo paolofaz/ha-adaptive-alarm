@@ -28,7 +28,7 @@
           "optional": "Optional contacts",
           "vibrations": "Vibration sensors (any number)",
           "siren": "Optional siren (INERT / DISABLED)",
-          "timing": "Timing, vibration threshold and recovery",
+          "timing": "Arming timing and vibration confirmation",
           "deterrent": "Deterrent lights on first hit (optional)",
           "notifications": "Phone notifications (HA App, Telegram, others)",
           "notification_test": "Send test notification"
@@ -41,7 +41,7 @@
           "optional": "Add contacts that do not block arming.",
           "vibrations": "Add, edit, or remove any number of sensors, each with its own physical contact.",
           "siren": "Optional siren selection, without any actuation.",
-          "timing": "Set delays, debounce, required hit count and recovery behavior.",
+          "timing": "Set exit delay, debounce, window and hit threshold 2 or 3. Protected contacts returning open trigger automatically.",
           "deterrent": "OFF by default: physical lighting only after explicit opt-in.",
           "notifications": "Choose explicit HA notify targets. Telegram Bot uses notify entities.",
           "notification_test": "Only sends a message to configured targets, without triggering the alarm."
@@ -98,21 +98,19 @@
         }
       },
       "timing": {
-        "title": "Timing, vibration threshold and recovery",
-        "description": "These settings control arming and vibration evaluation. Hits count only from the SAME sensor when its linked contact is protected. One hit generates a prealert; 2 or 3 valid hits within the confirmation window trigger the simulated alarm.\n\n**Offline recovery** applies only when a PROTECTED contact comes back online already open after being unavailable. It does not configure phone notification destinations.",
+        "title": "Arming timing and vibration confirmation",
+        "description": "Hits count per sensor: one hit generates a prealert; 2 or 3 hits from the SAME sensor within the window create a simulated trigger.\\n\\n**Offline recovery (automatic):** a protected contact stays protected during HA/Zigbee2MQTT outages and across restarts. If it returns CLOSED the session continues; if OPEN, the simulated alarm triggers. Contacts UNKNOWN at arming are PENDING: first return CLOSED enrolls them; first return OPEN excludes them for that session. Mandatory contacts and minimum groups must be covered at arming; no recovery policy choice is needed.",
         "data": {
           "arming_delay": "Exit delay (seconds)",
           "vibration_debounce": "Repeated-hit filter (seconds)",
           "vibration_window": "Maximum hit confirmation time (seconds)",
-          "recovery_policy": "Protected contact returns online already open",
           "vibration_threshold": "Hits from same sensor to trigger (2 or 3)"
         },
         "data_description": {
           "arming_delay": "Exit countdown before required contacts are checked; 0 = immediate check.",
           "vibration_threshold": "2 or 3 valid hits from the same sensor. Threshold 1 is not allowed.",
           "vibration_debounce": "Minimum time between hits from the same sensor; closer events are ignored (e.g. 3 s).",
-          "vibration_window": "Time in which 2 or 3 valid hits must arrive from the same sensor (e.g. 20 s).",
-          "recovery_policy": "«Notice only» reports the anomaly without triggering. «Simulated alarm» triggers if the contact comes online already open. Going offline always raises a diagnostic."
+          "vibration_window": "Time in which 2 or 3 valid hits must arrive from the same sensor (e.g. 20 s)."
         }
       },
       "vibration_add": {
@@ -189,12 +187,5 @@
       "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted."
     }
   },
-  "selector": {
-    "recovery_policy": {
-      "options": {
-        "notify": "Notice only: do not trigger alarm",
-        "trigger": "Simulated alarm if it returns open"
-      }
-    }
-  }
+  "selector": {}
 }

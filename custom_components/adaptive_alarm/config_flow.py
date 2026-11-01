@@ -16,13 +16,13 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
-    CONF_ARMING_DELAY, CONF_RECOVERY_POLICY, CONF_STORM_SENSOR,
+    CONF_ARMING_DELAY, CONF_STORM_SENSOR,
     CONF_VIBRATION_DEBOUNCE, CONF_VIBRATION_PROFILE, CONF_VIBRATION_WINDOW,
     CONF_VIBRATION_THRESHOLD, DEFAULT_VIBRATION_THRESHOLD,
     CONF_DETERRENT_ENABLED, CONF_DETERRENT_LIGHTS,
     CONF_DETERRENT_AUTO_OFF, CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY,
     CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
-    DEFAULT_ARMING_DELAY, DEFAULT_RECOVERY_POLICY, DEFAULT_VIBRATION_DEBOUNCE,
+    DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DEFAULT_NAME, DOMAIN,
     VIBRATION_ASSIGNMENTS,
 )
@@ -521,11 +521,6 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_VIBRATION_WINDOW, default=opts.get(
                     CONF_VIBRATION_WINDOW, DEFAULT_VIBRATION_WINDOW
                 )): vol.All(number(5, 180), vol.Coerce(int)),
-                vol.Required(CONF_RECOVERY_POLICY, default=opts.get(
-                    CONF_RECOVERY_POLICY, DEFAULT_RECOVERY_POLICY
-                )): selector.SelectSelector(selector.SelectSelectorConfig(
-                    options=["notify", "trigger"],
-                    translation_key="recovery_policy",
-                )),
+
             }),
         )

@@ -71,6 +71,7 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
             "fault": self.controller.machine.fault or None,
             "minimum_routes": list(session.initial_routes) if session else [],
             "protected_zones": sorted(session.protected_zones) if session else [],
+            "pending_zones": sorted(session.pending_zones) if session else [],
             "excluded_zones": sorted(session.excluded_zones) if session else [],
             "session_id": session.identifier if session else None,
             "arming_until": self.controller.machine.arming_until,
