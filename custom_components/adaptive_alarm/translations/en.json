@@ -146,11 +146,11 @@
       },
       "deterrent": {
         "title": "Deterrent lights on first hit (optional)",
-        "description": "If enabled, the first valid vibration requests light.turn_on only for lights initially OFF. Automatic turn-off is a SEPARATE opt-in, OFF by default: never turns off lights already ON or modified meanwhile, and never during simulated trigger. After restart lights stay ON for manual review. No siren actions.",
+        "description": "To turn on lights at the first valid hit, enable light activation and select light entities. To have them switch OFF after a delay, you must ALSO enable Safe automatic light turn-off: this is a separate option, OFF by default. Choose a delay (120 s default). Adaptive Alarm waits up to 15 s for Home Assistant to confirm the light is ON; if no confirmation arrives, it NEVER blindly switches it off and reports the reason. Lights originally ON, later manually modified or in a triggered alarm are not switched off. Timer ownership is not resumed after restart. Siren is inactive.",
         "data": {
           "deterrent_enabled": "Enable actual light turn-on at prealert",
           "deterrent_lights": "Deterrent lights (light domain only)",
-          "deterrent_auto_off": "Enable safe automatic light turn-off",
+          "deterrent_auto_off": "ALSO enable automatic turn-off after the delay",
           "deterrent_off_delay": "Turn off after (seconds, 15–3600)"
         }
       },

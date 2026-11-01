@@ -72,6 +72,15 @@ class AdaptiveDiagnostic(SensorEntity):
                 "simulation_only": True,
                 "siren_configured": bool(self.controller.siren_entity),
                 "siren_enabled": False,
+                "deterrent_enabled": self.controller.deterrent_enabled,
+                "deterrent_auto_off_enabled": self.controller.deterrent_auto_off,
+                "deterrent_off_delay_seconds": self.controller.deterrent_off_delay,
+                "deterrent_lights_waiting_for_on": sorted(
+                    self.controller._light_pending
+                ),
+                "deterrent_lights_awaiting_auto_off": sorted(
+                    self.controller._light_leases
+                ),
                 "requirements_configured": rules.configured,
                 "mandatory_contacts": list(rules.mandatory),
                 "alternative_groups": {

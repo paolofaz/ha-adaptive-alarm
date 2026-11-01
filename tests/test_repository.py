@@ -52,6 +52,10 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("may_turn_off(", source)
         self.assertIn("await asyncio.gather(", source)
         self.assertIn("self.deterrent_auto_off", source)
+        self.assertIn("_process_light_state_event", source)
+        self.assertIn("confirm_transition(", source)
+        self.assertIn("self._light_pending[light] = pending", source)
+        self.assertIn("deterrent_light_tracking_unconfirmed", source)
         self.assertIn("self.deterrent_enabled", source)
         self.assertIn("session.protected_zones", source)
         self.assertIn("CONF_DETERRENT_ENABLED", flow)
@@ -61,7 +65,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_siren_metadata_cannot_activate_outputs(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "0.6.1")
+        self.assertEqual(manifest["version"], "0.6.2")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": False', panel)
