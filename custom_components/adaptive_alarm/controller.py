@@ -246,8 +246,13 @@ class AdaptiveAlarmController:
                     )),
                 )
             )
-            light_status = await self._request_deterrent_lights(events)
-            await self._notify_events(events, light_status=light_status)
+            # Do not make an urgent prealert wait for slow Zigbee/Wi-Fi
+            # lights (or delay real lighting on a slow notify provider).
+            # The prealert never claims the physical lights actually switched.
+            await asyncio.gather(
+                self._notify_events(events),
+                self._request_deterrent_lights(events),
+            )
         elif zone == self.lock_entity:
             if self.machine.active and getattr(new_state, "state", None) != "locked":
                 await self._apply(

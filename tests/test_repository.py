@@ -50,6 +50,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('"light", "turn_on"', source)
         self.assertIn('"light", "turn_off"', source)
         self.assertIn("may_turn_off(", source)
+        self.assertIn("await asyncio.gather(", source)
         self.assertIn("self.deterrent_auto_off", source)
         self.assertIn("self.deterrent_enabled", source)
         self.assertIn("session.protected_zones", source)

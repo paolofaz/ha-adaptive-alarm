@@ -47,7 +47,7 @@ async def async_send_notification(
             continue
         try:
             await hass.services.async_call(
-                "notify", "send_message", {"message": message, "title": title},
+                "notify", "send_message", {"message": message},
                 target={"entity_id": entity}, blocking=True,
             )
         except Exception:
