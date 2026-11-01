@@ -1,7 +1,7 @@
 """Home Assistant adapter for a serialized, dry-run alarm machine.
 
-This module deliberately NEVER invokes light, switch, siren, lock, notify or
-MQTT services. It observes physical entities and emits diagnostic events only.
+This module invokes ONLY light.turn_on after an explicitly enabled, valid
+prealert. Sirens, locks, switches, RF and MQTT have no actuator path.
 """
 
 from __future__ import annotations
@@ -23,7 +23,9 @@ from .const import (
     CONF_EXTRA_CONTACTS, CONF_RECOVERY_POLICY,
     CONF_SHUTTER_BATH, CONF_SHUTTER_LIVING, CONF_STORM_SENSOR,
     CONF_VIBRATION_DEBOUNCE, CONF_VIBRATION_PROFILE,
-    CONF_VIBRATION_WINDOW, CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
+    CONF_VIBRATION_WINDOW, CONF_VIBRATION_THRESHOLD, DEFAULT_VIBRATION_THRESHOLD,
+    CONF_DETERRENT_ENABLED, CONF_DETERRENT_LIGHTS,
+    CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
     VIBRATION_ASSIGNMENTS,
     DEFAULT_ARMING_DELAY, DEFAULT_RECOVERY_POLICY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DOMAIN, EVENT_ADAPTIVE_ALARM,
@@ -57,7 +59,15 @@ class AdaptiveAlarmController:
         d = entry.data
         self.paths = rules_for_config(d, entry.options)
         self.lock_entity = self.paths.lock
-        self.siren_entity = self.paths.siren  # inert metadata; no actuator services
+        self.siren_entity = self.paths.siren  # inert metadata; no siren services
+        self.deterrent_enabled = entry.options.get(CONF_DETERRENT_ENABLED) is True
+        self.deterrent_lights = tuple(entry.options.get(CONF_DETERRENT_LIGHTS, []))
+        if any(
+            not isinstance(light, str) or not light.startswith("light.")
+            for light in self.deterrent_lights
+        ):
+            raise ValueError("Deterrent output must be light entities only")
+        self._deterrent_activated_session: str | None = None
         self.zones = self.paths.known_contacts
         if "vibration_links" in entry.options:
             links = (
@@ -182,33 +192,79 @@ class AdaptiveAlarmController:
             await self._refresh_faults()
             # Readiness is derived from actual states, even while disarmed.
             self._events([])
-        elif zone in self.vibrations and getattr(new_state, "state", None) == "on" and getattr(old_state, "state", None) == "off":
-            await self._apply(
+        elif (
+            zone in self.vibrations
+            and getattr(new_state, "state", None) == "on"
+            and getattr(old_state, "state", None) == "off"
+        ):
+            threshold = self.entry.options.get(CONF_VIBRATION_THRESHOLD)
+            if threshold is None:
+                # Existing cautious users keep their 3-hit threshold.
+                threshold = 3 if self.entry.options.get(CONF_VIBRATION_PROFILE) == "cautious" else 2
+            events = await self._apply(
                 lambda: self.machine.vibration(
                     zone, now=now,
                     protected_zone=self.vibration_zone_map[zone],
-                    profile=self.entry.options.get(
-                        CONF_VIBRATION_PROFILE, DEFAULT_VIBRATION_PROFILE
-                    ),
+                    threshold=int(threshold),
                     debounce=float(self.entry.options.get(
                         CONF_VIBRATION_DEBOUNCE, DEFAULT_VIBRATION_DEBOUNCE
                     )),
                     window=float(self.entry.options.get(
                         CONF_VIBRATION_WINDOW, DEFAULT_VIBRATION_WINDOW
                     )),
-                    storm=bool(
-                        self.storm_entity and self.hass.states.is_state(
-                            self.storm_entity, "on"
-                        )
-                    ),
                 )
             )
+            await self._request_deterrent_lights(events)
         elif zone == self.lock_entity:
             if self.machine.active and getattr(new_state, "state", None) != "locked":
                 await self._apply(
                     lambda: [{"type": "lock_fault", "state": getattr(new_state, "state", None)}]
                 )
             self._events([])
+
+    async def _request_deterrent_lights(self, events: list[dict[str, Any]]) -> None:
+        """Opt-in light-only deterrent after persistence, once per armed session.
+
+        Never calls a siren, switch, lock, RF, MQTT or light.turn_off. Recheck
+        under the state guard so a concurrent disarm cannot turn on lights.
+        """
+        if not self.deterrent_enabled or not self.deterrent_lights:
+            return
+        candidates = [
+            e for e in events if e.get("type") == "vibration_prealert"
+        ]
+        if not candidates:
+            return
+        async with self._guard:
+            session = self.machine.session
+            if (
+                self.machine.phase != Phase.ARMED_AWAY
+                or session is None
+                or session.identifier == self._deterrent_activated_session
+            ):
+                return
+            if not any(
+                e.get("protected_contact") in session.protected_zones
+                and self.vibration_zone_map.get(e.get("zone")) == e.get("protected_contact")
+                for e in candidates
+            ):
+                return
+            try:
+                # This is the ONLY physical actuator permitted by this alpha.
+                await self.hass.services.async_call(
+                    "light", "turn_on",
+                    {"entity_id": list(self.deterrent_lights)},
+                    blocking=False,
+                )
+            except Exception:
+                _LOGGER.exception("Could not request deterrent lighting")
+                self._events([{"type": "deterrent_light_request_failed"}])
+                return
+            self._deterrent_activated_session = session.identifier
+            self._events([{
+                "type": "deterrent_lights_requested",
+                "lights": list(self.deterrent_lights),
+            }])
 
     async def _refresh_faults(self) -> None:
         """Publish new non-closed protected contacts once per fault episode."""
