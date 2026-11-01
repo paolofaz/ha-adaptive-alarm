@@ -70,6 +70,9 @@ class PackagingTests(unittest.TestCase):
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": False', panel)
         self.assertIn("self.siren_entity = self.paths.siren", controller)
+        sensor = (DOMAIN / "sensor.py").read_text()
+        self.assertIn('"pending_zones"', sensor)
+        self.assertIn('"minimum_protection_frozen"', sensor)
 
 
 if __name__ == "__main__":

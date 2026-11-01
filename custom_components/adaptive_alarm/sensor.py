@@ -61,13 +61,18 @@ class AdaptiveDiagnostic(SensorEntity):
         session = self.controller.machine.session
         if self.kind == "protected":
             zones = session.protected_zones if session else frozenset()
-            return {"zones": sorted(zones), "session_frozen": True}
+            return {
+                "zones": sorted(zones),
+                "minimum_protection_frozen": True,
+                "late_pending_enrollment_allowed": True,
+            }
         if self.kind == "excluded":
             zones = session.excluded_zones if session else frozenset()
             return {
                 "zones": sorted(zones),
                 "pending_zones": sorted(session.pending_zones) if session else [],
-                "session_frozen": True,
+                "minimum_protection_frozen": True,
+                "late_pending_enrollment_allowed": True,
             }
         if self.kind == "health":
             rules = self.controller.paths

@@ -250,6 +250,23 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(recovered.phase, Phase.TRIGGERED)
         self.assertEqual(recovered.reconcile(states, now=1001), [])
 
+    def test_vibration_uses_enrolled_contact_not_other_group_barrier(self):
+        e = armed(w_sala=U, sh_sala=C)
+        self.assertIn("w_sala", e.session.pending_zones)
+        self.assertEqual(
+            e.vibration("v_window_sala", protected_zone="w_sala", now=200)[0]["type"],
+            "vibration_ignored",
+        )
+        self.assertEqual(e.observed("w_sala", U, C, now=201)[0]["type"], "zone_enrolled")
+        self.assertEqual(
+            e.vibration("v_window_sala", protected_zone="w_sala", now=202)[0]["type"],
+            "vibration_prealert",
+        )
+        self.assertEqual(
+            e.vibration("v_window_sala", protected_zone="w_sala", now=207)[0]["type"],
+            "triggered",
+        )
+
     def test_unknown_at_arming_waits_then_enrolls_closed(self):
         e = armed(studio=U)
         self.assertNotIn("studio", e.session.protected_zones)

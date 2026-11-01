@@ -181,6 +181,9 @@ class AdaptiveAlarmController:
             await self._store.async_save(self.machine.snapshot())
         if recovery:
             _LOGGER.warning("Adaptive Alarm restart: %s", recovery)
+        # Publish the restored state BEFORE startup reconciliation may escalate
+        # an already-OPEN protected contact to TRIGGERED.
+        self._events(recovery)
         # Observe contacts and optional vibrations from one shared listener.
         if self.zones or self.vibrations:
             self._remove_callbacks.append(
@@ -216,7 +219,6 @@ class AdaptiveAlarmController:
             )
             await self._notify_events(restored_events)
             await self._refresh_faults()
-        self._events(recovery)
 
     async def async_stop(self) -> None:
         """Release callbacks; leave persisted session untouched."""
