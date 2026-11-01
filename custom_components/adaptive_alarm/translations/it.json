@@ -49,10 +49,14 @@
       },
       "mandatory": {
         "title": "Contatti obbligatori e serratura facoltativa",
-        "description": "Tutti i contatti obbligatori devono essere chiusi alla fine dell'inserimento. La serratura è facoltativa: se configurata deve risultare bloccata. Occorre almeno un contatto obbligatorio oppure un gruppo alternativo per poter inserire.",
+        "description": "Tutti i contatti indicati sotto sono obbligatori. La serratura è facoltativa ma, se selezionata, deve essere bloccata. **Anche tutti i gruppi sono obbligatori**: in ciascun gruppo basta almeno UN contatto chiuso.\n\n**Gruppi già configurati (sola lettura):** {groups_summary}\n\nPer aggiungere o modificare un gruppo torna al menu e scegli «Aggiungi o modifica gruppo obbligatorio». Non è necessario duplicare i contatti dei gruppi nell'elenco dei contatti obbligatori.",
         "data": {
           "mandatory": "Contatti sempre obbligatori (tutti chiusi)",
           "lock": "Serratura facoltativa (deve essere bloccata)"
+        },
+        "data_description": {
+          "mandatory": "TUTTI questi sensori devono essere chiusi. I sensori già inclusi in un gruppo alternativo non vanno ripetuti qui.",
+          "lock": "Se scegli una serratura, deve essere bloccata al termine del ritardo d'inserimento."
         }
       },
       "group": {
@@ -95,13 +99,20 @@
       },
       "timing": {
         "title": "Tempi, soglia vibrazioni e recupero offline",
-        "description": "Le vibrazioni sono indipendenti per sensore. Scegli 2 o 3 impulsi dal medesimo sensore entro la finestra configurata. Un colpo valido genera il preallarme. Debounce minimo fra i colpi. Le vecchie soglie incrociate e la tolleranza temporale non sono più utilizzate.",
+        "description": "Queste impostazioni valgono durante l'inserimento e quando l'allarme è attivo. I colpi vengono contati solo sullo STESSO sensore e solo se il relativo contatto era protetto. Un solo colpo genera il preallarme; 2 o 3 colpi validi entro la finestra fanno scattare l'allarme simulato.\n\n**Recupero offline** riguarda soltanto un contatto PROTETTO che, dopo essere risultato non disponibile, torna online già aperto. Non riguarda i destinatari delle notifiche sul telefono.",
         "data": {
           "arming_delay": "Ritardo inserimento (secondi)",
-          "vibration_debounce": "Filtro impulsi (secondi)",
-          "vibration_window": "Intervallo di conferma colpi (secondi)",
-          "recovery_policy": "Recupero sensori offline",
+          "vibration_debounce": "Filtro colpi ripetuti (secondi)",
+          "vibration_window": "Tempo massimo per confermare i colpi (secondi)",
+          "recovery_policy": "Contatto protetto torna online già aperto",
           "vibration_threshold": "Colpi dello stesso sensore per l'allarme (2 o 3)"
+        },
+        "data_description": {
+          "arming_delay": "Tempo di uscita prima che vengano verificati i contatti obbligatori; 0 = verifica immediata.",
+          "vibration_threshold": "2 o 3 colpi validi sullo stesso sensore. La soglia 1 non è consentita.",
+          "vibration_debounce": "Secondi minimi tra due segnali dello stesso sensore: quelli più ravvicinati vengono scartati (es. 3 s).",
+          "vibration_window": "Tempo entro cui devono arrivare 2 o 3 colpi validi dello stesso sensore (es. 20 s).",
+          "recovery_policy": "«Solo avviso» segnala l'anomalia senza far scattare l'allarme. «Allarme simulato» fa scattare l'allarme se il contatto torna online già aperto. Quando diventa offline viene sempre segnalata un'anomalia."
         }
       },
       "vibration_add": {
@@ -176,6 +187,14 @@
       "notification_test_failed": "Almeno un destinatario della prova non è raggiungibile o ha restituito errore. Controlla i registri.",
       "notification_no_targets": "Scegli almeno un destinatario per abilitare le notifiche.",
       "invalid_notification_target": "Destinatario non valido: sono ammessi solo servizi/entità notify."
+    }
+  },
+  "selector": {
+    "recovery_policy": {
+      "options": {
+        "notify": "Solo avviso: non far scattare l'allarme",
+        "trigger": "Allarme simulato se torna aperto"
+      }
     }
   }
 }

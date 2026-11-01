@@ -76,3 +76,12 @@ GitHub CI also runs HACS and hassfest. Tests cannot establish physical sensor be
 **Only thresholds 2 or 3 are supported. A single vibration can NEVER trigger the alarm.**
 
 All notification targets and lighting outputs default to disabled on existing installations. Reconfigure them explicitly after updating, and test one harmless light with the siren disconnected/inert.
+
+## v0.6.1-alpha — clear diagnostics and notifications
+
+- The **mandatory contacts** configuration form now also shows **every configured required alternative group** and its member contacts, using Home Assistant friendly names where available. This summary is read-only: use the separate group editor to change memberships. Do **not** list group contacts twice.
+- Home Assistant push messages for **vibration prealerts** now name the protected physical contact (e.g. **Finestra Sala**) and the reporting vibration source (e.g. **Vibrazione Sala**), rather than showing raw `binary_sensor.*` IDs when a friendly name exists.
+- **Simulated trigger notifications identify the cause**: opening of a protected contact, confirmed repeated vibration from a particular sensor and linked window, or manual test. Source IDs are preserved internally for diagnostics; only display text changes.
+- **Offline contact faults** now also send phone notifications when external notifications are enabled. The offline recovery option **notify** means *report a recovered-but-open protected contact without triggering*, not "configure phone push". **trigger** means *raise simulated alarm if a protected contact returns online already open*. Ordinary `closed → open` on a protected contact still triggers regardless of this option.
+- Timing fields have visible numeric inputs, with explanations for debounce, the hit confirmation window, the 2-or-3 threshold, and the offline-return policy. Recovery choices are localized in IT/EN while their stored identifiers remain unchanged.
+- No physical siren, switch, lock, RF or MQTT actions are added; lighting and push remain opt-in as in v0.6.0.
