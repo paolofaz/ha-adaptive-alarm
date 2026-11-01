@@ -26,3 +26,5 @@
 An empty protection rule set must never arm. A 60-second exit countdown is not protection until commit; if minimum requirements fail then the alarm remains disarmed. Excluded sensors never dynamically re-enroll. Changes to options are rejected while arming/armed/triggered. Saved protected zones persist across restarts.
 
 This is an early preview, **not a certified or operational security alarm**. Keep the existing physical security system in charge of any siren.
+
+- The once-only deterrent lighting request is persisted in the restored alarm session to avoid repeating it after a Home Assistant restart.

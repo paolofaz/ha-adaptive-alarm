@@ -389,7 +389,7 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 )): vol.All(vol.Coerce(int), vol.Range(min=0, max=600)),
                 vol.Required(CONF_VIBRATION_THRESHOLD, default=opts.get(
                     CONF_VIBRATION_THRESHOLD,
-                    3 if opts.get(CONF_VIBRATION_PROFILE) == "cautious"
+                    3 if opts.get(CONF_VIBRATION_PROFILE) in ("cautious", "cross")
                     else DEFAULT_VIBRATION_THRESHOLD,
                 )): vol.All(vol.Coerce(int), vol.In((2, 3))),
                 vol.Required("vibration_debounce", default=opts.get(

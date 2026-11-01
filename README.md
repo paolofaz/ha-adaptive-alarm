@@ -32,7 +32,7 @@ The engine listens to binary sensor **`off → on` rising edges**. An individual
 - Contacts **excluded** at arming time cannot contribute vibration hits, even if the associated shutter is closed.
 - Debounce prevents multiple edges too close together from counting. The configured confirmation window is checked by timer and on each new hit.
 
-Default settings for new installations: **2 hits, 3-second debounce, 20-second window**. Configure threshold (2/3), debounce (1–20 seconds) and confirmation window (5–180 seconds) under **Configure → Timing**. Existing options for a 60-second confirmation window are retained until you edit them. Former `cross` profile and storm grace are **no longer applied**. A prior `cautious` configuration maps to three hits unless you select a new threshold.
+Default settings for new installations: **2 hits, 3-second debounce, 20-second window**. Configure threshold (2/3), debounce (1–20 seconds) and confirmation window (5–180 seconds) under **Configure → Timing**. Existing options for a 60-second confirmation window are retained until you edit them. Former `cross` profile and storm grace are **no longer applied**. A prior `cautious` or `cross` configuration maps to three hits from the **same sensor** unless you select a new threshold. This avoids silently making previous Cross settings more permissive.
 
 **Hardware warning:** the Aqara DJT11LM is known to suppress repeat reports for about a minute, so two hits within 20 seconds cannot be expected. These rules target replacement sensors with demonstrated independent hit events roughly 5 seconds apart. Always test their actual Home Assistant binary sensor behavior before relying on detection.
 
@@ -42,7 +42,7 @@ Go to **Configure → Deterrent lights**:
 
 1. Select one or more **`light.`** entities (do not select a siren or a switch).
 2. Enable the explicit **Turn on deterrent lights at prealert** boolean. It is **OFF by default**.
-3. After the alarm has fully armed and a vibration sensor linked to a *protected contact* raises its FIRST valid hit, the controller requests **`light.turn_on` at most once for that armed session**. No later repeated prealerts keep sending commands.
+3. After the alarm has fully armed and a vibration sensor linked to a *protected contact* raises its FIRST valid hit, the controller requests **`light.turn_on` at most once for that armed session (including across Home Assistant restarts)**. No later repeated prealerts keep sending commands.
 
 These are **real Home Assistant light service calls**, unlike the simulated alarm. The lights are **never turned off automatically**, including on disarm or a restart. They may remain on until a human or a separate controlled lighting automation turns them off. Choose only lights you are comfortable switching on when the home is empty; do not attach unsafe loads, bright flashing patterns or lights connected to the siren. If the lights are unconfigured or the enable toggle is false, **no light calls are made**.
 

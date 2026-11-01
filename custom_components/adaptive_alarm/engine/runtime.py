@@ -40,6 +40,8 @@ class AlarmMachine:
     vibration_last: dict[str, float] = field(default_factory=dict)
     vibration_prealarms: int = 0
     vibration_filtered: int = 0
+    # Persisted so HA restarts cannot repeat a one-time light request.
+    deterrent_requested: bool = False
 
     def __post_init__(self) -> None:
         required = (
@@ -74,6 +76,7 @@ class AlarmMachine:
                 self.fault = "Arming rejected: " + ", ".join(eligibility.problems)
                 return [{"type": "arm_rejected", "problems": list(eligibility.problems)}]
         self.fault = ""
+        self.deterrent_requested = False
         self.phase = Phase.ARMING
         self.arming_until = now + delay
         self._clear_vibration()
@@ -148,6 +151,7 @@ class AlarmMachine:
         self.session = None
         self.arming_until = None
         self.fault = ""
+        self.deterrent_requested = False
         self._clear_vibration()
         return [{"type": "disarmed"}]
 
@@ -225,6 +229,7 @@ class AlarmMachine:
             },
             "arming_until": self.arming_until,
             "fault": self.fault,
+            "deterrent_requested": self.deterrent_requested,
         }
 
     def restore(self, data: Mapping[str, Any] | None) -> list[dict[str, Any]]:
@@ -290,6 +295,10 @@ class AlarmMachine:
             if phase in (Phase.DISARMED, Phase.ARMING) and session is not None:
                 raise ValueError("Unexpected stored session")
             self.session = session
+            self.deterrent_requested = (
+                bool(data.get("deterrent_requested", False))
+                if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) else False
+            )
             self.fault = str(data.get("fault") or "")
             if phase == Phase.ARMING:
                 self.phase = Phase.DISARMED
@@ -307,6 +316,7 @@ class AlarmMachine:
             return []
         except (KeyError, TypeError, ValueError, AttributeError) as exc:
             self.phase = Phase.FAULT
+            self.deterrent_requested = False
             self.session = None
             self.arming_until = None
             self.fault = f"Invalid stored session: {exc}"

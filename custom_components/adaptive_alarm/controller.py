@@ -67,7 +67,7 @@ class AdaptiveAlarmController:
             for light in self.deterrent_lights
         ):
             raise ValueError("Deterrent output must be light entities only")
-        self._deterrent_activated_session: str | None = None
+
         self.zones = self.paths.known_contacts
         if "vibration_links" in entry.options:
             links = (
@@ -200,7 +200,7 @@ class AdaptiveAlarmController:
             threshold = self.entry.options.get(CONF_VIBRATION_THRESHOLD)
             if threshold is None:
                 # Existing cautious users keep their 3-hit threshold.
-                threshold = 3 if self.entry.options.get(CONF_VIBRATION_PROFILE) == "cautious" else 2
+                threshold = 3 if self.entry.options.get(CONF_VIBRATION_PROFILE) in ("cautious", "cross") else 2
             events = await self._apply(
                 lambda: self.machine.vibration(
                     zone, now=now,
@@ -240,7 +240,7 @@ class AdaptiveAlarmController:
             if (
                 self.machine.phase != Phase.ARMED_AWAY
                 or session is None
-                or session.identifier == self._deterrent_activated_session
+                or self.machine.deterrent_requested
             ):
                 return
             if not any(
@@ -260,7 +260,9 @@ class AdaptiveAlarmController:
                 _LOGGER.exception("Could not request deterrent lighting")
                 self._events([{"type": "deterrent_light_request_failed"}])
                 return
-            self._deterrent_activated_session = session.identifier
+            # Save the once-only request in the frozen session metadata.
+            self.machine.deterrent_requested = True
+            await self._store.async_save(self.machine.snapshot())
             self._events([{
                 "type": "deterrent_lights_requested",
                 "lights": list(self.deterrent_lights),

@@ -350,6 +350,26 @@ class RuntimeTests(unittest.TestCase):
             )[0]["type"], "vibration_filtered")
         self.assertEqual(e.phase, Phase.ARMED_AWAY)
 
+    def test_deterrent_once_only_marker_survives_restart(self):
+        e = armed()
+        e.deterrent_requested = True
+        saved = e.snapshot()
+        rebooted = AlarmMachine(PATHS, ZONES)
+        rebooted.restore(saved)
+        self.assertEqual(rebooted.phase, Phase.ARMED_AWAY)
+        self.assertTrue(rebooted.deterrent_requested)
+        rebooted.disarm()
+        self.assertFalse(rebooted.deterrent_requested)
+
+    def test_legacy_snapshot_without_deterrent_marker_restores(self):
+        e = armed()
+        saved = e.snapshot()
+        del saved["deterrent_requested"]
+        rebooted = AlarmMachine(PATHS, ZONES)
+        rebooted.restore(saved)
+        self.assertEqual(rebooted.phase, Phase.ARMED_AWAY)
+        self.assertFalse(rebooted.deterrent_requested)
+
     def test_invalid_threshold_rejected(self):
         e = armed()
         with self.assertRaises(ValueError):
