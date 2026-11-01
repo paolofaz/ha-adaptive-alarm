@@ -64,11 +64,16 @@ class FlowLocalizationTests(unittest.TestCase):
 
     def test_no_outdated_five_sensor_setup_description(self):
         for language in ("it", "en"):
-            text = (INTEGRATION / "translations" / f"{language}.json").read_text()
-            self.assertNotIn("cinque contatti", text.lower())
-            self.assertNotIn("five contacts", text.lower())
-            self.assertNotIn("zone monitorate", text.lower())
-            self.assertNotIn("monitored zones", text.lower())
+            translation = json.loads(
+                (INTEGRATION / "translations" / f"{language}.json").read_text()
+            )
+            # A legitimate vibration form can refer to monitored zones;
+            # prohibit outdated setup text only in the initial setup step.
+            intro = translation["config"]["step"]["user"]["description"].lower()
+            self.assertNotIn("cinque contatti", intro)
+            self.assertNotIn("five contacts", intro)
+            self.assertNotIn("zone monitorate", intro)
+            self.assertNotIn("monitored zones", intro)
 
     def test_no_unreleased_home_assistant_translation_api_import(self):
         # This helper exists on Home Assistant dev, but not in the

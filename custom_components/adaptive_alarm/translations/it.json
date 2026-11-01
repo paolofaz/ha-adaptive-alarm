@@ -28,10 +28,10 @@
           "optional": "Contatti opzionali",
           "vibrations": "Sensori di vibrazione (numero libero)",
           "siren": "Sirena opzionale (INATTIVA)",
-          "timing": "Tempi, temporale e recupero offline",
+          "timing": "Tempi, soglia vibrazioni e recupero offline",
           "deterrent": "Luci deterrenti al primo colpo (opzionali)"
         },
-        "description": "Scegli la sezione da modificare. Ogni modifica viene salvata separatamente. Le uscite fisiche, inclusa la sirena, restano disabilitate.",
+        "description": "Scegli una sezione. La sirena resta inattiva. Le luci deterrenti possono essere accese realmente soltanto dopo attivazione esplicita nelle loro opzioni.",
         "menu_option_descriptions": {
           "mandatory": "Definisci i contatti sempre obbligatori e l'eventuale serratura.",
           "group": "OGNI gruppo è obbligatorio: al suo interno basta almeno un contatto chiuso.",
@@ -39,7 +39,7 @@
           "optional": "Aggiungi contatti che non impediscono l'inserimento.",
           "vibrations": "Aggiungi, modifica o rimuovi un numero qualsiasi di sensori, ognuno con il contatto fisico associato.",
           "siren": "Selezione facoltativa, senza comandare la sirena.",
-          "timing": "Imposta ritardi, filtri vibrazioni, temporale e recupero.",
+          "timing": "Imposta ritardi, debounce, numero di colpi e recupero sensori.",
           "deterrent": "Per impostazione predefinita OFF: accensione reale solo dopo consenso esplicito."
         }
       },
@@ -90,7 +90,7 @@
         }
       },
       "timing": {
-        "title": "Tempi, temporale e recupero offline",
+        "title": "Tempi, soglia vibrazioni e recupero offline",
         "description": "Le vibrazioni sono indipendenti per sensore. Scegli 2 o 3 impulsi dal medesimo sensore entro la finestra configurata. Un colpo valido genera il preallarme. Debounce minimo fra i colpi. Le vecchie soglie incrociate e la tolleranza temporale non sono più utilizzate.",
         "data": {
           "arming_delay": "Ritardo inserimento (secondi)",

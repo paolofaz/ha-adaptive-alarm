@@ -28,10 +28,10 @@
           "optional": "Optional contacts",
           "vibrations": "Vibration sensors (any number)",
           "siren": "Optional siren (INERT / DISABLED)",
-          "timing": "Timing, storm and recovery policy",
+          "timing": "Timing, vibration threshold and recovery",
           "deterrent": "Deterrent lights on first hit (optional)"
         },
-        "description": "Choose a section to configure. Each change is saved separately. Physical outputs, including the siren, remain disabled.",
+        "description": "Choose a section. The siren stays disabled. Real deterrent lighting is possible only after explicitly enabling it in its own settings.",
         "menu_option_descriptions": {
           "mandatory": "Set required contacts and an optional lock.",
           "group": "EVERY group is required; one closed contact within each group is enough.",
@@ -39,7 +39,7 @@
           "optional": "Add contacts that do not block arming.",
           "vibrations": "Add, edit, or remove any number of sensors, each with its own physical contact.",
           "siren": "Optional siren selection, without any actuation.",
-          "timing": "Configure delays, vibration filters, storm and recovery.",
+          "timing": "Set delays, debounce, required hit count and recovery behavior.",
           "deterrent": "OFF by default: physical lighting only after explicit opt-in."
         }
       },
@@ -90,7 +90,7 @@
         }
       },
       "timing": {
-        "title": "Timing, storm and recovery policy",
+        "title": "Timing, vibration threshold and recovery",
         "description": "Vibrations are tracked per sensor. Choose 2 or 3 hits from the SAME sensor within the configured window. First valid hit creates a prealert. Debounce filters rapid repeats. Previous cross-sensor and storm-grace behaviors are no longer used.",
         "data": {
           "arming_delay": "Exit delay (seconds)",
