@@ -403,8 +403,5 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 )): selector.SelectSelector(selector.SelectSelectorConfig(
                     options=["notify", "trigger"]
                 )),
-                vol.Optional("storm_sensor", description={
-                    "suggested_value": opts.get(CONF_STORM_SENSOR)
-                }): _contacts(multiple=False),
             }),
         )
