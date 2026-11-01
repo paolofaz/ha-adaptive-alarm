@@ -23,22 +23,24 @@
         "title": "Configurazione Adaptive Alarm",
         "menu_options": {
           "mandatory": "Contatti obbligatori e serratura facoltativa",
-          "group": "Aggiungi o modifica gruppo alternativo",
-          "remove_group": "Rimuovi un gruppo alternativo",
+          "group": "Aggiungi o modifica gruppo obbligatorio (alternative)",
+          "remove_group": "Rimuovi un gruppo obbligatorio",
           "optional": "Contatti opzionali",
-          "vibrations": "Vibrazioni e relativo contatto fisico",
+          "vibrations": "Sensori di vibrazione (numero libero)",
           "siren": "Sirena opzionale (INATTIVA)",
-          "timing": "Tempi, temporale e recupero offline"
+          "timing": "Tempi, soglia vibrazioni e recupero offline",
+          "deterrent": "Luci deterrenti al primo colpo (opzionali)"
         },
-        "description": "Scegli la sezione da modificare. Ogni modifica viene salvata separatamente. Le uscite fisiche, inclusa la sirena, restano disabilitate.",
+        "description": "Scegli una sezione. La sirena resta inattiva. Le luci deterrenti possono essere accese realmente soltanto dopo attivazione esplicita nelle loro opzioni.",
         "menu_option_descriptions": {
           "mandatory": "Definisci i contatti sempre obbligatori e l'eventuale serratura.",
-          "group": "Crea o modifica un gruppo in cui basta almeno un sensore chiuso.",
-          "remove_group": "Elimina un gruppo di alternative esistente.",
+          "group": "OGNI gruppo è obbligatorio: al suo interno basta almeno un contatto chiuso.",
+          "remove_group": "Elimina un gruppo obbligatorio esistente.",
           "optional": "Aggiungi contatti che non impediscono l'inserimento.",
-          "vibrations": "Associa fino a tre vibrazioni ai rispettivi contatti fisici.",
+          "vibrations": "Aggiungi, modifica o rimuovi un numero qualsiasi di sensori, ognuno con il contatto fisico associato.",
           "siren": "Selezione facoltativa, senza comandare la sirena.",
-          "timing": "Imposta ritardi, filtri vibrazioni, temporale e recupero."
+          "timing": "Imposta ritardi, debounce, numero di colpi e recupero sensori.",
+          "deterrent": "Per impostazione predefinita OFF: accensione reale solo dopo consenso esplicito."
         }
       },
       "mandatory": {
@@ -50,15 +52,15 @@
         }
       },
       "group": {
-        "title": "Aggiungi o modifica gruppo alternativo",
-        "description": "Crea un gruppo OR con un nome: basta che uno dei suoi contatti sia chiuso. Tutti i gruppi devono essere soddisfatti. Ripeti il nome per modificarlo.",
+        "title": "Aggiungi o modifica gruppo obbligatorio (alternative)",
+        "description": "Questo è un gruppo OBBLIGATORIO. Per inserire l'allarme, almeno un contatto del gruppo deve essere chiuso. Tutti i gruppi devono essere soddisfatti contemporaneamente. Usa lo stesso nome per modificarlo.",
         "data": {
           "name": "Nome gruppo (stesso nome = modifica)",
           "contacts": "Contatti alternativi (almeno uno chiuso)"
         }
       },
       "remove_group": {
-        "title": "Rimuovi un gruppo alternativo",
+        "title": "Rimuovi un gruppo obbligatorio",
         "description": "Elimina il gruppo di alternative selezionato.",
         "data": {
           "name": "Gruppo da rimuovere"
@@ -72,15 +74,12 @@
         }
       },
       "vibrations": {
-        "title": "Vibrazioni e relativo contatto fisico",
-        "description": "Per ogni sensore scegli il contatto della porta/finestra su cui è fisicamente installato. Una persiana non sostituisce una finestra aperta. Disponibili tre coppie.",
-        "data": {
-          "sensor_1": "Sensore vibrazione 1",
-          "contact_1": "Contatto fisico associato alla vibrazione 1",
-          "sensor_2": "Sensore vibrazione 2",
-          "contact_2": "Contatto fisico associato alla vibrazione 2",
-          "sensor_3": "Sensore vibrazione 3",
-          "contact_3": "Contatto fisico associato alla vibrazione 3"
+        "title": "Sensori di vibrazione (numero libero)",
+        "description": "Associa ciascun sensore al contatto su cui è montato. Gli impulsi sono conteggiati per singolo sensore; finestre diverse non si confermano a vicenda.",
+        "menu_options": {
+          "vibration_add": "Aggiungi sensore vibrazione",
+          "vibration_edit": "Modifica contatto associato",
+          "vibration_remove": "Rimuovi sensore vibrazione"
         }
       },
       "siren": {
@@ -91,15 +90,51 @@
         }
       },
       "timing": {
-        "title": "Tempi, temporale e recupero offline",
-        "description": "Con ritardo positivo i requisiti vengono controllati SOLO alla fine; con ritardo zero la verifica è immediata.",
+        "title": "Tempi, soglia vibrazioni e recupero offline",
+        "description": "Le vibrazioni sono indipendenti per sensore. Scegli 2 o 3 impulsi dal medesimo sensore entro la finestra configurata. Un colpo valido genera il preallarme. Debounce minimo fra i colpi. Le vecchie soglie incrociate e la tolleranza temporale non sono più utilizzate.",
         "data": {
           "arming_delay": "Ritardo inserimento (secondi)",
-          "vibration_profile": "Profilo vibrazioni",
           "vibration_debounce": "Filtro impulsi (secondi)",
-          "vibration_window": "Finestra conferma vibrazioni (secondi)",
+          "vibration_window": "Intervallo di conferma colpi (secondi)",
           "recovery_policy": "Recupero sensori offline",
-          "storm_sensor": "Sensore temporale (facoltativo)"
+          "vibration_threshold": "Colpi dello stesso sensore per l'allarme (2 o 3)"
+        }
+      },
+      "vibration_add": {
+        "title": "Aggiungi sensore vibrazione",
+        "description": "Seleziona il sensore e il relativo contatto fisico, che deve già essere tra le zone monitorate.",
+        "data": {
+          "sensor": "Sensore vibrazione",
+          "contact": "Contatto fisico associato"
+        }
+      },
+      "vibration_edit": {
+        "title": "Modifica contatto associato",
+        "description": "Scegli quale sensore modificare. Per cambiare il sensore di origine, rimuovilo e aggiungilo di nuovo.",
+        "data": {
+          "sensor": "Sensore da modificare"
+        }
+      },
+      "vibration_edit_contact": {
+        "title": "Contatto fisico della vibrazione",
+        "description": "Seleziona il nuovo contatto fisico associato a questo sensore.",
+        "data": {
+          "contact": "Nuovo contatto fisico"
+        }
+      },
+      "vibration_remove": {
+        "title": "Rimuovi sensore vibrazione",
+        "description": "Rimuove soltanto l'associazione del sensore, senza modificare le zone dell'allarme.",
+        "data": {
+          "sensor": "Sensore da rimuovere"
+        }
+      },
+      "deterrent": {
+        "title": "Luci deterrenti al primo colpo (opzionali)",
+        "description": "DISABILITATO per impostazione predefinita. Se attivi esplicitamente e scegli luci Home Assistant, un primo impulso valido su un contatto protetto richiede light.turn_on UNA sola volta per inserimento. Le luci NON si spengono automaticamente. NON vengono comandati sirene, serrature o switch. In simulazione un allarme successivo NON comanda la sirena.",
+        "data": {
+          "deterrent_enabled": "Abilita davvero l'accensione delle luci al preallarme",
+          "deterrent_lights": "Luci deterrenti (solo dominio light)"
         }
       }
     },
@@ -107,12 +142,15 @@
       "invalid_rules": "Sensori duplicati, gruppo non valido o regole incompatibili. Ogni contatto può comparire in un solo gruppo/elenco.",
       "unpaired_vibration": "Ogni vibrazione richiede il proprio contatto fisico e viceversa.",
       "invalid_vibration_zone": "Il contatto associato deve essere monitorato.",
-      "duplicate_entities": "Sensori vibrazione duplicati o in conflitto."
+      "duplicate_entities": "Sensori vibrazione duplicati o in conflitto.",
+      "deterrent_no_lights": "Scegli almeno una luce prima di abilitare il deterrente.",
+      "invalid_deterrent_lights": "Sono consentite solo entità light."
     },
     "abort": {
       "active_session": "Disinserisci l'allarme prima di cambiare configurazione o parametri.",
       "no_groups": "Non sono presenti gruppi alternativi da rimuovere.",
-      "unlink_vibration_first": "Scollega prima il sensore di vibrazione dalla zona che vuoi rimuovere, quindi modifica le regole."
+      "unlink_vibration_first": "Scollega prima il sensore di vibrazione dalla zona che vuoi rimuovere, quindi modifica le regole.",
+      "no_vibrations": "Non hai configurato sensori di vibrazione."
     }
   }
 }

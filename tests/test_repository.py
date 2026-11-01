@@ -27,7 +27,6 @@ class PackagingTests(unittest.TestCase):
     def test_no_physical_actuation_services(self):
         """Any future siren output requires an explicit, reviewed release."""
         forbidden = (
-            "services.async_call(",
             "mqtt.publish",
             "lock.unlock",
             "switch.turn_on",
@@ -35,15 +34,31 @@ class PackagingTests(unittest.TestCase):
             'async_call("siren"',
             'async_call("switch"',
         )
+        controller = (DOMAIN / "controller.py").read_text()
+        self.assertEqual(controller.count("services.async_call("), 1)
+        self.assertIn('"light", "turn_on"', controller)
         for component in DOMAIN.rglob("*.py"):
             source = component.read_text()
             for phrase in forbidden:
                 with self.subTest(file=str(component), phrase=phrase):
                     self.assertNotIn(phrase, source)
 
+    def test_deterrent_only_turns_on_lights_after_explicit_opt_in(self):
+        source = (DOMAIN / "controller.py").read_text()
+        flow = (DOMAIN / "config_flow.py").read_text()
+        const = (DOMAIN / "const.py").read_text()
+        self.assertIn('"light", "turn_on"', source)
+        self.assertNotIn('"light", "turn_off"', source)
+        self.assertIn("self.deterrent_enabled", source)
+        self.assertIn("session.protected_zones", source)
+        self.assertIn("CONF_DETERRENT_ENABLED", flow)
+        self.assertIn("CONF_DETERRENT_LIGHTS", flow)
+        self.assertIn("DEFAULT_DETERRENT_ENABLED = False", const)
+        self.assertNotIn('services.async_call("siren"', source)
+
     def test_siren_metadata_cannot_activate_outputs(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "0.4.2")
+        self.assertEqual(manifest["version"], "0.5.0")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": False', panel)

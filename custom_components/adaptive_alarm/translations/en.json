@@ -23,22 +23,24 @@
         "title": "Adaptive Alarm configuration",
         "menu_options": {
           "mandatory": "Mandatory contacts and optional lock",
-          "group": "Add or edit an alternative group",
-          "remove_group": "Remove an alternative group",
+          "group": "Add or edit a required group (alternatives)",
+          "remove_group": "Remove a required group",
           "optional": "Optional contacts",
-          "vibrations": "Vibration sensors and their physical contacts",
+          "vibrations": "Vibration sensors (any number)",
           "siren": "Optional siren (INERT / DISABLED)",
-          "timing": "Timing, storm and recovery policy"
+          "timing": "Timing, vibration threshold and recovery",
+          "deterrent": "Deterrent lights on first hit (optional)"
         },
-        "description": "Choose a section to configure. Each change is saved separately. Physical outputs, including the siren, remain disabled.",
+        "description": "Choose a section. The siren stays disabled. Real deterrent lighting is possible only after explicitly enabling it in its own settings.",
         "menu_option_descriptions": {
           "mandatory": "Set required contacts and an optional lock.",
-          "group": "Add or edit a group where any one closed contact is sufficient.",
-          "remove_group": "Delete an existing alternative group.",
+          "group": "EVERY group is required; one closed contact within each group is enough.",
+          "remove_group": "Delete an existing required group.",
           "optional": "Add contacts that do not block arming.",
-          "vibrations": "Pair up to three vibration sensors with physical contacts.",
+          "vibrations": "Add, edit, or remove any number of sensors, each with its own physical contact.",
           "siren": "Optional siren selection, without any actuation.",
-          "timing": "Configure delays, vibration filters, storm and recovery."
+          "timing": "Set delays, debounce, required hit count and recovery behavior.",
+          "deterrent": "OFF by default: physical lighting only after explicit opt-in."
         }
       },
       "mandatory": {
@@ -50,15 +52,15 @@
         }
       },
       "group": {
-        "title": "Add or edit an alternative group",
-        "description": "Define a named OR group: at least one of its contacts must be closed. Every configured group must pass. Use the same group name again to edit it.",
+        "title": "Add or edit a required group (alternatives)",
+        "description": "This is a REQUIRED group. At least one of its contacts must be closed to arm. ALL groups must be satisfied together. Reuse the name to edit.",
         "data": {
           "name": "Group name (same name edits)",
           "contacts": "Alternative contacts (at least one closed)"
         }
       },
       "remove_group": {
-        "title": "Remove an alternative group",
+        "title": "Remove a required group",
         "description": "Remove the selected OR group.",
         "data": {
           "name": "Group to remove"
@@ -72,15 +74,12 @@
         }
       },
       "vibrations": {
-        "title": "Vibration sensors and their physical contacts",
-        "description": "For each sensor, select the exact door/window contact where it is physically mounted. A shutter cannot stand in for an open window. Three slots are available.",
-        "data": {
-          "sensor_1": "Vibration sensor 1",
-          "contact_1": "Physical contact monitored by vibration 1",
-          "sensor_2": "Vibration sensor 2",
-          "contact_2": "Physical contact monitored by vibration 2",
-          "sensor_3": "Vibration sensor 3",
-          "contact_3": "Physical contact monitored by vibration 3"
+        "title": "Vibration sensors (any number)",
+        "description": "Link each vibration sensor to its actual mounted contact. Hits are counted per sensor; different windows cannot confirm one another.",
+        "menu_options": {
+          "vibration_add": "Add vibration sensor",
+          "vibration_edit": "Edit linked contact",
+          "vibration_remove": "Remove vibration sensor"
         }
       },
       "siren": {
@@ -91,15 +90,51 @@
         }
       },
       "timing": {
-        "title": "Timing, storm and recovery policy",
-        "description": "A positive exit delay checks minimum conditions ONLY at the deadline; delay zero checks immediately.",
+        "title": "Timing, vibration threshold and recovery",
+        "description": "Vibrations are tracked per sensor. Choose 2 or 3 hits from the SAME sensor within the configured window. First valid hit creates a prealert. Debounce filters rapid repeats. Previous cross-sensor and storm-grace behaviors are no longer used.",
         "data": {
           "arming_delay": "Exit delay (seconds)",
-          "vibration_profile": "Vibration profile",
           "vibration_debounce": "Vibration debounce (seconds)",
-          "vibration_window": "Vibration confirmation window (seconds)",
+          "vibration_window": "Hit confirmation window (seconds)",
           "recovery_policy": "Return-online policy",
-          "storm_sensor": "Storm sensor (optional)"
+          "vibration_threshold": "Hits from same sensor to trigger (2 or 3)"
+        }
+      },
+      "vibration_add": {
+        "title": "Add vibration sensor",
+        "description": "Choose the vibration sensor and its actual physical contact, which must already be monitored.",
+        "data": {
+          "sensor": "Vibration sensor",
+          "contact": "Linked physical contact"
+        }
+      },
+      "vibration_edit": {
+        "title": "Edit linked contact",
+        "description": "Choose a sensor to edit. To change the source, remove it and add it again.",
+        "data": {
+          "sensor": "Sensor to edit"
+        }
+      },
+      "vibration_edit_contact": {
+        "title": "Vibration physical contact",
+        "description": "Select the new physical contact linked to this sensor.",
+        "data": {
+          "contact": "New physical contact"
+        }
+      },
+      "vibration_remove": {
+        "title": "Remove vibration sensor",
+        "description": "Removes only this sensor association, without changing the monitored contacts.",
+        "data": {
+          "sensor": "Sensor to remove"
+        }
+      },
+      "deterrent": {
+        "title": "Deterrent lights on first hit (optional)",
+        "description": "OFF by default. If explicitly enabled and light entities are selected, the first valid hit on a protected contact requests light.turn_on ONCE per armed session. Lights are NOT turned off automatically. No sirens, locks or switches are actuated. The alarm trigger stays simulated.",
+        "data": {
+          "deterrent_enabled": "Enable actual light turn-on at prealert",
+          "deterrent_lights": "Deterrent lights (light domain only)"
         }
       }
     },
@@ -107,12 +142,15 @@
       "invalid_rules": "Duplicate sensors, invalid group or incompatible rule. Each contact may appear only once across mandatory/alternative/optional lists.",
       "unpaired_vibration": "Every vibration sensor must have a physical contact (and vice versa).",
       "invalid_vibration_zone": "Linked physical contact must be in monitored contacts.",
-      "duplicate_entities": "Duplicate or conflicting vibration sources."
+      "duplicate_entities": "Duplicate or conflicting vibration sources.",
+      "deterrent_no_lights": "Select at least one light before enabling deterrence.",
+      "invalid_deterrent_lights": "Only light entities are permitted."
     },
     "abort": {
       "active_session": "Disarm the alarm before changing protection rules or settings.",
       "no_groups": "No alternative groups to remove.",
-      "unlink_vibration_first": "Unlink the vibration sensor from that contact before removing it from the protection rules."
+      "unlink_vibration_first": "Unlink the vibration sensor from that contact before removing it from the protection rules.",
+      "no_vibrations": "No vibration sensors are configured."
     }
   }
 }
