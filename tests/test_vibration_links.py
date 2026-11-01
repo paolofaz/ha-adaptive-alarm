@@ -37,6 +37,12 @@ class VibrationLinksTests(unittest.TestCase):
             & {CONF_SHUTTER_LIVING, CONF_SHUTTER_BATH}
         )
 
+    def test_n_sources_unlimited(self):
+        contacts = {f"binary_sensor.window_{n}" for n in range(12)}
+        links = [(f"binary_sensor.vibration_{n}", f"binary_sensor.window_{n}")
+                 for n in range(12)]
+        self.assertEqual(len(validated_vibration_links(links, contacts)), 12)
+
     def test_empty(self):
         self.assertEqual(
             validated_vibration_links([(None, None)] * 3, self.contacts), {}

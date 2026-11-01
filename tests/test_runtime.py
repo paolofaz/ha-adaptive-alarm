@@ -300,29 +300,60 @@ class RuntimeTests(unittest.TestCase):
         events = e.vibration("vib_entry", now=204, protected_zone="entry")
         self.assertTrue(any(x["type"] == "triggered" for x in events))
 
-    def test_cross_profile(self):
+    def test_different_sensors_never_confirm_each_other(self):
         e = armed()
-        e.vibration("v1", protected_zone="entry", now=200, profile="cross")
-        self.assertEqual(e.vibration("v1", protected_zone="entry", now=204, profile="cross"), [])
-        events = e.vibration("v2", protected_zone="sh_sala", now=205, profile="cross")
-        self.assertTrue(any(x["type"] == "triggered" for x in events))
-
-    def test_temporale_grazia(self):
-        e = armed()
-        e.vibration("v1", protected_zone="entry", now=200, storm=True)
-        result = e.vibration("v1", protected_zone="entry", now=204, storm=True)
-        self.assertIn("vibration_storm_grace", [x["type"] for x in result])
-        later = e.vibration("v1", protected_zone="entry", now=208, storm=True)
-        self.assertEqual(e.phase, Phase.TRIGGERED)
-        self.assertIn("triggered", [x["type"] for x in later])
-
-    def test_cautious_profile(self):
-        e = armed()
-        e.vibration("v1", protected_zone="entry", now=200, profile="cautious")
-        e.vibration("v1", protected_zone="entry", now=204, profile="cautious")
+        for zone, contact in (
+            ("v_sala", "w_sala"),
+            ("v_bagno", "w_bagno"),
+            ("v_porta", "entry"),
+        ):
+            events = e.vibration(zone, protected_zone=contact, now=200, threshold=2)
+            self.assertEqual([item["type"] for item in events], ["vibration_prealert"])
         self.assertEqual(e.phase, Phase.ARMED_AWAY)
-        e.vibration("v1", protected_zone="entry", now=208, profile="cautious")
+        self.assertEqual(len(e.vibration_hits), 3)
+
+    def test_interleaving_does_not_merge_or_reset_sensor_sequences(self):
+        e = armed()
+        e.vibration("v_sala", protected_zone="w_sala", now=200, threshold=2)
+        e.vibration("v_bagno", protected_zone="w_bagno", now=201, threshold=2)
+        events = e.vibration("v_sala", protected_zone="w_sala", now=206, threshold=2)
+        self.assertIn("triggered", [x["type"] for x in events])
         self.assertEqual(e.phase, Phase.TRIGGERED)
+
+    def test_three_impulse_threshold_on_one_source(self):
+        e = armed()
+        first = e.vibration("v_sala", protected_zone="w_sala", now=200, threshold=3)
+        self.assertEqual(first[0]["type"], "vibration_prealert")
+        second = e.vibration("v_sala", protected_zone="w_sala", now=206, threshold=3)
+        self.assertEqual(second[0]["type"], "vibration_progress")
+        self.assertEqual(second[0]["count"], 2)
+        self.assertEqual(e.phase, Phase.ARMED_AWAY)
+        third = e.vibration("v_sala", protected_zone="w_sala", now=212, threshold=3)
+        self.assertEqual(third[0]["type"], "triggered")
+        self.assertEqual(e.phase, Phase.TRIGGERED)
+
+    def test_short_window_expires_independently_for_each_source(self):
+        e = armed()
+        e.vibration("v_sala", protected_zone="w_sala", now=200, threshold=2, window=10)
+        e.vibration("v_bagno", protected_zone="w_bagno", now=208, threshold=2, window=10)
+        events = e.vibration("v_sala", protected_zone="w_sala", now=211, threshold=2, window=10)
+        self.assertIn("vibration_prealert", [x["type"] for x in events])
+        self.assertEqual(e.phase, Phase.ARMED_AWAY)
+        self.assertTrue(any(z == "v_bagno" for _, z in e.vibration_hits))
+
+    def test_debounce_does_not_count_same_pulse_twice(self):
+        e = armed()
+        e.vibration("v_sala", protected_zone="w_sala", now=200, threshold=2, debounce=3)
+        for t in (201, 202):
+            self.assertEqual(e.vibration(
+                "v_sala", protected_zone="w_sala", now=t, threshold=2, debounce=3
+            )[0]["type"], "vibration_filtered")
+        self.assertEqual(e.phase, Phase.ARMED_AWAY)
+
+    def test_invalid_threshold_rejected(self):
+        e = armed()
+        with self.assertRaises(ValueError):
+            e.vibration("v_sala", protected_zone="w_sala", now=200, threshold=1)
 
     def test_disarm_does_not_keep_pending(self):
         e = armed()
