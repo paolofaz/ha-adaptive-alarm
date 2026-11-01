@@ -48,3 +48,51 @@ def may_turn_off(
     if current_episode is not None and current_episode != lease.episode:
         return False
     return state == "on" and last_updated == lease.last_updated
+
+
+# Home Assistant light state can arrive after a successful turn_on service
+# request. Keep a SHORT, in-memory acknowledgement window; never use an
+# unverified pending request as authority to turn the light off.
+LIGHT_ACK_TIMEOUT = 15
+
+
+@dataclass(frozen=True)
+class PendingLight:
+    """Light was OFF before we requested ON; waiting for state confirmation."""
+
+    entity_id: str
+    baseline_updated: str
+    ack_deadline: float
+    off_deadline: float
+    episode: str
+
+
+def confirm_transition(
+    pending: PendingLight, *, now: float,
+    old_state: str | None, old_updated: str | None,
+    new_state: str | None, new_updated: str | None,
+    current_episode: str | None,
+) -> LightLease | None:
+    """Accept exactly an OFF→ON transition starting at the sampled OFF state.
+
+    We cannot prove a device's physical origin from state events, so if another
+    actor changes state before the expected transition we fail closed. Late
+    state updates are ignored instead of giving the integration permanent
+    authority to shut a light off.
+    """
+    if (
+        now > pending.ack_deadline
+        or current_episode != pending.episode
+        or old_state != "off"
+        or old_updated != pending.baseline_updated
+        or new_state != "on"
+        or not new_updated
+        or new_updated == old_updated
+    ):
+        return None
+    return LightLease(
+        entity_id=pending.entity_id,
+        last_updated=new_updated,
+        deadline=pending.off_deadline,
+        episode=pending.episode,
+    )
