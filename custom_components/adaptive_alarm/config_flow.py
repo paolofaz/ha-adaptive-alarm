@@ -27,6 +27,7 @@ from .const import (
     VIBRATION_ASSIGNMENTS,
 )
 from .engine.configurable import AlternativeGroup, ProtectionRules, rules_for_config
+from .engine.presentation import group_summary
 from .engine.vibration_links import VibrationConfigurationError, validated_vibration_links
 from .notifications import async_send_notification, validate_targets
 
@@ -88,6 +89,15 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
     def _rules(self) -> ProtectionRules:
         return rules_for_config(self.config_entry.data, self.config_entry.options)
 
+    def _friendly_name(self, entity_id: str) -> str:
+        """Show current HA display names in the read-only group summary."""
+        state = self.hass.states.get(entity_id)
+        if state:
+            friendly = state.attributes.get("friendly_name")
+            if isinstance(friendly, str) and friendly.strip():
+                return friendly
+        return entity_id
+
     def _active(self) -> bool:
         ctrl = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
         return bool(ctrl and (
@@ -140,8 +150,15 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "invalid_rules"
             else:
                 return self._save(protection=update)
+        language = self.hass.config.language
         return self.async_show_form(
             step_id="mandatory", errors=errors,
+            description_placeholders={
+                "groups_summary": group_summary(
+                    rule.groups, self._friendly_name,
+                    alternative_word="oppure" if language.startswith("it") else "or",
+                ),
+            },
             data_schema=vol.Schema({
                 vol.Optional("mandatory", default=list(rule.mandatory)): _contacts(),
                 vol.Optional("lock", description={
@@ -471,29 +488,44 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
         })
 
     async def async_step_timing(self, user_input: dict[str, Any] | None = None):
+        """Explicit numeric values and localized offline-return choices."""
         if user_input is not None:
             return self._save(other=user_input)
         opts = self.config_entry.options
+        number = lambda minimum, maximum: selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=minimum, max=maximum, step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="s",
+            )
+        )
         return self.async_show_form(
             step_id="timing", data_schema=vol.Schema({
-                vol.Required("arming_delay", default=opts.get(
+                vol.Required(CONF_ARMING_DELAY, default=opts.get(
                     CONF_ARMING_DELAY, DEFAULT_ARMING_DELAY
-                )): vol.All(vol.Coerce(int), vol.Range(min=0, max=600)),
+                )): vol.All(number(0, 600), vol.Coerce(int)),
                 vol.Required(CONF_VIBRATION_THRESHOLD, default=opts.get(
                     CONF_VIBRATION_THRESHOLD,
                     3 if opts.get(CONF_VIBRATION_PROFILE) in ("cautious", "cross")
                     else DEFAULT_VIBRATION_THRESHOLD,
-                )): vol.All(vol.Coerce(int), vol.In((2, 3))),
-                vol.Required("vibration_debounce", default=opts.get(
+                )): vol.All(
+                    selector.NumberSelector(selector.NumberSelectorConfig(
+                        min=2, max=3, step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )),
+                    vol.Coerce(int), vol.In((2, 3)),
+                ),
+                vol.Required(CONF_VIBRATION_DEBOUNCE, default=opts.get(
                     CONF_VIBRATION_DEBOUNCE, DEFAULT_VIBRATION_DEBOUNCE
-                )): vol.All(vol.Coerce(int), vol.Range(min=1, max=20)),
-                vol.Required("vibration_window", default=opts.get(
+                )): vol.All(number(1, 20), vol.Coerce(int)),
+                vol.Required(CONF_VIBRATION_WINDOW, default=opts.get(
                     CONF_VIBRATION_WINDOW, DEFAULT_VIBRATION_WINDOW
-                )): vol.All(vol.Coerce(int), vol.Range(min=5, max=180)),
-                vol.Required("recovery_policy", default=opts.get(
+                )): vol.All(number(5, 180), vol.Coerce(int)),
+                vol.Required(CONF_RECOVERY_POLICY, default=opts.get(
                     CONF_RECOVERY_POLICY, DEFAULT_RECOVERY_POLICY
                 )): selector.SelectSelector(selector.SelectSelectorConfig(
-                    options=["notify", "trigger"]
+                    options=["notify", "trigger"],
+                    translation_key="recovery_policy",
                 )),
             }),
         )
