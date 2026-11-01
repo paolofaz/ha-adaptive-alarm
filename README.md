@@ -1,83 +1,63 @@
-# Adaptive Alarm v0.4.1-alpha
+# Adaptive Alarm — v0.5.0-alpha
 
-**HACS-installable, simulation-only, programmable AND/OR intrusion policy.**
+Configurable Home Assistant intruder-alarm engine, with HACS support. **The alarm and siren remain simulated**, but this version optionally supports **real deterrent light.turn_on** after explicit user opt-in.
 
-> **NO PHYSICAL OUTPUTS.** The optional siren selector saves an entity reference only. No siren, switch, light, lock, RF or MQTT command is ever issued. Do not depend on this alpha for real security.
+## Install and upgrade
 
-## Setup
+1. HACS → custom repository `https://github.com/paolofaz/ha-adaptive-alarm` → Integration → Update/Redownload.
+2. Restart Home Assistant. **Do not delete or recreate your existing integration.**
+3. Settings → Devices & services → Adaptive Alarm → Configure. Options are saved section by section.
+4. If this is a new installation, choose a name, then configure at least one mandatory contact or alternative group before arming.
 
-1. Install via HACS custom repository `https://github.com/paolofaz/ha-adaptive-alarm` (Integration).
-2. Restart Home Assistant and add **Adaptive Alarm** under Settings → Devices & services.
-3. The quick first step only asks for a name. The alarm **cannot be armed** until minimum rules are configured.
-4. Open **Adaptive Alarm → Configure**, and select a configuration section. One section is saved at a time; reopen Configure for other sections.
+The integration respects existing rules and frozen sessions from v0.3.x and v0.4.x.
 
-## Protection policy
+## Minimum protection
 
-- **Mandatory contacts**: all must be closed.
-- **Alternative groups**: each named group requires *at least one* closed sensor. All groups must pass.
-- **Optional contacts**: do not gate insertion. Those closed at activation are protected; those open/offline remain excluded until disarm and re-arm.
-- **Lock**: optional `lock.` entity, if present must be `locked`. No lock is required if unset.
-- **Vibrations**: up to three sensor → actual physical door/window contact associations. An impulse counts only when that exact contact was protected at insertion, not because a shutter was closed.
-- **Siren**: optional `siren.` or `switch.` entity selection, **inert in v0.4.0-alpha**. Leave unconfigured until output controls are developed and separately field-tested.
+- **Mandatory contacts**: ALL must be closed.
+- **Mandatory alternative groups**: ALL groups must be satisfied; within each group, at least ONE contact must be closed. The existing setup migrates to mandatory entry contact + optional required lock + OR group Sala + OR group Bagno.
+- **Optional contacts**: they never block arming. Contacts closed at the end of the exit countdown become protected; contacts open/unavailable at the deadline stay excluded for the entire session, even if they later close.
+- **Lock**: optional entity; if configured, it must be locked.
 
-Every binary contact is interpreted as `off = closed`, `on = open`. `unknown`, `unavailable` and missing entities are NOT safe. This first generic release targets binary door/window contacts, not arbitrary sensor types with custom normal states.
+Exit delay defaults to 60 s. If positive, requirements are checked only at the deadline. With delay 0 they are checked immediately. The alarm is not armed during the countdown. Protected opening triggers a **simulated** alarm.
 
-### Example: Sala and Bagno
+## Vibration sensor behavior (redesigned)
 
-For your existing setup, the rules map to:
+Go to **Configure → Vibration sensors** to **add, edit or remove any number** of sensor-to-contact pairs. Each vibration sensor must be linked to the *real contact* of the window/door where it is mounted; linking a vibration sensor to a closed shutter does not protect an open window. Existing sensor mappings are kept on upgrade.
 
-- Mandatory: **porta ingresso** (closed)
-- Optional lock prerequisite: **serratura ingresso** (locked)
-- OR group **Sala**: finestra sala **or** persiana sala closed
-- OR group **Bagno**: finestra bagno **or** persiana bagno closed
-- Any other configured contacts: Optional list
+The engine listens to binary sensor **`off → on` rising edges**. An individual sensor has an independent hit sequence:
 
-If both window and shutter in a room are closed at the arming deadline, **both are protected**. A closure after activation never adds an excluded contact.
+- First valid hit on a **protected** contact → `vibration_prealert` immediately.
+- **2 or 3 hits from the SAME sensor** within the configured confirmation window → simulated `triggered`.
+- Hits from other sensors never add together, and never confirm the first sensor's hits. A second hit with threshold 3 emits `vibration_progress`.
+- Contacts **excluded** at arming time cannot contribute vibration hits, even if the associated shutter is closed.
+- Debounce prevents multiple edges too close together from counting. The configured confirmation window is checked by timer and on each new hit.
 
-For another home, a single mandatory door and several optional windows may be enough, with no shutters or lock.
+Default settings for new installations: **2 hits, 3-second debounce, 20-second window**. Configure threshold (2/3), debounce (1–20 seconds) and confirmation window (5–180 seconds) under **Configure → Timing**. Existing options for a 60-second confirmation window are retained until you edit them. Former `cross` profile and storm grace are **no longer applied**. A prior `cautious` configuration maps to three hits unless you select a new threshold.
 
-### Exit delay
+**Hardware warning:** the Aqara DJT11LM is known to suppress repeat reports for about a minute, so two hits within 20 seconds cannot be expected. These rules target replacement sensors with demonstrated independent hit events roughly 5 seconds apart. Always test their actual Home Assistant binary sensor behavior before relying on detection.
 
-For delay > 0, Arm Away starts the countdown even if conditions are not yet met. All minimum requirements are checked **only at the deadline**. If they fail, arming is rejected, the panel remains disarmed and its `fault` attribute explains which conditions failed. Delay 0 checks immediately. Use `Ready to arm` as a live diagnostic, not as a premature gate.
+## Opt-in deterrent lights (the ONLY real output)
 
-## Migration from v0.3.1
+Go to **Configure → Deterrent lights**:
 
-**No reinstall or re-selection is needed for your existing home.** Your previous six configured entities are automatically interpreted through the generic policy, with mandatory door, Sala and Bagno groups, optional lock and any extra contacts. Your previously configured door/window vibration sensors keep their original safe physical associations until you edit the vibration page. A previously armed frozen session keeps the exact protected entity set on restart; obsolete route names are converted to new group labels.
+1. Select one or more **`light.`** entities (do not select a siren or a switch).
+2. Enable the explicit **Turn on deterrent lights at prealert** boolean. It is **OFF by default**.
+3. After the alarm has fully armed and a vibration sensor linked to a *protected contact* raises its FIRST valid hit, the controller requests **`light.turn_on` at most once for that armed session**. No later repeated prealerts keep sending commands.
 
-Migration is **in memory** until an Options page is saved. If you edit mandatory/groups, do so while disarmed, verify the groups, and then proceed with tests. A configuration change is refused while Arming, Armed Away or Triggered.
+These are **real Home Assistant light service calls**, unlike the simulated alarm. The lights are **never turned off automatically**, including on disarm or a restart. They may remain on until a human or a separate controlled lighting automation turns them off. Choose only lights you are comfortable switching on when the home is empty; do not attach unsafe loads, bright flashing patterns or lights connected to the siren. If the lights are unconfigured or the enable toggle is false, **no light calls are made**.
 
-## Siren safety
+The siren field remains optional and **inert metadata**; `siren.turn_on`, `switch.turn_on`, lock commands, RF and MQTT actuations are absent. Simulated `triggered` never activates the siren. Do not create user automations that drive a siren based on preview `adaptive_alarm_event` events.
 
-The optional siren is deliberately *metadata only* (no output adapter or actuation services). The panel publishes `siren_configured` and `siren_enabled: false`. The application never calls any Home Assistant service on the selected siren.
+## Diagnostics and safe trial
 
-For trial runs **leave the siren field blank**, and never create automations that route the `adaptive_alarm_event` simulation event to a real siren.
+Listen to `adaptive_alarm_event` in Home Assistant Developer Tools → Events. New events include `vibration_prealert`, `vibration_progress`, `vibration_filtered`, `vibration_ignored`, `vibration_expired`, `deterrent_lights_requested`, `deterrent_light_request_failed` and `triggered`.
 
-## Testing and limitations
+The old alarm YAML/hardware remains your **only operational physical alarm** during trials. Test one replacement vibration sensor before replacing all three. See [Safety](docs/safety.md), [Test plan](docs/test-plan.md) and [Architecture](docs/architecture.md).
+
+## Tests
 
 ```sh
 python -m unittest discover -s tests -v
 ```
 
-The project also runs hassfest and HACS checks. Neither CI nor the dry-run simulation is a certified alarm; Home Assistant runtime and on-site testing remain essential.
-
-Configuration currently uses native multi-step Options Flow pages rather than a custom Lovelace configuration panel. Additional rule operators and siren control are future work, not silently enabled in this release.
-
-[Architecture](docs/architecture.md) · [Safety](docs/safety.md) · [Trial plan](docs/test-plan.md)
-
-## v0.4.2 — stable Home Assistant config-flow hotfix
-
-v0.4.1 accidentally imported `async_invalidate_translations`, an API
-available on the Home Assistant development branch but **not available in
-Home Assistant stable 2026.9/2026.10**. This could prevent the integration's
-configuration flow from loading and produce `Invalid handler specified`.
-The unsupported import was completely removed from both
-`config_flow.py` and `__init__.py`.
-
-Update to **v0.4.2** through HACS and fully restart Home Assistant. Keep the
-existing integration entry; **do not delete it**. The seven configuration
-menu labels and updated new-install description remain in both shipped
-translation files. Restart Home Assistant and refresh the frontend to replace
-cached translations.
-
-The integration remains simulation-only. The optional siren is stored as
-configuration metadata and is never activated.
+GitHub CI also runs HACS and hassfest. Tests cannot establish physical sensor behavior or guarantee Home Assistant runtime compatibility.
