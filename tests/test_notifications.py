@@ -18,6 +18,8 @@ class FakeServices:
 
     async def async_call(self, domain, service, data, **kwargs):
         self.calls.append((domain, service, data, kwargs))
+        if kwargs.get("target", {}).get("entity_id") == "notify.missing":
+            raise RuntimeError("Simulated unavailable notify entity")
         if service == "mobile_app_phone":
             raise RuntimeError("Simulated phone outage")
 
