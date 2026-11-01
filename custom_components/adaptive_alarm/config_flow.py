@@ -1,6 +1,6 @@
 """Configuration: quick initial setup and editable native protection wizard.
 
-No physical outputs. Changes are blocked during an active/arming session so
+Physical outputs are strictly opted-in light controls; changes are blocked during an active/arming session so
 an edit cannot silently replace a live security snapshot.
 """
 

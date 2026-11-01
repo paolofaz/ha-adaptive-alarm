@@ -30,3 +30,18 @@ These steps have not been executed on your actual HA runtime. GitHub CI only cov
 10. Restart HA and verify the frozen zone set is restored, with no automatic light activation at boot.
 
 This checklist is a plan for your on-site testing, not a report of physical tests performed.
+
+## v0.6.0 — Phone notification and safe light-off checklist
+
+1. Upgrade HACS and restart HA. Confirm existing contacts, mandatory alternative groups and frozen session remain intact. Siren must remain inert. Configurable hit threshold allows only **2 or 3**, never 1.
+2. With notifications disabled, verify no notify calls occur at prealert/trigger. Configure an actual Companion App `notify.mobile_app_*` or a Telegram Bot `notify.*` chat. Enable and choose **Send test notification**. Verify on the phone; a successful HA action alone is not proof of delivery.
+3. Generate a single valid vibration: a phone PREALARM message but no trigger. A second from the *same* sensor in the window: SIMULATED ALARM notification. Different sensors may not confirm each other. Repeat with threshold 3.
+4. Configure one safe test light initially OFF, enable deterrent and separately enable auto-off (e.g., 30 s). First prealert turns it ON; expiry requests light.turn_off; notification reports action. Avoid hardware siren proxies.
+5. Repeat with test light initially ON: its state must not be touched at all. With two lights (one ON, one OFF), only the originally OFF light is claimed for expiry.
+6. Change brightness/attributes manually after prealert: automatic OFF must be skipped and a warning sent. Simulate unavailable/missing entity and manual OFF likewise.
+7. Trigger simulated alarm before expiry: no light OFF while TRIGGERED; disarm and verify eventual cleanup if still unmodified.
+8. Restart HA while light expiry is pending: no blind OFF after restart; user is warned to check lights manually. Make sure previous sessions do not cause repeated ON calls.
+9. Disable auto-off and confirm v0.5 behavior (lights may remain ON), while push notifications remain independent. Disable notifications and confirm no phone delivery.
+10. Force one missing notify target and a working second target: delivery requests continue to the second target; a `notification_failed` diagnostic event records the failure.
+
+This checklist requires **physical Home Assistant testing**, not just unit tests or HACS/hassfest validators.
