@@ -36,6 +36,7 @@ from .const import (
 from .engine import RecoveryPolicy, ZoneState, evaluate_eligibility
 from .engine.configurable import rules_for_config
 from .engine.runtime import AlarmMachine, Phase
+from .engine.presentation import prealert_text, trigger_text, fault_text
 from .engine.light_expiry import LightLease, may_turn_off
 from .notifications import async_send_notification, validate_targets
 from .engine.vibration_links import validated_vibration_links
@@ -120,6 +121,16 @@ class AdaptiveAlarmController:
 
     def _states(self) -> dict[str, ZoneState]:
         return {zone: _contact_state(self.hass.states.get(zone)) for zone in self.zones}
+
+    def _friendly_name(self, entity_id: str) -> str:
+        """Use HA's actual friendly name; keep the ID only as safe fallback."""
+        if not entity_id:
+            return "sconosciuto"
+        state = self.hass.states.get(entity_id)
+        if state is None:
+            return entity_id
+        friendly = state.attributes.get("friendly_name")
+        return friendly if isinstance(friendly, str) and friendly.strip() else entity_id
 
     def _locked(self) -> bool:
         return not self.lock_entity or self.hass.states.is_state(self.lock_entity, "locked")
@@ -278,25 +289,27 @@ class AdaptiveAlarmController:
         except Exception:
             _LOGGER.exception("Could not request Adaptive Alarm notification")
 
-    async def _notify_events(
-        self, events: list[dict[str, Any]], *, light_status: str = "",
-    ) -> None:
+    async def _notify_events(self, events: list[dict[str, Any]]) -> None:
+        """Send understandable, reason-specific alerts to selected phones."""
         for event in events:
             kind = event.get("type")
             if kind == "vibration_prealert":
-                source = event["zone"]
-                contact = event.get("protected_contact", "")
-                detail = f" Stato luci: {light_status}." if light_status else ""
-                await self._notify_text(
-                    f"PREALLARME: vibrazione {source} sul contatto {contact}."
-                    f"{detail} Allarme non ancora scattato."
-                )
+                await self._notify_text(prealert_text(
+                    event["zone"], event["protected_contact"],
+                    self._friendly_name,
+                ))
             elif kind == "triggered":
-                cause = event.get("cause", "sconosciuta")
-                await self._notify_text(
-                    f"ALLARME SIMULATO: possibile intrusione rilevata ({cause}). "
-                    "Sirena fisica NON attivata."
-                )
+                await self._notify_text(trigger_text(
+                    event.get("cause", "sconosciuta"),
+                    self.vibration_zone_map, self._friendly_name,
+                ))
+            elif kind == "zone_fault":
+                # The policy named "notify" means no auto-trigger on a
+                # recovered-but-open contact; now also notify the phone
+                # when a notification destination is configured.
+                await self._notify_text(fault_text(
+                    event["zone"], event["state"], self._friendly_name,
+                ))
 
     async def _request_deterrent_lights(
         self, events: list[dict[str, Any]],
