@@ -28,3 +28,14 @@ An empty protection rule set must never arm. A 60-second exit countdown is not p
 This is an early preview, **not a certified or operational security alarm**. Keep the existing physical security system in charge of any siren.
 
 - The once-only deterrent lighting request is persisted in the restored alarm session to avoid repeating it after a Home Assistant restart.
+
+## v0.6.0 — Push and automatic light-off safeguards
+
+- Both push notifications and light auto-off are **separate disabled-by-default options**.
+- Outbound messages use only explicitly configured Home Assistant `notify` entities/actions. Telegram Bot is configured and authorized in Home Assistant, not in Adaptive Alarm. Successful dispatch does not prove delivery.
+- A prealert sends a notification regardless of lights being enabled. A confirmed trigger sends a separate notification; siren output remains permanently disabled.
+- Real `light.turn_off` requests are authorized ONLY for lights that were OFF before Adaptive Alarm switched them on, subsequently confirmed ON, and have not had any `last_updated` change. Never turn off an already-ON light, a changed state, an unavailable light, or a light from another active armed episode.
+- Automatic off remains suspended while the alarm is in the TRIGGERED state. Once disarmed, expiry may proceed if ownership evidence remains unchanged.
+- HA restart / integration reload cancels pending ownership rather than guessing. Notification warns that lights may need manual shutdown. Some real lights report delayed changes and may therefore remain on: this is intentional and safer than turning off an unrelated light.
+- Auto-off duration defaults to 120 s if separately enabled, adjustable between 15 and 3600 s; it cannot be enabled through the siren field. Light.turn_off is the only additional physical action in this version.
+- Threshold 1 is explicitly forbidden by the engine. All tests must reject it.

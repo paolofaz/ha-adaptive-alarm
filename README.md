@@ -1,6 +1,6 @@
-# Adaptive Alarm — v0.5.0-alpha
+# Adaptive Alarm — v0.6.0-alpha
 
-Configurable Home Assistant intruder-alarm engine, with HACS support. **The alarm and siren remain simulated**, but this version optionally supports **real deterrent light.turn_on** after explicit user opt-in.
+Configurable Home Assistant intruder-alarm engine, with HACS support. **The alarm and siren remain simulated**, and supports explicitly opted-in **real deterrent lighting** and **Home Assistant push notifications**. Sirens and locking hardware are still inert.
 
 ## Install and upgrade
 
@@ -44,7 +44,7 @@ Go to **Configure → Deterrent lights**:
 2. Enable the explicit **Turn on deterrent lights at prealert** boolean. It is **OFF by default**.
 3. After the alarm has fully armed and a vibration sensor linked to a *protected contact* raises its FIRST valid hit, the controller requests **`light.turn_on` at most once for that armed session (including across Home Assistant restarts)**. No later repeated prealerts keep sending commands.
 
-These are **real Home Assistant light service calls**, unlike the simulated alarm. The lights are **never turned off automatically**, including on disarm or a restart. They may remain on until a human or a separate controlled lighting automation turns them off. Choose only lights you are comfortable switching on when the home is empty; do not attach unsafe loads, bright flashing patterns or lights connected to the siren. If the lights are unconfigured or the enable toggle is false, **no light calls are made**.
+These are **real Home Assistant light service calls**, unlike the simulated alarm. The new **safe auto-off** option is **separately disabled by default**, with an adjustable **120-second** default delay (15–3600 s). Only a light that was **off before the prealert**, was confirmed **on** after the integration's request and has **not subsequently changed state or attributes** may be turned off. A triggered alarm **holds the lights on** until disarmed. A Home Assistant restart invalidates ownership and skips auto-off with a warning instead of guessing. This is conservative: some lights may stay on if state acknowledgement is delayed or unavailable. Choose only lights you are comfortable switching on when the home is empty, not a siren proxy or unsafe relay. If light controls are disabled, **no light calls are made**.
 
 The siren field remains optional and **inert metadata**; `siren.turn_on`, `switch.turn_on`, lock commands, RF and MQTT actuations are absent. Simulated `triggered` never activates the siren. Do not create user automations that drive a siren based on preview `adaptive_alarm_event` events.
 
@@ -61,3 +61,18 @@ python -m unittest discover -s tests -v
 ```
 
 GitHub CI also runs HACS and hassfest. Tests cannot establish physical sensor behavior or guarantee Home Assistant runtime compatibility.
+
+## Phone notifications (new in v0.6.0)
+
+**Configure → Phone notifications** is OFF by default, completely independent of enabling deterrent lights.
+
+- To send to **Home Assistant Companion App**, select its existing **`notify.mobile_app_*` action** in the Notify actions field.
+- To send to **Telegram Bot**, create/allowlist a chat in the **Telegram bot integration** first. It exposes a **`notify.*` entity** for each chat; select that entity in the Notify entities field. Older configured Telegram `notify.` actions are also supported.
+- Other Home Assistant notify entities or notify services can be added. No direct Telegram API, chat IDs, API tokens or external HTTP integrations are stored in Adaptive Alarm.
+- Enable notifications and save. Select **Send test notification** in Configure to request a harmless live message.
+- A valid first vibration on a protected window sends a **prealarm** notification even if deterrent lights are disabled. A later **simulated trigger**, from repeated same-sensor vibration or protected contact opening, sends an **alarm** notification. Safe timer expiry, automatic-off skipped, failure and restart cancellation also generate messages where recipients are configured.
+- Each target is requested independently. Successful `notify` service calls do **not** guarantee push delivery (phone could be offline). Missing or failing targets are reported in `adaptive_alarm_event` as `notification_failed`; other recipients continue.
+
+**Only thresholds 2 or 3 are supported. A single vibration can NEVER trigger the alarm.**
+
+All notification targets and lighting outputs default to disabled on existing installations. Reconfigure them explicitly after updating, and test one harmless light with the siren disconnected/inert.

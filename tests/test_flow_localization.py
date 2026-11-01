@@ -11,7 +11,7 @@ FLOW = INTEGRATION / "config_flow.py"
 
 EXPECTED_STEPS = (
     "mandatory", "group", "remove_group", "optional",
-    "vibrations", "deterrent", "siren", "timing",
+    "vibrations", "deterrent", "notifications", "notification_test", "siren", "timing",
 )
 
 
@@ -49,6 +49,7 @@ class FlowLocalizationTests(unittest.TestCase):
                     self.assertTrue(options[step]["title"].strip())
                     self.assertTrue(
                         "data" in options[step] or "menu_options" in options[step]
+                        or step == "notification_test"
                     )
                 self.assertEqual(
                     set(options["vibrations"]["menu_options"]),

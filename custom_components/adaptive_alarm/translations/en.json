@@ -29,7 +29,9 @@
           "vibrations": "Vibration sensors (any number)",
           "siren": "Optional siren (INERT / DISABLED)",
           "timing": "Timing, vibration threshold and recovery",
-          "deterrent": "Deterrent lights on first hit (optional)"
+          "deterrent": "Deterrent lights on first hit (optional)",
+          "notifications": "Phone notifications (HA App, Telegram, others)",
+          "notification_test": "Send test notification"
         },
         "description": "Choose a section. The siren stays disabled. Real deterrent lighting is possible only after explicitly enabling it in its own settings.",
         "menu_option_descriptions": {
@@ -40,7 +42,9 @@
           "vibrations": "Add, edit, or remove any number of sensors, each with its own physical contact.",
           "siren": "Optional siren selection, without any actuation.",
           "timing": "Set delays, debounce, required hit count and recovery behavior.",
-          "deterrent": "OFF by default: physical lighting only after explicit opt-in."
+          "deterrent": "OFF by default: physical lighting only after explicit opt-in.",
+          "notifications": "Choose explicit HA notify targets. Telegram Bot uses notify entities.",
+          "notification_test": "Only sends a message to configured targets, without triggering the alarm."
         }
       },
       "mandatory": {
@@ -131,10 +135,24 @@
       },
       "deterrent": {
         "title": "Deterrent lights on first hit (optional)",
-        "description": "OFF by default. If explicitly enabled and light entities are selected, the first valid hit on a protected contact requests light.turn_on ONCE per armed session. Lights are NOT turned off automatically. No sirens, locks or switches are actuated. The alarm trigger stays simulated.",
+        "description": "If enabled, the first valid vibration requests light.turn_on only for lights initially OFF. Automatic turn-off is a SEPARATE opt-in, OFF by default: never turns off lights already ON or modified meanwhile, and never during simulated trigger. After restart lights stay ON for manual review. No siren actions.",
         "data": {
           "deterrent_enabled": "Enable actual light turn-on at prealert",
-          "deterrent_lights": "Deterrent lights (light domain only)"
+          "deterrent_lights": "Deterrent lights (light domain only)",
+          "deterrent_auto_off": "Enable safe automatic light turn-off",
+          "deterrent_off_delay": "Turn off after (seconds, 15–3600)"
+        }
+      },
+      "notification_test": {
+        "title": "Test notification"
+      },
+      "notifications": {
+        "title": "Phone notifications (HA App, Telegram, others)",
+        "description": "OFF by default. Select one or more notify.* entities (including modern Telegram Bot chat targets), or notify.mobile_app_* and other existing HA notify actions. Do not enter Telegram credentials here; configure the bot separately in Home Assistant. Test sends a real message. Accepted service request does not guarantee delivery to the phone.",
+        "data": {
+          "notifications_enabled": "Enable phone notifications",
+          "notification_entities": "Notify entities (Telegram Bot, etc.)",
+          "notification_services": "Notify actions (phone app, legacy providers)"
         }
       }
     },
@@ -144,13 +162,20 @@
       "invalid_vibration_zone": "Linked physical contact must be in monitored contacts.",
       "duplicate_entities": "Duplicate or conflicting vibration sources.",
       "deterrent_no_lights": "Select at least one light before enabling deterrence.",
-      "invalid_deterrent_lights": "Only light entities are permitted."
+      "invalid_deterrent_lights": "Only light entities are permitted.",
+      "notification_no_targets": "Select at least one target to enable notifications.",
+      "notification_service_missing": "The chosen notify service is not available.",
+      "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted."
     },
     "abort": {
       "active_session": "Disarm the alarm before changing protection rules or settings.",
       "no_groups": "No alternative groups to remove.",
       "unlink_vibration_first": "Unlink the vibration sensor from that contact before removing it from the protection rules.",
-      "no_vibrations": "No vibration sensors are configured."
+      "no_vibrations": "No vibration sensors are configured.",
+      "notification_test_sent": "Test notification request sent. Check the phone: action success does not guarantee delivery.",
+      "notification_test_failed": "At least one test destination is missing or returned an error. Check logs.",
+      "notification_no_targets": "Select at least one target to enable notifications.",
+      "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted."
     }
   }
 }

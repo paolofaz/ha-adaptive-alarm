@@ -1,7 +1,8 @@
 """Home Assistant adapter for a serialized, dry-run alarm machine.
 
-This module invokes ONLY light.turn_on after an explicitly enabled, valid
-prealert. Sirens, locks, switches, RF and MQTT have no actuator path.
+This module invokes only opted-in light.turn_on / safe light.turn_off and
+explicitly selected Home Assistant notify actions. Sirens, locks, switches, RF
+and MQTT have no actuator path.
 """
 
 from __future__ import annotations
@@ -25,6 +26,8 @@ from .const import (
     CONF_VIBRATION_DEBOUNCE, CONF_VIBRATION_PROFILE,
     CONF_VIBRATION_WINDOW, CONF_VIBRATION_THRESHOLD, DEFAULT_VIBRATION_THRESHOLD,
     CONF_DETERRENT_ENABLED, CONF_DETERRENT_LIGHTS,
+    CONF_DETERRENT_AUTO_OFF, CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY,
+    CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
     CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
     VIBRATION_ASSIGNMENTS,
     DEFAULT_ARMING_DELAY, DEFAULT_RECOVERY_POLICY, DEFAULT_VIBRATION_DEBOUNCE,
@@ -33,6 +36,8 @@ from .const import (
 from .engine import RecoveryPolicy, ZoneState, evaluate_eligibility
 from .engine.configurable import rules_for_config
 from .engine.runtime import AlarmMachine, Phase
+from .engine.light_expiry import LightLease, may_turn_off
+from .notifications import async_send_notification, validate_targets
 from .engine.vibration_links import validated_vibration_links
 
 _LOGGER = logging.getLogger(__name__)
@@ -68,6 +73,18 @@ class AdaptiveAlarmController:
         ):
             raise ValueError("Deterrent output must be light entities only")
 
+        self.deterrent_auto_off = entry.options.get(CONF_DETERRENT_AUTO_OFF) is True
+        self.deterrent_off_delay = int(entry.options.get(
+            CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY
+        ))
+        if not 15 <= self.deterrent_off_delay <= 3600:
+            raise ValueError("Invalid light-off delay")
+        self.notify_enabled = entry.options.get(CONF_NOTIFY_ENABLED) is True
+        self.notify_entities, self.notify_services = validate_targets(
+            entry.options.get(CONF_NOTIFY_ENTITIES, []),
+            entry.options.get(CONF_NOTIFY_SERVICES, []),
+        )
+
         self.zones = self.paths.known_contacts
         if "vibration_links" in entry.options:
             links = (
@@ -88,6 +105,10 @@ class AdaptiveAlarmController:
         self._store: Store[dict[str, Any]] = Store(
             hass, 1, f"{DOMAIN}.{entry.entry_id}"
         )
+        self._light_store: Store[dict[str, Any]] = Store(
+            hass, 1, f"{DOMAIN}.{entry.entry_id}.deterrent_lights"
+        )
+        self._light_leases: dict[str, LightLease] = {}
         self._guard = asyncio.Lock()
         self._remove_callbacks: list[Any] = []
         self._active_faults: set[str] = set()
@@ -131,6 +152,16 @@ class AdaptiveAlarmController:
         """Load persisted state, attach listeners, then reconcile faults."""
         stored = await self._store.async_load()
         recovery = self.machine.restore(stored)
+        old_leases = await self._light_store.async_load()
+        if old_leases and old_leases.get("leases"):
+            # After any restart/reload we cannot establish who controls a
+            # physical light. Never issue automatic OFF from stale metadata.
+            await self._light_store.async_save({"leases": []})
+            await self._notify_text(
+                "Riavvio: spegnimento automatico luci sospeso per sicurezza. "
+                "Controlla e spegni manualmente le luci deterrenti rimaste accese."
+            )
+            self._events([{"type": "deterrent_lights_restart_unclaimed"}])
         # Interrupted arming must not reappear as arming after another restart.
         if stored is not None and self.machine.snapshot() != stored:
             await self._store.async_save(self.machine.snapshot())
@@ -184,11 +215,12 @@ class AdaptiveAlarmController:
             policy = RecoveryPolicy(
                 self.entry.options.get(CONF_RECOVERY_POLICY, DEFAULT_RECOVERY_POLICY)
             )
-            await self._apply(
+            emitted = await self._apply(
                 lambda: self.machine.observed(
                     zone, previous, current, now=now, recovery_policy=policy
                 )
             )
+            await self._notify_events(emitted)
             await self._refresh_faults()
             # Readiness is derived from actual states, even while disarmed.
             self._events([])
@@ -214,7 +246,13 @@ class AdaptiveAlarmController:
                     )),
                 )
             )
-            await self._request_deterrent_lights(events)
+            # Do not make an urgent prealert wait for slow Zigbee/Wi-Fi
+            # lights (or delay real lighting on a slow notify provider).
+            # The prealert never claims the physical lights actually switched.
+            await asyncio.gather(
+                self._notify_events(events),
+                self._request_deterrent_lights(events),
+            )
         elif zone == self.lock_entity:
             if self.machine.active and getattr(new_state, "state", None) != "locked":
                 await self._apply(
@@ -222,19 +260,57 @@ class AdaptiveAlarmController:
                 )
             self._events([])
 
-    async def _request_deterrent_lights(self, events: list[dict[str, Any]]) -> None:
-        """Opt-in light-only deterrent after persistence, once per armed session.
+    async def _notify_text(self, message: str) -> None:
+        """Never block or influence the alarm on notifier errors."""
+        if not self.notify_enabled:
+            return
+        if not self.notify_entities and not self.notify_services:
+            return
+        try:
+            result = await async_send_notification(
+                self.hass, entities=self.notify_entities,
+                services=self.notify_services, message=message,
+            )
+            if result["failed"]:
+                self._events([{
+                    "type": "notification_failed", "targets": result["failed"],
+                }])
+        except Exception:
+            _LOGGER.exception("Could not request Adaptive Alarm notification")
 
-        Never calls a siren, switch, lock, RF, MQTT or light.turn_off. Recheck
-        under the state guard so a concurrent disarm cannot turn on lights.
+    async def _notify_events(
+        self, events: list[dict[str, Any]], *, light_status: str = "",
+    ) -> None:
+        for event in events:
+            kind = event.get("type")
+            if kind == "vibration_prealert":
+                source = event["zone"]
+                contact = event.get("protected_contact", "")
+                detail = f" Stato luci: {light_status}." if light_status else ""
+                await self._notify_text(
+                    f"PREALLARME: vibrazione {source} sul contatto {contact}."
+                    f"{detail} Allarme non ancora scattato."
+                )
+            elif kind == "triggered":
+                cause = event.get("cause", "sconosciuta")
+                await self._notify_text(
+                    f"ALLARME SIMULATO: possibile intrusione rilevata ({cause}). "
+                    "Sirena fisica NON attivata."
+                )
+
+    async def _request_deterrent_lights(
+        self, events: list[dict[str, Any]],
+    ) -> str:
+        """Explicit opt-in: activate only currently OFF light entities.
+
+        Claims require a confirmed transition to ON. Lights already ON are
+        never touched. Auto-off is separately opted in and fail-closed.
         """
-        if not self.deterrent_enabled or not self.deterrent_lights:
-            return
-        candidates = [
-            e for e in events if e.get("type") == "vibration_prealert"
-        ]
+        candidates = [e for e in events if e.get("type") == "vibration_prealert"]
         if not candidates:
-            return
+            return ""
+        if not self.deterrent_enabled or not self.deterrent_lights:
+            return "non abilitate"
         async with self._guard:
             session = self.machine.session
             if (
@@ -242,31 +318,122 @@ class AdaptiveAlarmController:
                 or session is None
                 or self.machine.deterrent_requested
             ):
-                return
+                return "non richieste"
             if not any(
                 e.get("protected_contact") in session.protected_zones
                 and self.vibration_zone_map.get(e.get("zone")) == e.get("protected_contact")
                 for e in candidates
             ):
-                return
-            try:
-                # This is the ONLY physical actuator permitted by this alpha.
-                await self.hass.services.async_call(
-                    "light", "turn_on",
-                    {"entity_id": list(self.deterrent_lights)},
-                    blocking=False,
-                )
-            except Exception:
-                _LOGGER.exception("Could not request deterrent lighting")
-                self._events([{"type": "deterrent_light_request_failed"}])
-                return
-            # Save the once-only request in the frozen session metadata.
+                return "contatto non protetto"
+            # Persist before physical actuation, never redo a request on restart.
             self.machine.deterrent_requested = True
             await self._store.async_save(self.machine.snapshot())
-            self._events([{
-                "type": "deterrent_lights_requested",
-                "lights": list(self.deterrent_lights),
-            }])
+            lights_off = [
+                light for light in self.deterrent_lights
+                if self.hass.states.is_state(light, "off")
+            ]
+            if not lights_off:
+                self._events([{"type": "deterrent_lights_already_on_or_unavailable"}])
+                return "già accese o non disponibili"
+            requested: list[str] = []
+            failed: list[str] = []
+            now = time.time()
+            for light in lights_off:
+                try:
+                    await self.hass.services.async_call(
+                        "light", "turn_on", {"entity_id": light}, blocking=True,
+                    )
+                except Exception:
+                    _LOGGER.exception("Deterrent light-on request failed: %s", light)
+                    failed.append(light)
+                    continue
+                requested.append(light)
+                current = self.hass.states.get(light)
+                if (
+                    self.deterrent_auto_off
+                    and current is not None
+                    and current.state == "on"
+                ):
+                    self._light_leases[light] = LightLease(
+                        entity_id=light,
+                        last_updated=current.last_updated.isoformat(),
+                        deadline=now + self.deterrent_off_delay,
+                        episode=session.identifier,
+                    )
+            if self._light_leases:
+                await self._light_store.async_save({
+                    "leases": [v.to_dict() for v in self._light_leases.values()]
+                })
+            if failed:
+                self._events([{"type": "deterrent_light_request_failed", "lights": failed}])
+            if requested:
+                self._events([{
+                    "type": "deterrent_lights_requested", "lights": requested,
+                    "auto_off": self.deterrent_auto_off,
+                    "timeout_seconds": self.deterrent_off_delay if self.deterrent_auto_off else None,
+                }])
+            return ("accensione richiesta (" + ", ".join(requested) + ")"
+                    if requested else "accensione fallita")
+
+    async def _expire_deterrent_lights(self) -> None:
+        """Conservatively turn off only owned, unmodified lights at deadline.
+
+        Do not turn off during a triggered alarm, or within another armed
+        episode. After reboot no claims are restored (manual inspection).
+        """
+        if not self._light_leases:
+            return
+        notices: list[str] = []
+        events: list[dict[str, Any]] = []
+        async with self._guard:
+            if self.machine.phase == Phase.TRIGGERED:
+                return
+            now = time.time()
+            session = self.machine.session
+            episode = session.identifier if session and self.machine.phase == Phase.ARMED_AWAY else None
+            for entity, lease in list(self._light_leases.items()):
+                if now < lease.deadline:
+                    continue
+                state = self.hass.states.get(entity)
+                allowed = may_turn_off(
+                    lease, state=state.state if state else None,
+                    last_updated=state.last_updated.isoformat() if state else None,
+                    alarm_triggered=False, current_episode=episode,
+                )
+                del self._light_leases[entity]
+                if not allowed:
+                    events.append({
+                        "type": "deterrent_light_off_skipped", "light": entity,
+                        "reason": "state_changed_or_new_session",
+                    })
+                    notices.append(
+                        f"Luci deterrenti: spegnimento automatico NON eseguito "
+                        f"per {entity} (stato cambiato o nuova sessione). Controlla la luce."
+                    )
+                    continue
+                try:
+                    await self.hass.services.async_call(
+                        "light", "turn_off", {"entity_id": entity}, blocking=True,
+                    )
+                except Exception:
+                    _LOGGER.exception("Deterrent light-off request failed: %s", entity)
+                    events.append({"type": "deterrent_light_off_failed", "light": entity})
+                    notices.append(
+                        f"Luci deterrenti: richiesta spegnimento FALLITA per {entity}."
+                    )
+                else:
+                    events.append({"type": "deterrent_light_off_requested", "light": entity})
+                    notices.append(
+                        f"Luci deterrenti: richiesta spegnimento per {entity} "
+                        f"dopo {self.deterrent_off_delay} secondi."
+                    )
+            if events:
+                await self._light_store.async_save({
+                    "leases": [v.to_dict() for v in self._light_leases.values()]
+                })
+                self._events(events)
+        for message in notices:
+            await self._notify_text(message)
 
     async def _refresh_faults(self) -> None:
         """Publish new non-closed protected contacts once per fault episode."""
@@ -304,6 +471,7 @@ class AdaptiveAlarmController:
         )
         # Detect missed transitions, but never manufacture an intrusion after startup.
         await self._refresh_faults()
+        await self._expire_deterrent_lights()
 
     async def async_arm(self) -> list[dict[str, Any]]:
         return await self._apply(
@@ -317,4 +485,6 @@ class AdaptiveAlarmController:
         return await self._apply(self.machine.disarm)
 
     async def async_trigger(self) -> list[dict[str, Any]]:
-        return await self._apply(lambda: self.machine.trigger("manual_test"))
+        events = await self._apply(lambda: self.machine.trigger("manual_test"))
+        await self._notify_events(events)
+        return events
