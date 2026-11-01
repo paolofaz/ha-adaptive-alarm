@@ -77,6 +77,10 @@ def new_session(
             zone for zone, state in states.items() if state == ZoneState.CLOSED
         ),
         initial_routes=eligibility.routes,
+        pending_zones=frozenset(
+            zone for zone, state in states.items()
+            if state == ZoneState.UNAVAILABLE
+        ),
     )
 
 
@@ -97,20 +101,14 @@ def classify_opening(
         return EventAction.IGNORE
     if zone not in session.protected_zones:
         return EventAction.IGNORE
-    if current == ZoneState.UNAVAILABLE:
-        return EventAction.CRITICAL_NOTICE
+    # A protected zone NEVER loses its protection after an outage.
+    # "notify" is retained only as a legacy API parameter and is ignored:
+    # a formerly protected contact restored OPEN must be treated exactly
+    # like one opened from the CLOSED state, even after HA/Z2M restart.
     if current != ZoneState.OPEN:
         return EventAction.IGNORE
-    if startup:
-        return EventAction.CRITICAL_NOTICE
-    if previous == ZoneState.CLOSED:
+    if previous in (ZoneState.CLOSED, ZoneState.UNAVAILABLE):
         return EventAction.TRIGGER
-    if previous == ZoneState.UNAVAILABLE:
-        return (
-            EventAction.TRIGGER
-            if recovery_policy == RecoveryPolicy.TRIGGER
-            else EventAction.CRITICAL_NOTICE
-        )
     return EventAction.IGNORE
 
 

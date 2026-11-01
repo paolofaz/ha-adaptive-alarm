@@ -114,6 +114,7 @@ class AlarmMachine:
                         "type": "armed",
                         "routes": list(self.session.initial_routes),
                         "protected": sorted(self.session.protected_zones),
+                        "pending": sorted(self.session.pending_zones),
                         "excluded": sorted(self.session.excluded_zones),
                     })
         self._expire_vibrations(now, events, window=vibration_window)
@@ -123,16 +124,60 @@ class AlarmMachine:
         self, zone: str, previous: ZoneState, current: ZoneState,
         *, now: float, recovery_policy: RecoveryPolicy = RecoveryPolicy.NOTIFY,
     ) -> list[dict[str, Any]]:
-        """React to one contact event. The adapter supplies old/new states."""
-        events: list[dict[str, Any]] = []
+        """Apply state changes to the immutable per-episode coverage policy.
+
+        Protected -> unavailable -> open ALWAYS triggers; unavailable does
+        not remove protection. A contact UNKNOWN at arming may enter the
+        protected set only on its first known CLOSED value. OPEN excludes
+        it permanently (exactly like contacts already OPEN at commit).
+        """
         if zone not in self.zones or self.phase != Phase.ARMED_AWAY or self.session is None:
-            return events
-        action = classify_opening(self.session, zone, previous, current,
-                                  recovery_policy=recovery_policy)
+            return []
+        if zone in self.session.pending_zones:
+            if current == ZoneState.UNAVAILABLE:
+                return []
+            protected = self.session.protected_zones
+            if current == ZoneState.CLOSED:
+                protected = protected | {zone}
+            self.session = Session(
+                identifier=self.session.identifier,
+                known_zones=self.session.known_zones,
+                protected_zones=frozenset(protected),
+                pending_zones=self.session.pending_zones - {zone},
+                initial_routes=self.session.initial_routes,
+            )
+            if current == ZoneState.CLOSED:
+                return [{"type": "zone_enrolled", "zone": zone}]
+            return [{"type": "zone_excluded", "zone": zone, "reason": "first_known_open"}]
+        action = classify_opening(
+            self.session, zone, previous, current,
+            recovery_policy=recovery_policy,
+        )
         if action == EventAction.TRIGGER:
-            events.extend(self.trigger(zone))
-        elif action == EventAction.CRITICAL_NOTICE:
-            events.append({"type": "zone_fault", "zone": zone, "state": current.value})
+            return self.trigger(zone)
+        if action == EventAction.CRITICAL_NOTICE:
+            return [{"type": "zone_fault", "zone": zone, "state": current.value}]
+        return []
+
+    def reconcile(self, states: Mapping[str, ZoneState], *, now: float) -> list[dict[str, Any]]:
+        """Catch states already available before listeners attach at startup.
+
+        In particular, an already-OPEN protected contact must never be
+        silently tolerated just because Z2M updated before the HA listener
+        subscribed. Pending contacts can be resolved from their first
+        available state even without a new state-change event.
+        """
+        if self.phase != Phase.ARMED_AWAY or self.session is None:
+            return []
+        events: list[dict[str, Any]] = []
+        for zone in sorted(self.session.pending_zones):
+            state = states.get(zone, ZoneState.UNAVAILABLE)
+            if state != ZoneState.UNAVAILABLE:
+                events.extend(self.observed(zone, ZoneState.UNAVAILABLE, state, now=now))
+        for zone in sorted(self.session.protected_zones):
+            if states.get(zone, ZoneState.UNAVAILABLE) == ZoneState.OPEN:
+                events.extend(self.trigger(zone))
+                break
         return events
 
     def trigger(self, cause: str) -> list[dict[str, Any]]:
@@ -225,6 +270,7 @@ class AlarmMachine:
                 "identifier": self.session.identifier,
                 "known_zones": sorted(self.session.known_zones),
                 "protected_zones": sorted(self.session.protected_zones),
+                "pending_zones": sorted(self.session.pending_zones),
                 "initial_routes": list(self.session.initial_routes),
             },
             "arming_until": self.arming_until,
@@ -252,9 +298,16 @@ class AlarmMachine:
                     known_zones=frozenset(serialized["known_zones"]),
                     protected_zones=frozenset(serialized["protected_zones"]),
                     initial_routes=tuple(serialized["initial_routes"]),
+                    pending_zones=frozenset(serialized.get("pending_zones", [])),
                 )
                 if not session.known_zones.issubset(self.zones):
                     raise ValueError("Configured zone set changed while active")
+                # A required mandatory contact or minimum group can NEVER
+                # rely on a pending (unknown) sensor for eligibility.
+                if isinstance(self.paths, ProtectionRules) and (
+                    session.pending_zones & set(self.paths.mandatory)
+                ):
+                    raise ValueError("Mandatory contact unexpectedly pending")
                 protected_snapshot = {
                     zone: (
                         ZoneState.CLOSED if zone in session.protected_zones
@@ -266,7 +319,7 @@ class AlarmMachine:
                 )
                 if not validity.permitted:
                     raise ValueError("Session minimum protection missing")
-                if set(session.initial_routes) != set(validity.routes):
+                if not set(session.initial_routes).issubset(set(validity.routes)):
                     # One-time compatibility: v0.3 frozen sessions stored
                     # names of four route combinations. The new rule model
                     # stores one satisfied condition for each room.
@@ -289,6 +342,7 @@ class AlarmMachine:
                         known_zones=session.known_zones,
                         protected_zones=session.protected_zones,
                         initial_routes=validity.routes,
+                        pending_zones=session.pending_zones,
                     )
             if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) and session is None:
                 raise ValueError("Active state without a session")
