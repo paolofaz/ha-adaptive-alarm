@@ -5,6 +5,7 @@ import unittest
 
 from custom_components.adaptive_alarm.engine import MinimumPaths, ZoneState
 from custom_components.adaptive_alarm.engine.runtime import AlarmMachine, Phase
+from custom_components.adaptive_alarm.engine.model import RecoveryPolicy
 
 C = ZoneState.CLOSED
 O = ZoneState.OPEN
@@ -199,11 +200,109 @@ class RuntimeTests(unittest.TestCase):
             e.observed("studio", C, O, now=250)[0]["type"], "triggered"
         )
 
-    def test_protected_offline_and_return(self):
+    def test_protected_offline_then_closed_is_still_protected(self):
         e = armed()
-        self.assertEqual(e.observed("entry", C, U, now=200)[0]["type"], "zone_fault")
-        self.assertEqual(e.observed("entry", U, O, now=201)[0]["type"], "zone_fault")
+        before = e.session.protected_zones
+        self.assertEqual(e.observed("entry", C, U, now=200), [])
+        self.assertIn("entry", e.session.protected_zones)
+        self.assertEqual(e.observed("entry", U, C, now=201), [])
+        self.assertEqual(e.session.protected_zones, before)
+        self.assertEqual(e.observed("entry", C, O, now=202)[0]["type"], "triggered")
+
+    def test_protected_offline_then_open_triggers_even_with_legacy_notify(self):
+        for policy in (RecoveryPolicy.NOTIFY, RecoveryPolicy.TRIGGER):
+            with self.subTest(policy=policy):
+                e = armed()
+                self.assertEqual(
+                    e.observed("entry", C, U, now=200, recovery_policy=policy), []
+                )
+                self.assertIn("entry", e.session.protected_zones)
+                events = e.observed(
+                    "entry", U, O, now=201, recovery_policy=policy,
+                )
+                self.assertEqual(events, [
+                    {"type": "triggered", "cause": "entry"}
+                ])
+                self.assertEqual(e.phase, Phase.TRIGGERED)
+
+    def test_reboot_all_unavailable_does_not_demote_protected_contacts(self):
+        e = armed(studio=C)
+        previous = e.snapshot()
+        rebooted = AlarmMachine(PATHS, ZONES)
+        rebooted.restore(previous)
+        all_unknown = {zone: U for zone in ZONES}
+        self.assertEqual(rebooted.reconcile(all_unknown, now=1000), [])
+        self.assertEqual(rebooted.session.protected_zones, e.session.protected_zones)
+        self.assertEqual(rebooted.snapshot()["session"], previous["session"])
+        self.assertEqual(rebooted.observed("w_sala", U, C, now=1001), [])
+        events = rebooted.observed("w_sala", C, O, now=1002)
+        self.assertEqual(events[0]["type"], "triggered")
+
+    def test_restart_recovers_already_open_contact_before_listener(self):
+        e = armed()
+        recovered = AlarmMachine(PATHS, ZONES)
+        recovered.restore(e.snapshot())
+        states = {zone: U for zone in ZONES}
+        states["w_sala"] = O
+        self.assertEqual(recovered.reconcile(states, now=1000), [
+            {"type": "triggered", "cause": "w_sala"}
+        ])
+        self.assertEqual(recovered.phase, Phase.TRIGGERED)
+        self.assertEqual(recovered.reconcile(states, now=1001), [])
+
+    def test_unknown_at_arming_waits_then_enrolls_closed(self):
+        e = armed(studio=U)
+        self.assertNotIn("studio", e.session.protected_zones)
+        self.assertIn("studio", e.session.pending_zones)
+        self.assertNotIn("studio", e.session.excluded_zones)
+        self.assertEqual(e.observed("studio", U, C, now=200), [
+            {"type": "zone_enrolled", "zone": "studio"}
+        ])
+        self.assertIn("studio", e.session.protected_zones)
+        self.assertNotIn("studio", e.session.pending_zones)
+        self.assertEqual(e.observed("studio", C, O, now=201), [
+            {"type": "triggered", "cause": "studio"}
+        ])
+
+    def test_unknown_at_arming_first_open_becomes_permanently_excluded(self):
+        e = armed(studio=U)
+        self.assertEqual(e.observed("studio", U, O, now=200), [
+            {"type": "zone_excluded", "zone": "studio", "reason": "first_known_open"}
+        ])
+        self.assertIn("studio", e.session.excluded_zones)
+        self.assertNotIn("studio", e.session.pending_zones)
+        self.assertEqual(e.observed("studio", O, C, now=201), [])
+        self.assertEqual(e.observed("studio", C, O, now=202), [])
         self.assertEqual(e.phase, Phase.ARMED_AWAY)
+
+    def test_pending_state_survives_restart_and_reconciles(self):
+        e = armed(studio=U)
+        snapshot = e.snapshot()
+        recovered = AlarmMachine(PATHS, ZONES)
+        recovered.restore(snapshot)
+        self.assertIn("studio", recovered.session.pending_zones)
+        states = {zone: U for zone in ZONES}
+        states["studio"] = C
+        self.assertEqual(recovered.reconcile(states, now=1000), [
+            {"type": "zone_enrolled", "zone": "studio"}
+        ])
+        self.assertIn("studio", recovered.session.protected_zones)
+        reloaded = AlarmMachine(PATHS, ZONES)
+        reloaded.restore(recovered.snapshot())
+        self.assertIn("studio", reloaded.session.protected_zones)
+        self.assertEqual(
+            reloaded.observed("studio", U, O, now=1001)[0]["type"],
+            "triggered",
+        )
+
+    def test_old_snapshot_without_pending_zones_stays_compatible(self):
+        e = armed(studio=O)
+        saved = e.snapshot()
+        del saved["session"]["pending_zones"]
+        recovered = AlarmMachine(PATHS, ZONES)
+        self.assertEqual(recovered.restore(saved)[0]["type"], "armed_restored")
+        self.assertFalse(recovered.session.pending_zones)
+        self.assertIn("studio", recovered.session.excluded_zones)
 
     def test_trigger_one_per_episode(self):
         e = armed()

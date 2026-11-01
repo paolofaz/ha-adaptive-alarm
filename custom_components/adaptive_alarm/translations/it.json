@@ -28,7 +28,7 @@
           "optional": "Contatti opzionali",
           "vibrations": "Sensori di vibrazione (numero libero)",
           "siren": "Sirena opzionale (INATTIVA)",
-          "timing": "Tempi, soglia vibrazioni e recupero offline",
+          "timing": "Tempi inserimento e conferma vibrazioni",
           "deterrent": "Luci deterrenti al primo colpo (opzionali)",
           "notifications": "Notifiche sul telefono (App HA, Telegram, altri)",
           "notification_test": "Invia una notifica di prova"
@@ -41,7 +41,7 @@
           "optional": "Aggiungi contatti che non impediscono l'inserimento.",
           "vibrations": "Aggiungi, modifica o rimuovi un numero qualsiasi di sensori, ognuno con il contatto fisico associato.",
           "siren": "Selezione facoltativa, senza comandare la sirena.",
-          "timing": "Imposta ritardi, debounce, numero di colpi e recupero sensori.",
+          "timing": "Imposta ritardo di inserimento, filtro colpi, finestra e soglia 2 o 3. La protezione dal ritorno online aperto è automatica.",
           "deterrent": "Per impostazione predefinita OFF: accensione reale solo dopo consenso esplicito.",
           "notifications": "Scegli destinatari notify di Home Assistant, attivazione volontaria. Telegram Bot usa le entità notify.",
           "notification_test": "Invia soltanto un messaggio ai destinatari configurati, senza avviare l'allarme."
@@ -98,21 +98,19 @@
         }
       },
       "timing": {
-        "title": "Tempi, soglia vibrazioni e recupero offline",
-        "description": "Queste impostazioni valgono durante l'inserimento e quando l'allarme è attivo. I colpi vengono contati solo sullo STESSO sensore e solo se il relativo contatto era protetto. Un solo colpo genera il preallarme; 2 o 3 colpi validi entro la finestra fanno scattare l'allarme simulato.\n\n**Recupero offline** riguarda soltanto un contatto PROTETTO che, dopo essere risultato non disponibile, torna online già aperto. Non riguarda i destinatari delle notifiche sul telefono.",
+        "title": "Tempi inserimento e conferma vibrazioni",
+        "description": "I colpi sono indipendenti per sensore: 1 colpo genera il preallarme; 2 o 3 sullo STESSO sensore entro la finestra generano l'allarme simulato.\\n\\n**Protezione dei sensori offline (automatica):** un contatto protetto rimane protetto anche se Zigbee2MQTT o Home Assistant lo rende temporaneamente non disponibile, incluso dopo riavvio. Se torna CHIUSO la sessione continua; se torna APERTO scatta l'allarme simulato. Contatti non disponibili all'inserimento rimangono IN ATTESA: al primo ritorno CHIUSI vengono protetti; se APERTI vengono esclusi per l'intera sessione. Contatti obbligatori e gruppi minimi devono essere soddisfatti all'inserimento. Non serve configurare una politica di recupero.",
         "data": {
           "arming_delay": "Ritardo inserimento (secondi)",
           "vibration_debounce": "Filtro colpi ripetuti (secondi)",
           "vibration_window": "Tempo massimo per confermare i colpi (secondi)",
-          "recovery_policy": "Contatto protetto torna online già aperto",
           "vibration_threshold": "Colpi dello stesso sensore per l'allarme (2 o 3)"
         },
         "data_description": {
           "arming_delay": "Tempo di uscita prima che vengano verificati i contatti obbligatori; 0 = verifica immediata.",
           "vibration_threshold": "2 o 3 colpi validi sullo stesso sensore. La soglia 1 non è consentita.",
           "vibration_debounce": "Secondi minimi tra due segnali dello stesso sensore: quelli più ravvicinati vengono scartati (es. 3 s).",
-          "vibration_window": "Tempo entro cui devono arrivare 2 o 3 colpi validi dello stesso sensore (es. 20 s).",
-          "recovery_policy": "«Solo avviso» segnala l'anomalia senza far scattare l'allarme. «Allarme simulato» fa scattare l'allarme se il contatto torna online già aperto. Quando diventa offline viene sempre segnalata un'anomalia."
+          "vibration_window": "Tempo entro cui devono arrivare 2 o 3 colpi validi dello stesso sensore (es. 20 s)."
         }
       },
       "vibration_add": {
@@ -189,12 +187,5 @@
       "invalid_notification_target": "Destinatario non valido: sono ammessi solo servizi/entità notify."
     }
   },
-  "selector": {
-    "recovery_policy": {
-      "options": {
-        "notify": "Solo avviso: non far scattare l'allarme",
-        "trigger": "Allarme simulato se torna aperto"
-      }
-    }
-  }
+  "selector": {}
 }

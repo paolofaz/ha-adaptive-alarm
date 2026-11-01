@@ -52,3 +52,23 @@ unchanged until expiry may turn it OFF. A missing, reordered, delayed beyond
 A successful request does not establish secure physical command provenance;
 external manual changes can occur even during the acknowledgement window.
 Sirens and switches still have zero actuation paths.
+
+## v0.7.0 — persist protected vs pending vs excluded zones
+
+A protected zone must survive `unavailable` and all HA/Z2M restarts; it
+always triggers when its first returning valid value is OPEN, ignoring any old
+`recovery_policy: notify` option. OFFLINE alone does not trigger or send
+a phone push. Contact status may be diagnosed as degraded.
+
+An UNKNOWN sensor when arming is not deemed safe: it enters Pending only when
+all configured minimum requirements are already satisfied without it. Pending
+contact CLOSED for the first time => protected; first OPEN => permanently
+excluded. A sensor already OPEN at commit is permanently excluded as before.
+
+Persist Pending and Protected atomically before events are published and
+restore them without using transient Zigbee2MQTT availability as a new
+insertion baseline. Existing v0.6.x stored sessions lacking the `pending_zones`
+field retain their original exclusion set. A mandatory contact or minimum
+group that cannot be covered without an unavailable sensor STILL blocks arm.
+The old UI return-online policy is removed because the safer fixed behavior
+cannot be downgraded. Siren remains entirely simulated.
