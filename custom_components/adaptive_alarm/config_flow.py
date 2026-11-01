@@ -20,12 +20,15 @@ from .const import (
     CONF_VIBRATION_DEBOUNCE, CONF_VIBRATION_PROFILE, CONF_VIBRATION_WINDOW,
     CONF_VIBRATION_THRESHOLD, DEFAULT_VIBRATION_THRESHOLD,
     CONF_DETERRENT_ENABLED, CONF_DETERRENT_LIGHTS,
+    CONF_DETERRENT_AUTO_OFF, CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY,
+    CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
     DEFAULT_ARMING_DELAY, DEFAULT_RECOVERY_POLICY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DEFAULT_NAME, DOMAIN,
     VIBRATION_ASSIGNMENTS,
 )
 from .engine.configurable import AlternativeGroup, ProtectionRules, rules_for_config
 from .engine.vibration_links import VibrationConfigurationError, validated_vibration_links
+from .notifications import async_send_notification, validate_targets
 
 
 OPTIONS_MENU_STEPS = (
@@ -35,6 +38,8 @@ OPTIONS_MENU_STEPS = (
     "optional",
     "vibrations",
     "deterrent",
+    "notifications",
+    "notification_test",
     "siren",
     "timing",
 )
@@ -337,6 +342,10 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 return self._save(other={
                     CONF_DETERRENT_ENABLED: enabled,
                     CONF_DETERRENT_LIGHTS: lights,
+                    CONF_DETERRENT_AUTO_OFF: user_input.get(CONF_DETERRENT_AUTO_OFF, False) is True,
+                    CONF_DETERRENT_OFF_DELAY: user_input.get(
+                        CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY
+                    ),
                 })
         return self.async_show_form(
             step_id="deterrent", errors=errors,
@@ -351,8 +360,91 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 ): selector.EntitySelector(selector.EntitySelectorConfig(
                     domain="light", multiple=True,
                 )),
+                vol.Required(
+                    CONF_DETERRENT_AUTO_OFF,
+                    default=opts.get(CONF_DETERRENT_AUTO_OFF, False),
+                ): bool,
+                vol.Required(
+                    CONF_DETERRENT_OFF_DELAY,
+                    default=opts.get(
+                        CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY,
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=15, max=3600)),
             }),
         )
+
+    def _available_notify_services(self) -> list[str]:
+        """Only real notify actions, never a generic arbitrary HA service."""
+        names = self.hass.services.async_services().get("notify", {})
+        return sorted(
+            name for name in names
+            if name not in ("notify", "send_message", "persistent_notification")
+        )
+
+    async def async_step_notifications(self, user_input: dict[str, Any] | None = None):
+        """Configure explicit push providers, never credentials or chat IDs."""
+        opts = self.config_entry.options
+        errors: dict[str, str] = {}
+        available = self._available_notify_services()
+        if user_input is not None:
+            enabled = user_input.get(CONF_NOTIFY_ENABLED, False) is True
+            entities = user_input.get(CONF_NOTIFY_ENTITIES, [])
+            services = user_input.get(CONF_NOTIFY_SERVICES, [])
+            try:
+                chosen_entities, chosen_services = validate_targets(entities, services)
+            except ValueError:
+                errors["base"] = "invalid_notification_target"
+            else:
+                if enabled and not (chosen_entities or chosen_services):
+                    errors["base"] = "notification_no_targets"
+                elif any(name not in available for name in chosen_services):
+                    errors["base"] = "notification_service_missing"
+                else:
+                    return self._save(other={
+                        CONF_NOTIFY_ENABLED: enabled,
+                        CONF_NOTIFY_ENTITIES: list(chosen_entities),
+                        CONF_NOTIFY_SERVICES: list(chosen_services),
+                    })
+        known = sorted(set(available) | set(opts.get(CONF_NOTIFY_SERVICES, [])))
+        return self.async_show_form(
+            step_id="notifications", errors=errors,
+            data_schema=vol.Schema({
+                vol.Required(CONF_NOTIFY_ENABLED, default=opts.get(
+                    CONF_NOTIFY_ENABLED, False,
+                )): bool,
+                vol.Optional(CONF_NOTIFY_ENTITIES, default=opts.get(
+                    CONF_NOTIFY_ENTITIES, [],
+                )): selector.EntitySelector(selector.EntitySelectorConfig(
+                    domain="notify", multiple=True,
+                )),
+                vol.Optional(CONF_NOTIFY_SERVICES, default=opts.get(
+                    CONF_NOTIFY_SERVICES, [],
+                )): selector.SelectSelector(selector.SelectSelectorConfig(
+                    options=known, multiple=True,
+                )),
+            }),
+        )
+
+    async def async_step_notification_test(
+        self, user_input: dict[str, Any] | None = None,
+    ):
+        """User-selected menu action; only sends a harmless test message."""
+        opts = self.config_entry.options
+        entities = opts.get(CONF_NOTIFY_ENTITIES, [])
+        services = opts.get(CONF_NOTIFY_SERVICES, [])
+        try:
+            entity_ids, names = validate_targets(entities, services)
+        except ValueError:
+            return self.async_abort(reason="invalid_notification_target")
+        if not (entity_ids or names):
+            return self.async_abort(reason="notification_no_targets")
+        result = await async_send_notification(
+            self.hass, entities=entity_ids, services=names,
+            message="Test Adaptive Alarm: canale notifiche configurato correttamente. Nessun allarme attivato.",
+        )
+        if result["failed"]:
+            return self.async_abort(reason="notification_test_failed")
+        return self.async_abort(reason="notification_test_sent")
 
     async def async_step_siren(self, user_input: dict[str, Any] | None = None):
         rule = self._rules()

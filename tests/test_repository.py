@@ -35,7 +35,7 @@ class PackagingTests(unittest.TestCase):
             'async_call("switch"',
         )
         controller = (DOMAIN / "controller.py").read_text()
-        self.assertEqual(controller.count("services.async_call("), 1)
+        self.assertEqual(controller.count("services.async_call("), 2)
         self.assertIn('"light", "turn_on"', controller)
         for component in DOMAIN.rglob("*.py"):
             source = component.read_text()
@@ -48,7 +48,9 @@ class PackagingTests(unittest.TestCase):
         flow = (DOMAIN / "config_flow.py").read_text()
         const = (DOMAIN / "const.py").read_text()
         self.assertIn('"light", "turn_on"', source)
-        self.assertNotIn('"light", "turn_off"', source)
+        self.assertIn('"light", "turn_off"', source)
+        self.assertIn("may_turn_off(", source)
+        self.assertIn("self.deterrent_auto_off", source)
         self.assertIn("self.deterrent_enabled", source)
         self.assertIn("session.protected_zones", source)
         self.assertIn("CONF_DETERRENT_ENABLED", flow)
@@ -58,7 +60,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_siren_metadata_cannot_activate_outputs(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "0.5.0")
+        self.assertEqual(manifest["version"], "0.6.0")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": False', panel)

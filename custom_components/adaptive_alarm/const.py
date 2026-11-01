@@ -49,3 +49,15 @@ DEFAULT_VIBRATION_THRESHOLD = 2
 CONF_DETERRENT_LIGHTS = "deterrent_lights"
 CONF_DETERRENT_ENABLED = "deterrent_enabled"
 DEFAULT_DETERRENT_ENABLED = False
+
+# v0.6.0 — light timer is a SECOND opt-in. Existing users keep their
+# v0.5.0 behavior until explicitly enabling automatic light-off.
+CONF_DETERRENT_AUTO_OFF = "deterrent_auto_off"
+CONF_DETERRENT_OFF_DELAY = "deterrent_off_delay"
+DEFAULT_DETERRENT_OFF_DELAY = 120
+
+# Phone/push routes must be explicitly configured. Modern Telegram Bot chat
+# targets appear as notify entities; mobile apps generally use notify services.
+CONF_NOTIFY_ENABLED = "notifications_enabled"
+CONF_NOTIFY_ENTITIES = "notification_entities"
+CONF_NOTIFY_SERVICES = "notification_services"
