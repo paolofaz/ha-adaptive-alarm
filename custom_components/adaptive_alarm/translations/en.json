@@ -49,10 +49,14 @@
       },
       "mandatory": {
         "title": "Mandatory contacts and optional lock",
-        "description": "All mandatory contacts must be closed at the end of arming. A lock is optional and, if chosen, must be locked. The integration cannot arm without at least one mandatory contact or alternative group.",
+        "description": "Every contact below is mandatory. The lock is optional, but if selected must be locked. **Every alternative group is also required**: at least ONE contact in each group must be closed.\\n\\n**Configured groups (read-only):** {groups_summary}\\n\\nTo add or edit a group return to the menu and choose Add or edit required group. Do not duplicate group members in the mandatory contacts list.",
         "data": {
           "mandatory": "Required binary contacts (all closed)",
           "lock": "Optional door lock (must be locked)"
+        },
+        "data_description": {
+          "mandatory": "ALL these contacts must be closed. Do not also add contacts already assigned to alternative groups.",
+          "lock": "If a lock is configured, it must be locked when the exit delay ends."
         }
       },
       "group": {
@@ -95,13 +99,20 @@
       },
       "timing": {
         "title": "Timing, vibration threshold and recovery",
-        "description": "Vibrations are tracked per sensor. Choose 2 or 3 hits from the SAME sensor within the configured window. First valid hit creates a prealert. Debounce filters rapid repeats. Previous cross-sensor and storm-grace behaviors are no longer used.",
+        "description": "These settings control arming and vibration evaluation. Hits count only from the SAME sensor when its linked contact is protected. One hit generates a prealert; 2 or 3 valid hits within the confirmation window trigger the simulated alarm.\\n\\n**Offline recovery** applies only when a PROTECTED contact comes back online already open after being unavailable. It does not configure phone notification destinations.",
         "data": {
           "arming_delay": "Exit delay (seconds)",
-          "vibration_debounce": "Vibration debounce (seconds)",
-          "vibration_window": "Hit confirmation window (seconds)",
-          "recovery_policy": "Return-online policy",
+          "vibration_debounce": "Repeated-hit filter (seconds)",
+          "vibration_window": "Maximum hit confirmation time (seconds)",
+          "recovery_policy": "Protected contact returns online already open",
           "vibration_threshold": "Hits from same sensor to trigger (2 or 3)"
+        },
+        "data_description": {
+          "arming_delay": "Exit countdown before required contacts are checked; 0 = immediate check.",
+          "vibration_threshold": "2 or 3 valid hits from the same sensor. Threshold 1 is not allowed.",
+          "vibration_debounce": "Minimum time between hits from the same sensor; closer events are ignored (e.g. 3 s).",
+          "vibration_window": "Time in which 2 or 3 valid hits must arrive from the same sensor (e.g. 20 s).",
+          "recovery_policy": "«Notice only» reports the anomaly without triggering. «Simulated alarm» triggers if the contact comes online already open. Going offline always raises a diagnostic."
         }
       },
       "vibration_add": {
@@ -176,6 +187,14 @@
       "notification_test_failed": "At least one test destination is missing or returned an error. Check logs.",
       "notification_no_targets": "Select at least one target to enable notifications.",
       "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted."
+    }
+  },
+  "selector": {
+    "recovery_policy": {
+      "options": {
+        "notify": "Notice only: do not trigger alarm",
+        "trigger": "Simulated alarm if it returns open"
+      }
     }
   }
 }

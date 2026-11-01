@@ -63,6 +63,28 @@ class FlowLocalizationTests(unittest.TestCase):
                     self.assertTrue(options[step]["title"])
                 self.assertIn("data", options["deterrent"])
 
+    def test_human_readable_recovery_policy_translated(self):
+        flow = FLOW.read_text()
+        self.assertIn('translation_key="recovery_policy"', flow)
+        self.assertIn("description_placeholders={", flow)
+        self.assertIn('"groups_summary": group_summary(', flow)
+        self.assertIn("NumberSelectorMode.BOX", flow)
+        for language in ("it", "en"):
+            tr = json.loads(
+                (INTEGRATION / "translations" / f"{language}.json").read_text()
+            )
+            self.assertEqual(
+                set(tr["selector"]["recovery_policy"]["options"]),
+                {"notify", "trigger"},
+            )
+            timing = tr["options"]["step"]["timing"]
+            self.assertEqual(set(timing["data_description"]), {
+                "arming_delay", "vibration_threshold", "vibration_debounce",
+                "vibration_window", "recovery_policy",
+            })
+            mandatory = tr["options"]["step"]["mandatory"]
+            self.assertIn("{groups_summary}", mandatory["description"])
+
     def test_no_outdated_five_sensor_setup_description(self):
         for language in ("it", "en"):
             translation = json.loads(
