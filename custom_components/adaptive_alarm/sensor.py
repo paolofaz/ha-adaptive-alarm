@@ -64,7 +64,11 @@ class AdaptiveDiagnostic(SensorEntity):
             return {"zones": sorted(zones), "session_frozen": True}
         if self.kind == "excluded":
             zones = session.excluded_zones if session else frozenset()
-            return {"zones": sorted(zones), "session_frozen": True}
+            return {
+                "zones": sorted(zones),
+                "pending_zones": sorted(session.pending_zones) if session else [],
+                "session_frozen": True,
+            }
         if self.kind == "health":
             rules = self.controller.paths
             return {
@@ -89,5 +93,9 @@ class AdaptiveDiagnostic(SensorEntity):
                 "optional_contacts": list(rules.optional),
                 "lock_configured": bool(rules.lock),
                 "protected_zone_problems": sorted(self.controller._active_faults),
+                "pending_zones": sorted(session.pending_zones) if session else [],
+                "active_zone_monitoring": sorted(
+                    session.protected_zones
+                ) if session else [],
             }
         return {}
