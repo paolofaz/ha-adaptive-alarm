@@ -37,7 +37,9 @@ from .engine import RecoveryPolicy, ZoneState, evaluate_eligibility
 from .engine.configurable import rules_for_config
 from .engine.runtime import AlarmMachine, Phase
 from .engine.presentation import prealert_text, trigger_text, fault_text
-from .engine.light_expiry import LightLease, may_turn_off
+from .engine.light_expiry import (
+    LIGHT_ACK_TIMEOUT, LightLease, PendingLight, confirm_transition, may_turn_off,
+)
 from .notifications import async_send_notification, validate_targets
 from .engine.vibration_links import validated_vibration_links
 
@@ -110,6 +112,7 @@ class AdaptiveAlarmController:
             hass, 1, f"{DOMAIN}.{entry.entry_id}.deterrent_lights"
         )
         self._light_leases: dict[str, LightLease] = {}
+        self._light_pending: dict[str, PendingLight] = {}
         self._guard = asyncio.Lock()
         self._remove_callbacks: list[Any] = []
         self._active_faults: set[str] = set()
@@ -191,6 +194,14 @@ class AdaptiveAlarmController:
                     self.hass, [self.lock_entity], self._on_state_event
                 )
             )
+        if self.deterrent_enabled and self.deterrent_auto_off and self.deterrent_lights:
+            # Register before accepting new requests; async light state updates
+            # may arrive after turn_on returned successfully.
+            self._remove_callbacks.append(
+                async_track_state_change_event(
+                    self.hass, list(self.deterrent_lights), self._on_light_state_event,
+                )
+            )
         self._remove_callbacks.append(
             async_track_time_interval(
                 self.hass, self._on_timer, timedelta(seconds=1)
@@ -213,6 +224,56 @@ class AdaptiveAlarmController:
     @callback
     def _on_state_event(self, event: Event) -> None:
         self.hass.async_create_task(self._process_state_event(event))
+
+    @callback
+    def _on_light_state_event(self, event: Event) -> None:
+        self.hass.async_create_task(self._process_light_state_event(event))
+
+    async def _process_light_state_event(self, event: Event) -> None:
+        """Claim delayed OFF→ON acknowledgement, never arbitrary lights."""
+        entity = event.data.get("entity_id")
+        old = event.data.get("old_state")
+        new = event.data.get("new_state")
+        async with self._guard:
+            pending = self._light_pending.get(entity)
+            if pending is None:
+                return
+            session = self.machine.session
+            episode = (
+                session.identifier
+                if session and self.machine.phase in (Phase.ARMED_AWAY, Phase.TRIGGERED)
+                else None
+            )
+            lease = confirm_transition(
+                pending, now=time.time(),
+                old_state=getattr(old, "state", None),
+                old_updated=old.last_updated.isoformat() if old else None,
+                new_state=getattr(new, "state", None),
+                new_updated=new.last_updated.isoformat() if new else None,
+                current_episode=episode,
+            )
+            # Any change from the originally sampled OFF state invalidates
+            # our tracking. Otherwise wait only until the short timeout.
+            if lease is None:
+                if (
+                    old is None or new is None
+                    or old.last_updated.isoformat() != pending.baseline_updated
+                    or getattr(new, "state", None) != "off"
+                ):
+                    del self._light_pending[entity]
+                    self._events([{
+                        "type": "deterrent_light_tracking_cancelled", "light": entity,
+                    }])
+                return
+            self._light_pending.pop(entity, None)
+            self._light_leases[entity] = lease
+            await self._light_store.async_save({
+                "leases": [v.to_dict() for v in self._light_leases.values()]
+            })
+            self._events([{
+                "type": "deterrent_light_tracking_confirmed",
+                "light": entity, "timeout_seconds": self.deterrent_off_delay,
+            }])
 
     async def _process_state_event(self, event: Event) -> None:
         data = event.data
@@ -351,7 +412,11 @@ class AdaptiveAlarmController:
             requested: list[str] = []
             failed: list[str] = []
             now = time.time()
+            session_id = session.identifier
             for light in lights_off:
+                baseline = self.hass.states.get(light)
+                if baseline is None or baseline.state != "off":
+                    continue
                 try:
                     await self.hass.services.async_call(
                         "light", "turn_on", {"entity_id": light}, blocking=True,
@@ -361,18 +426,44 @@ class AdaptiveAlarmController:
                     failed.append(light)
                     continue
                 requested.append(light)
+                if not self.deterrent_auto_off:
+                    continue
+                # The on request may return before the physical device
+                # publishes its new state. Never assume success equals ON.
+                pending = PendingLight(
+                    entity_id=light,
+                    baseline_updated=baseline.last_updated.isoformat(),
+                    ack_deadline=now + LIGHT_ACK_TIMEOUT,
+                    off_deadline=now + self.deterrent_off_delay,
+                    episode=session_id,
+                )
                 current = self.hass.states.get(light)
-                if (
-                    self.deterrent_auto_off
-                    and current is not None
-                    and current.state == "on"
-                ):
-                    self._light_leases[light] = LightLease(
-                        entity_id=light,
-                        last_updated=current.last_updated.isoformat(),
-                        deadline=now + self.deterrent_off_delay,
-                        episode=session.identifier,
+                if current is None:
+                    continue
+                if current.state == "on":
+                    # Synchronous state change; same strict confirmation as
+                    # delayed OFF→ON events.
+                    lease = confirm_transition(
+                        pending, now=time.time(),
+                        old_state=baseline.state,
+                        old_updated=baseline.last_updated.isoformat(),
+                        new_state=current.state,
+                        new_updated=current.last_updated.isoformat(),
+                        current_episode=session_id,
                     )
+                    if lease is not None:
+                        self._light_leases[light] = lease
+                elif (
+                    current.state == "off"
+                    and current.last_updated == baseline.last_updated
+                ):
+                    # Wait for the independent light state event (max 15 s).
+                    self._light_pending[light] = pending
+                else:
+                    self._events([{
+                        "type": "deterrent_light_tracking_cancelled",
+                        "light": light,
+                    }])
             if self._light_leases:
                 await self._light_store.async_save({
                     "leases": [v.to_dict() for v in self._light_leases.values()]
@@ -394,6 +485,26 @@ class AdaptiveAlarmController:
         Do not turn off during a triggered alarm, or within another armed
         episode. After reboot no claims are restored (manual inspection).
         """
+        # A successful service request is not evidence of a state change.
+        # Report pending lights that never confirmed ON within 15 seconds.
+        expired_pending: list[str] = []
+        async with self._guard:
+            now = time.time()
+            for entity, pending in list(self._light_pending.items()):
+                if now >= pending.ack_deadline:
+                    del self._light_pending[entity]
+                    expired_pending.append(entity)
+            if expired_pending:
+                self._events([{
+                    "type": "deterrent_light_tracking_unconfirmed",
+                    "lights": expired_pending,
+                }])
+        if expired_pending:
+            await self._notify_text(
+                "Luci deterrenti: nessuna conferma di accensione in tempo "
+                "per " + ", ".join(expired_pending) +
+                ". Spegnimento automatico non eseguito: controlla le luci."
+            )
         if not self._light_leases:
             return
         notices: list[str] = []
