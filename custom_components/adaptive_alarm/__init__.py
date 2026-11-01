@@ -1,4 +1,4 @@
-"""Adaptive Alarm integration: no physical outputs in the preview."""
+"""Adaptive Alarm: simulated security, with optional explicitly enabled lights."""
 
 from __future__ import annotations
 

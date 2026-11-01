@@ -11,7 +11,7 @@ FLOW = INTEGRATION / "config_flow.py"
 
 EXPECTED_STEPS = (
     "mandatory", "group", "remove_group", "optional",
-    "vibrations", "siren", "timing",
+    "vibrations", "deterrent", "siren", "timing",
 )
 
 
@@ -47,7 +47,20 @@ class FlowLocalizationTests(unittest.TestCase):
                 for step in menu:
                     self.assertTrue(options["init"]["menu_options"][step].strip())
                     self.assertTrue(options[step]["title"].strip())
+                    self.assertTrue(
+                        "data" in options[step] or "menu_options" in options[step]
+                    )
+                self.assertEqual(
+                    set(options["vibrations"]["menu_options"]),
+                    {"vibration_add", "vibration_edit", "vibration_remove"},
+                )
+                for step in (
+                    "vibration_add", "vibration_edit",
+                    "vibration_edit_contact", "vibration_remove",
+                ):
                     self.assertIn("data", options[step])
+                    self.assertTrue(options[step]["title"])
+                self.assertIn("data", options["deterrent"])
 
     def test_no_outdated_five_sensor_setup_description(self):
         for language in ("it", "en"):

@@ -27,7 +27,6 @@ class PackagingTests(unittest.TestCase):
     def test_no_physical_actuation_services(self):
         """Any future siren output requires an explicit, reviewed release."""
         forbidden = (
-            "services.async_call(",
             "mqtt.publish",
             "lock.unlock",
             "switch.turn_on",
@@ -35,6 +34,9 @@ class PackagingTests(unittest.TestCase):
             'async_call("siren"',
             'async_call("switch"',
         )
+        controller = (DOMAIN / "controller.py").read_text()
+        self.assertEqual(controller.count("services.async_call("), 1)
+        self.assertIn('"light", "turn_on"', controller)
         for component in DOMAIN.rglob("*.py"):
             source = component.read_text()
             for phrase in forbidden:
