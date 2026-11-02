@@ -61,12 +61,3 @@ DEFAULT_DETERRENT_OFF_DELAY = 120
 CONF_NOTIFY_ENABLED = "notifications_enabled"
 CONF_NOTIFY_ENTITIES = "notification_entities"
 CONF_NOTIFY_SERVICES = "notification_services"
-
-# v0.9.0 — strictly opt-in, read-only household presence consistency checks.
-# No automatic arming or disarming. Reuse existing configured notify routes.
-CONF_PRESENCE_HOME_ENABLED = "presence_home_enabled"
-CONF_PRESENCE_HOME_ENTITIES = "presence_home_entities"
-CONF_PRESENCE_EMPTY_ENABLED = "presence_empty_enabled"
-CONF_PRESENCE_EMPTY_SENSOR = "presence_empty_sensor"
-PRESENCE_HOME_DELAY = 20
-PRESENCE_EMPTY_DELAY = 120

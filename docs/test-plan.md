@@ -1,33 +1,11 @@
-# Adaptive Alarm test plan — current v0.9.0
+# Adaptive Alarm test plan — current v0.9.1
 
-## Presence consistency (opt-in only)
+## Current v0.9.1 acceptance (simulation only)
 
-1. Configure working phone/Telegram recipients under Notifications. Leave
-   both presence switches OFF and confirm no presence-mismatch events occur.
-2. Configure one existing person or input_select presence entity. Enable only
-   "armed while someone at home". Arm adaptive alarm, ensure the entity is
-   `home` for 20 s, then confirm exactly one notification with its HA
-   friendly name. Remaining home must not spam further notifications.
-3. Return the presence entity to `not_home`; set it back to `home` while
-   still armed. Confirm a fresh 20 s waiting period then a single new push.
-   Set it to `unknown` / `unavailable`; there must be no home warning.
-4. Configure your *existing* certainly-empty binary sensor and the required
-   door lock in Required contacts and groups; enable the second check.
-   Keep the alarm disarmed, empty sensor `on` and lock `locked` for
-   120 s. Confirm one notification, then no repeat. Unlock the door or
-   let the empty sensor become `unknown`; the timer must reset and no
-   notification may be generated from unavailable data.
-5. Restart Home Assistant while the condition remains true: the entire
-   delay is observed again before a warning, never instantly at startup.
-6. Verify there is still no automatic arming, no night mode, no physical
-   siren, no RF/MQTT commands; the adaptive alarm and prealarm behave
-   exactly as in v0.8.0.
-
-## Previous v0.8.0 acceptance and historical plans
-
-# Adaptive Alarm test plan — current v0.8.0
-
-## Current v0.8.0 acceptance (simulation only)
+The v0.9.0 presence observer was removed. Confirm that Configure has **no**
+Presence consistency alerts entry, no `presence_mismatch` events originate
+from the integration and the existing external Home Assistant presence
+entities/automations are unaffected. All v0.8.0 alarm tests still apply.
 
 1. Configure → Contatti obbligatori e gruppi must show every configured
    group and its friendly contact names. Verify adding and editing a group

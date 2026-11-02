@@ -1,4 +1,4 @@
-# Adaptive Alarm — v0.9.0-alpha
+# Adaptive Alarm — v0.9.1-alpha
 
 Configurable Home Assistant intruder-alarm engine, with HACS support. **The alarm and siren remain simulated**, and supports explicitly opted-in **real deterrent lighting** and **Home Assistant push notifications**. Sirens and locking hardware are still inert.
 
@@ -180,26 +180,16 @@ Both `unknown` and `unavailable` still count as unreadable in the alarm logic.
 No siren, light, notification, threshold or session-policy behavior was changed
 in this release.
 
-## v0.9.0 — opt-in presence mismatch notifications
+## v0.9.1 — remove household presence automation from integration
 
-The original YAML package contained two useful, informational consistency
-checks. Both are now available through **Configure → Presence consistency
-alerts** and both are **OFF by default**, including on upgrades:
+The optional presence-mismatch checks introduced in v0.9.0 have been removed
+from the integration. They belong in ordinary Home Assistant automations:
+alerts when the alarm is armed while someone is home, or when the home is
+certainly empty but the alarm is disarmed. No presence check, listener or
+notification is configured or run by Adaptive Alarm after this update.
 
-- **Armed with someone at home:** select one or more Home Assistant
-  `person`, `device_tracker` or existing `input_select` presence entities.
-  After 20 seconds of an uninterrupted `home` state while `armed_away`,
-  send one push mentioning the person(s) currently reported home.
-- **Empty house, alarm disarmed:** select the existing reliable
-  `binary_sensor` which is `on` only when the house is *certainly* empty.
-  This check requires the configured door lock to report `locked`.
-  After 120 continuous seconds of `disarmed`, certainly empty and locked,
-  send one informational warning.
-
-Configure and enable phone/Telegram notifications first. These checks reuse
-the already selected notification targets and do not contact anything else.
-`unknown` / `unavailable` never count as `home` or certainly empty, and
-a notification is issued at most once per uninterrupted mismatch episode.
-After a restart, both full delays run again before a possible warning.
-**No automatic arm/disarm, no device command and no physical siren output.**
-There is still just one adaptive `armed_away` mode, never night mode.
+Existing HA `person` entities, presence helpers, locks and automations
+are **never changed or deleted**. Earlier `presence_*` options are safely
+ignored if they remain in stored config; unrelated protection, notifications,
+and deterrent options are preserved. The one `armed_away` mode, protected /
+pending / excluded zones and physical siren inertness are unchanged.

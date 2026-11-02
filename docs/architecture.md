@@ -27,15 +27,3 @@ Health reports `degraded` while protected contacts are unreadable, including
 observational: it cannot change Protected/Pending/Excluded membership. A
 separate pure helper preserves the raw diagnosis while the security policy
 normalizes unknown and unavailable to the same unreadable domain state.
-
-## v0.9.0 — optional presence observer
-
-`engine.presence.PresenceAlerts` is a pure, read-only, debounced one-shot
-observer. It does not depend on the active protected-zone set, does not arm,
-disarm or trigger, and never controls hardware. The controller samples
-configured Home Assistant presence and empty-house entities on its existing
-one-second tick. Only explicit `home` and `on` states count; empty-house
-warnings additionally require the already configured lock to be `locked`.
-Both checks require opt-in and configured notification recipients. The
-observer resets its latched state when a condition clears; it starts fresh
-after HA restart so old flags cannot cause instantaneous notifications.

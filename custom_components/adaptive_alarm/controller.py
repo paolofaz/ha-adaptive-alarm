@@ -28,9 +28,6 @@ from .const import (
     CONF_DETERRENT_ENABLED, CONF_DETERRENT_LIGHTS,
     CONF_DETERRENT_AUTO_OFF, CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY,
     CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
-    CONF_PRESENCE_HOME_ENABLED, CONF_PRESENCE_HOME_ENTITIES,
-    CONF_PRESENCE_EMPTY_ENABLED, CONF_PRESENCE_EMPTY_SENSOR,
-    PRESENCE_HOME_DELAY, PRESENCE_EMPTY_DELAY,
     CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
     VIBRATION_ASSIGNMENTS,
     DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
@@ -40,7 +37,6 @@ from .engine import ZoneState, evaluate_eligibility
 from .engine.model import contact_state_from_raw
 from .engine.configurable import rules_for_config
 from .engine.runtime import AlarmMachine, Phase
-from .engine.presence import PresenceAlerts
 from .engine.presentation import prealert_text, trigger_text, fault_text
 from .engine.light_expiry import (
     LIGHT_ACK_TIMEOUT, LightLease, PendingLight, confirm_transition, may_turn_off,
@@ -85,14 +81,6 @@ class AdaptiveAlarmController:
             entry.options.get(CONF_NOTIFY_ENTITIES, []),
             entry.options.get(CONF_NOTIFY_SERVICES, []),
         )
-        self.presence_home_enabled = entry.options.get(CONF_PRESENCE_HOME_ENABLED) is True
-        self.presence_home_entities = tuple(
-            entry.options.get(CONF_PRESENCE_HOME_ENTITIES, [])
-        )
-        self.presence_empty_enabled = entry.options.get(CONF_PRESENCE_EMPTY_ENABLED) is True
-        self.presence_empty_sensor = entry.options.get(CONF_PRESENCE_EMPTY_SENSOR)
-        # Old installations stay fully passive; no presence listener until opted in.
-        self._presence_alerts = PresenceAlerts()
 
         self.zones = self.paths.known_contacts
         if "vibration_links" in entry.options:
@@ -593,57 +581,6 @@ class AdaptiveAlarmController:
             if events:
                 self._events(events)
 
-    async def _check_presence_alerts(self, now: float) -> None:
-        """Detect prolonged presence mismatches without changing alarm state.
-
-        The configured notify targets and explicit opt-in are reused. Sampling
-        occurs on the existing one-second tick, including just after a restart.
-        """
-        if not (self.presence_home_enabled or self.presence_empty_enabled):
-            return
-        async with self._guard:
-            home = (
-                (
-                    entity for entity in self.presence_home_entities
-                    if self.hass.states.is_state(entity, "home")
-                ) if self.presence_home_enabled else ()
-            )
-            events = self._presence_alerts.observe(
-                now=now,
-                phase=self.machine.phase.value,
-                people_home=home,
-                empty_sensor_on=bool(
-                    self.presence_empty_enabled
-                    and self.presence_empty_sensor
-                    and self.hass.states.is_state(self.presence_empty_sensor, "on")
-                ),
-                lock_locked=bool(
-                    self.lock_entity
-                    and self.hass.states.is_state(self.lock_entity, "locked")
-                ),
-                watch_home=self.presence_home_enabled,
-                watch_empty=self.presence_empty_enabled,
-                home_delay=PRESENCE_HOME_DELAY,
-                empty_delay=PRESENCE_EMPTY_DELAY,
-            )
-            if events:
-                self._events(events)
-        for event in events:
-            if event["kind"] == "armed_with_person_home":
-                names = ", ".join(
-                    self._friendly_name(person) for person in event["people"]
-                )
-                await self._notify_text(
-                    "ATTENZIONE PRESENZA: allarme inserito, "
-                    f"ma risultano a casa: {names}. Verifica la situazione."
-                )
-            elif event["kind"] == "empty_house_disarmed":
-                await self._notify_text(
-                    "ATTENZIONE CASA VUOTA: la casa risulta certamente vuota "
-                    "e la porta è chiusa a chiave, ma l'allarme è disinserito. "
-                    "Verifica prima di inserirlo."
-                )
-
     async def async_tick(self) -> None:
         """Handle countdown and prealarm expiry; session zones remain frozen."""
         states = self._states()
@@ -663,7 +600,6 @@ class AdaptiveAlarmController:
         await self._notify_events(events)
         await self._refresh_faults()
         await self._expire_deterrent_lights()
-        await self._check_presence_alerts(now)
 
     async def async_arm(self) -> list[dict[str, Any]]:
         return await self._apply(
