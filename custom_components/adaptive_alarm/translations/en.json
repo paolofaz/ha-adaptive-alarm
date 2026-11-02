@@ -27,6 +27,7 @@
           "vibrations": "Vibration sensors (any number)",
           "deterrent": "Deterrent lights on first hit (optional)",
           "notifications": "Phone notifications (HA App, Telegram, others)",
+          "presence": "Presence consistency alerts (optional)",
           "notification_test": "Send test notification",
           "siren": "Optional siren (INERT / DISABLED)",
           "timing": "Arming timing and vibration confirmation"
@@ -38,6 +39,7 @@
           "vibrations": "Add, edit, or remove any number of sensors, each with its own physical contact.",
           "deterrent": "OFF by default: physical lighting only after explicit opt-in.",
           "notifications": "Choose explicit HA notify targets. Telegram Bot uses notify entities.",
+          "presence": "Warn when someone is home while armed, or when the house is empty while disarmed. Never arms or disarms automatically.",
           "notification_test": "Only sends a message to configured targets, without triggering the alarm.",
           "siren": "Optional siren selection, without any actuation.",
           "timing": "Set exit delay, debounce, window and hit threshold 2 or 3. Protected contacts returning open trigger automatically."
@@ -182,6 +184,20 @@
         "data": {
           "name": "Group to edit"
         }
+      },
+      "presence": {
+        "title": "Presence and alarm consistency checks",
+        "description": "Both features are OFF until explicitly enabled.\\n\\n**Armed and someone home:** after 20 uninterrupted seconds with any selected entity exactly `home`, send one alert.\\n\\n**Certainly empty house while disarmed:** after 120 uninterrupted seconds when the selected binary sensor is `on`, the configured required door lock is `locked` and alarm `disarmed`, send one alert. The second check requires a lock configured under Required contacts.\\n\\nUnavailable sensors are NOT proof the home is empty. The integration never arms/disarms automatically and does not repeat the warning until the condition resets. Configure phone notifications first.",
+        "data": {
+          "presence_home_enabled": "Warn if armed while someone is home",
+          "presence_home_entities": "Presence entities (person, device_tracker or input_select)",
+          "presence_empty_enabled": "Warn if house is empty but alarm disarmed",
+          "presence_empty_sensor": "Certainly-empty house binary sensor"
+        },
+        "data_description": {
+          "presence_home_entities": "Only home is proof of presence; unknown/unavailable are ignored. Existing HA presence input_select entities are supported.",
+          "presence_empty_sensor": "Must be ON only if the house is certainly empty. Not created automatically, and the configured required lock must be locked."
+        }
       }
     },
     "error": {
@@ -193,7 +209,11 @@
       "invalid_deterrent_lights": "Only light entities are permitted.",
       "notification_no_targets": "Select at least one target to enable notifications.",
       "notification_service_missing": "The chosen notify service is not available.",
-      "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted."
+      "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted.",
+      "presence_home_targets_required": "Select at least one presence entity to enable this check.",
+      "presence_empty_sensor_required": "Select the Certainly empty house binary sensor.",
+      "presence_lock_required": "Configure a door lock under Required contacts and groups first.",
+      "presence_notifications_required": "Configure and enable notification recipients first."
     },
     "abort": {
       "active_session": "Disarm the alarm before changing protection rules or settings.",

@@ -22,6 +22,8 @@ from .const import (
     CONF_DETERRENT_ENABLED, CONF_DETERRENT_LIGHTS,
     CONF_DETERRENT_AUTO_OFF, CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY,
     CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
+    CONF_PRESENCE_HOME_ENABLED, CONF_PRESENCE_HOME_ENTITIES,
+    CONF_PRESENCE_EMPTY_ENABLED, CONF_PRESENCE_EMPTY_SENSOR,
     DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DEFAULT_NAME, DOMAIN,
     VIBRATION_ASSIGNMENTS,
@@ -38,6 +40,7 @@ OPTIONS_MENU_STEPS = (
     "vibrations",
     "deterrent",
     "notifications",
+    "presence",
     "notification_test",
     "siren",
     "timing",
@@ -494,6 +497,60 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                     CONF_NOTIFY_SERVICES, [],
                 )): selector.SelectSelector(selector.SelectSelectorConfig(
                     options=known, multiple=True,
+                )),
+            }),
+        )
+
+    async def async_step_presence(self, user_input: dict[str, Any] | None = None):
+        """Separate opt-ins for the two historical presence consistency checks.
+
+        The original household presence helpers are external HA entities;
+        none are created, guessed or modified by this integration.
+        """
+        opts = self.config_entry.options
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            home_enabled = user_input.get(CONF_PRESENCE_HOME_ENABLED) is True
+            home_entities = user_input.get(CONF_PRESENCE_HOME_ENTITIES, [])
+            empty_enabled = user_input.get(CONF_PRESENCE_EMPTY_ENABLED) is True
+            empty_sensor = user_input.get(CONF_PRESENCE_EMPTY_SENSOR) or None
+            if home_enabled and not home_entities:
+                errors["base"] = "presence_home_targets_required"
+            elif empty_enabled and not empty_sensor:
+                errors["base"] = "presence_empty_sensor_required"
+            elif empty_enabled and not self._rules().lock:
+                errors["base"] = "presence_lock_required"
+            elif (home_enabled or empty_enabled) and not (
+                opts.get(CONF_NOTIFY_ENABLED) is True and
+                (opts.get(CONF_NOTIFY_ENTITIES) or opts.get(CONF_NOTIFY_SERVICES))
+            ):
+                errors["base"] = "presence_notifications_required"
+            else:
+                return self._save(other={
+                    CONF_PRESENCE_HOME_ENABLED: home_enabled,
+                    CONF_PRESENCE_HOME_ENTITIES: home_entities,
+                    CONF_PRESENCE_EMPTY_ENABLED: empty_enabled,
+                    CONF_PRESENCE_EMPTY_SENSOR: empty_sensor,
+                })
+        return self.async_show_form(
+            step_id="presence", errors=errors,
+            data_schema=vol.Schema({
+                vol.Required(CONF_PRESENCE_HOME_ENABLED, default=opts.get(
+                    CONF_PRESENCE_HOME_ENABLED, False,
+                )): bool,
+                vol.Optional(CONF_PRESENCE_HOME_ENTITIES, default=opts.get(
+                    CONF_PRESENCE_HOME_ENTITIES, [],
+                )): selector.EntitySelector(selector.EntitySelectorConfig(
+                    domain=["person", "device_tracker", "input_select"],
+                    multiple=True,
+                )),
+                vol.Required(CONF_PRESENCE_EMPTY_ENABLED, default=opts.get(
+                    CONF_PRESENCE_EMPTY_ENABLED, False,
+                )): bool,
+                vol.Optional(CONF_PRESENCE_EMPTY_SENSOR, description={
+                    "suggested_value": opts.get(CONF_PRESENCE_EMPTY_SENSOR),
+                }): selector.EntitySelector(selector.EntitySelectorConfig(
+                    domain="binary_sensor",
                 )),
             }),
         )
