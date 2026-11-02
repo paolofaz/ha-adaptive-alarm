@@ -231,6 +231,7 @@ The integration is community-developed, not a certified security appliance.
 Correct behavior depends on HA, Z2M, radios, devices and local networking.
 Automated tests and HACS/hassfest checks do not substitute for field tests.
 
+
 ## Development
 
 Run `python -m unittest discover -s tests -v`. The repository includes
@@ -240,3 +241,10 @@ construction tests and HACS / hassfest validation workflows.
 Report bugs with the Adaptive Alarm version, relevant Health attributes,
 alarm state and anonymized `adaptive_alarm_event` payloads. Do not include
 API tokens, RF codes, chat identifiers or personal address data.
+
+# 🍺 Support the Project
+
+If you found this project useful and want to support my work, you can offer me a beer:
+
+[![Buy Me a Beer](https://img.shields.io/badge/Buy%20Me%20a%20Beer-0070ba?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/PaoloFazari)
+
