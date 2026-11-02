@@ -1,4 +1,4 @@
-"""HA alarm panel for the dry-run adaptive protection engine."""
+"""Home Assistant alarm panel for Adaptive Alarm."""
 
 from __future__ import annotations
 
@@ -26,12 +26,12 @@ MAP = {
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ) -> None:
-    """Expose the simulation alarm control panel."""
+    """Expose the alarm control panel."""
     async_add_entities([AdaptiveAlarmPanel(hass.data[DOMAIN][entry.entry_id])])
 
 
 class AdaptiveAlarmPanel(AlarmControlPanelEntity):
-    """Only ARM_AWAY; no physical outputs in this preview."""
+    """Away arming and HomeKit-compatible alarm states."""
 
     _attr_has_entity_name = True
     _attr_name = None
@@ -48,7 +48,7 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
             "identifiers": {(DOMAIN, controller.entry.entry_id)},
             "name": "Adaptive Alarm",
             "manufacturer": "Adaptive Alarm (community)",
-            "model": "Beta — siren disabled",
+            "model": "Adaptive Alarm 1.0",
         }
 
     async def async_added_to_hass(self) -> None:
@@ -65,9 +65,10 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
     def extra_state_attributes(self) -> dict:
         session = self.controller.machine.session
         return {
-            "simulation_only": True,
             "siren_configured": bool(self.controller.siren_entity),
-            "siren_enabled": False,
+            "siren_enabled": self.controller.siren_output_enabled,
+            "siren_entity": self.controller.siren_entity,
+            "siren_last_error": self.controller.siren_last_error,
             "fake_siren_enabled": self.controller.fake_siren_enabled,
             "fake_siren_helper": self.controller.fake_siren_helper,
             "fault": self.controller.machine.fault or None,

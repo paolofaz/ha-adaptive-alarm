@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Adaptive Alarm — nuova configurazione",
-        "description": "Crea Adaptive Alarm. Successivamente potrai configurare contatti obbligatori, gruppi alternativi, sensori opzionali, vibrazioni, notifiche e tempi. La sirena fisica è disabilitata.",
+        "description": "Crea Adaptive Alarm. Configura successivamente contatti, gruppi, vibrazioni, notifiche, luci e sirena.",
         "data": {
           "name": "Nome dell'integrazione"
         }
@@ -28,11 +28,11 @@
           "deterrent": "Luci deterrenti al primo colpo (opzionali)",
           "notifications": "Notifiche sul telefono (App HA, Telegram, altri)",
           "notification_events": "Eventi da notificare",
-          "notification_test": "Invia una notifica di prova",
-          "siren": "Sirena fisica e simulazione con helper",
+          "notification_test": "Verifica destinatari notifiche",
+          "siren": "Sirena e indicatore",
           "timing": "Tempi inserimento e conferma vibrazioni"
         },
-        "description": "Configura protezione, vibrazioni, notifiche e tempi. La sirena fisica è disabilitata in questa beta; le luci deterrenti sono comandate solo se abilitate.",
+        "description": "Configura protezione, vibrazioni, notifiche, tempi, luci e sirena. Le uscite fisiche richiedono un'abilitazione esplicita.",
         "menu_option_descriptions": {
           "protection": "Visualizza e gestisci i contatti e tutti i gruppi nello stesso menu.",
           "optional": "Aggiungi contatti che non impediscono l'inserimento.",
@@ -40,8 +40,8 @@
           "deterrent": "Per impostazione predefinita OFF: accensione reale solo dopo consenso esplicito.",
           "notifications": "Scegli destinatari notify di Home Assistant, attivazione volontaria. Telegram Bot usa le entità notify.",
           "notification_events": "Attiva o disattiva ogni evento indipendentemente. I destinatari restano quelli scelti in Notifiche sul telefono.",
-          "notification_test": "Invia soltanto un messaggio ai destinatari configurati, senza avviare l'allarme.",
-          "siren": "Dispositivo reale non comandato; facoltativa prova ON/OFF con solo input_boolean.",
+          "notification_test": "Invia un messaggio di verifica ai destinatari configurati.",
+          "siren": "Configurazione sirena e indicatore. La sirena fisica richiede un'abilitazione esplicita.",
           "timing": "Imposta ritardo di inserimento, filtro colpi, finestra e soglia 2 o 3. La protezione dal ritorno online aperto è automatica."
         }
       },
@@ -89,12 +89,13 @@
         }
       },
       "siren": {
-        "title": "Sirena fisica e simulazione con helper",
-        "description": "L'eventuale sirena fisica resta SOLO memorizzata: non riceve mai comandi.\n\nPer collaudare la durata dell'allarme puoi abilitare separatamente una sirena fittizia scegliendo un helper input_boolean. L'helper viene acceso in triggered e spento al ritorno in armed_away o al disinserimento. Non collegare questo helper a uno switch o a una sirena reale tramite automazioni.",
+        "title": "Sirena e indicatore",
+        "description": "Seleziona la sirena Zigbee2MQTT. Abilita il comando fisico solo dopo avere verificato il limite di autospegnimento sul dispositivo. La sirena si accende allo scatto e si spegne al disinserimento o al termine della durata configurata. Il comando fisico è disabilitato per impostazione predefinita. Puoi selezionare anche un helper input_boolean come indicatore ON/OFF.",
         "data": {
-          "siren": "Sirena fisica (solo configurazione, NON comandata)",
-          "fake_siren_enabled": "Abilita uscita di prova su helper (OFF predefinito)",
-          "fake_siren_helper": "Helper input_boolean per sirena fittizia"
+          "siren": "Sirena Zigbee2MQTT (entità siren o switch)",
+          "fake_siren_enabled": "Abilita indicatore su helper",
+          "fake_siren_helper": "Helper indicatore (input_boolean)",
+          "siren_output_enabled": "Abilita comando fisico sirena"
         }
       },
       "timing": {
@@ -112,7 +113,7 @@
           "vibration_threshold": "2 o 3 colpi validi sullo stesso sensore. La soglia 1 non è consentita.",
           "vibration_debounce": "Secondi minimi tra due segnali dello stesso sensore: quelli più ravvicinati vengono scartati (es. 3 s).",
           "vibration_window": "Tempo entro cui devono arrivare 2 o 3 colpi validi dello stesso sensore (es. 20 s).",
-          "trigger_duration": "Al termine torna in armed_away senza perdere la sessione. Ritorno automatico anche dopo un riavvio. Non aziona ancora la sirena fisica."
+          "trigger_duration": "Durata dello stato di allarme prima del ritorno automatico a inserito e dello spegnimento sirena. Verifica il limite di autospegnimento del dispositivo Zigbee."
         }
       },
       "vibration_add": {
@@ -146,7 +147,7 @@
       },
       "deterrent": {
         "title": "Luci deterrenti al primo colpo (opzionali)",
-        "description": "Per accendere le luci al primo colpo, abilita l'accensione e seleziona una o più entità light. Per farle SPEGNERE dopo un tempo, devi attivare anche «Spegnimento automatico»: è una seconda opzione distinta e per impostazione predefinita OFF. Imposta il ritardo (predefinito 120 s). Adaptive Alarm osserva fino a 15 secondi la conferma di accensione da Home Assistant; se non la riceve, NON spegne la luce automaticamente e segnala il motivo. Non spegne luci che erano già accese, modificate manualmente o durante l'allarme simulato. Dopo un riavvio lo spegnimento non viene ripreso automaticamente. Sirena sempre inattiva.",
+        "description": "Per accendere le luci al primo colpo, abilita l'accensione e seleziona una o più entità light. Per farle SPEGNERE dopo un tempo, devi attivare anche «Spegnimento automatico»: è una seconda opzione distinta e per impostazione predefinita OFF. Imposta il ritardo (predefinito 120 s). Adaptive Alarm osserva fino a 15 secondi la conferma di accensione da Home Assistant; se non la riceve, NON spegne la luce automaticamente e segnala il motivo. Non spegne luci che erano già accese, modificate manualmente o durante l'allarme. Dopo un riavvio lo spegnimento non viene ripreso automaticamente. Sirena sempre inattiva.",
         "data": {
           "deterrent_enabled": "Abilita davvero l'accensione delle luci al preallarme",
           "deterrent_lights": "Luci deterrenti (solo dominio light)",
@@ -155,11 +156,11 @@
         }
       },
       "notification_test": {
-        "title": "Notifica di prova"
+        "title": "Verifica destinatari"
       },
       "notifications": {
         "title": "Notifiche sul telefono (App HA, Telegram, altri)",
-        "description": "OFF per impostazione predefinita. Seleziona una o più entità notify.* (inclusi i destinatari del nuovo Telegram Bot) oppure azioni notify.mobile_app_* e altre notify già configurate. Non inserire chiavi Telegram: configura il bot separatamente in Home Assistant. Il test invia davvero un messaggio. Il servizio può confermare la richiesta, non necessariamente la consegna al telefono.",
+        "description": "Seleziona le entità notify.* o i servizi notify di Home Assistant già configurati. I destinatari sono condivisi da tutte le categorie abilitate nella pagina «Eventi da notificare». Un messaggio di verifica accettato non garantisce la consegna al telefono.",
         "data": {
           "notifications_enabled": "Abilita notifiche push dal sistema",
           "notification_entities": "Destinatari come entità notify (Telegram Bot, ecc.)",
@@ -212,16 +213,17 @@
       "notification_no_targets": "Scegli almeno un destinatario per abilitare le notifiche.",
       "notification_service_missing": "Il servizio notify selezionato non è disponibile.",
       "invalid_notification_target": "Destinatario non valido: sono ammessi solo servizi/entità notify.",
-      "fake_siren_helper_required": "Se abiliti la prova, seleziona un helper input_boolean.",
-      "invalid_fake_siren_helper": "È ammesso soltanto un helper input_boolean valido."
+      "fake_siren_helper_required": "Se abiliti l'indicatore, seleziona l'helper input_boolean.",
+      "invalid_fake_siren_helper": "È ammesso soltanto un helper input_boolean valido.",
+      "siren_entity_required": "Se abiliti la sirena, seleziona prima la sua entità."
     },
     "abort": {
       "active_session": "Disinserisci l'allarme prima di cambiare configurazione o parametri.",
       "no_groups": "Non sono presenti gruppi alternativi da rimuovere.",
       "unlink_vibration_first": "Scollega prima il sensore di vibrazione dalla zona che vuoi rimuovere, quindi modifica le regole.",
       "no_vibrations": "Non hai configurato sensori di vibrazione.",
-      "notification_test_sent": "Richiesta di notifica di prova inviata. Controlla il telefono: l'esito del servizio non garantisce la consegna.",
-      "notification_test_failed": "Almeno un destinatario della prova non è raggiungibile o ha restituito errore. Controlla i registri.",
+      "notification_test_sent": "Messaggio di verifica richiesto. Controlla il telefono: la richiesta non garantisce la consegna.",
+      "notification_test_failed": "Uno o più destinatari non hanno accettato il messaggio di verifica. Controlla i registri.",
       "notification_no_targets": "Scegli almeno un destinatario per abilitare le notifiche.",
       "invalid_notification_target": "Destinatario non valido: sono ammessi solo servizi/entità notify."
     }

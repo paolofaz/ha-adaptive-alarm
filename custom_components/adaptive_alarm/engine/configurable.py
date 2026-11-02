@@ -40,8 +40,9 @@ class ProtectionRules:
             raise ValueError("Alternative group names must be unique")
         if self.lock is not None and not self.lock.startswith("lock."):
             raise ValueError("Expected lock entity")
-        if self.siren is not None and not self.siren.startswith(("switch.", "siren.")):
-            raise ValueError("Expected siren/switch entity")
+        if self.siren is not None:
+            from .siren_output import validate_real_siren
+            validate_real_siren(self.siren)
 
     @property
     def known_contacts(self) -> frozenset[str]:
