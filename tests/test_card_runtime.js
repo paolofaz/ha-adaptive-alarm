@@ -87,4 +87,7 @@ second.setConfig({entity:"alarm_control_panel.adaptive_alarm"});
 second.hass=card._hass;
 assert.ok(second.shadowRoot.textContent.includes("ALLARME SCATTATO"));
 assert.throws(()=>second.setConfig({entity:"switch.unsafe"}), /alarm_control_panel/);
+assert.throws(()=>second.setConfig({entity:24}), /alarm_control_panel/);
+assert.throws(()=>second.setConfig([{type:"custom:adaptive-alarm-card"}]), /SENZA il trattino/);
+assert.throws(()=>second.setConfig(null), /SENZA il trattino/);
 console.log("Adaptive Alarm Lovelace card: runtime and health rendering OK");

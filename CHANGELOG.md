@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.6 — card-editor syntax and Zigbee2MQTT startup sequencing
+
+- Documented the correct single-card editor YAML without a leading dash
+- More helpful validation for malformed or missing Lovelace card configuration
+- Defers startup siren OFF until Zigbee2MQTT is available, without error spam
+- Retries the pending startup OFF, including after a temporarily unavailable siren
+- Warns once if the device remains unreachable for more than two minutes
+- Preserves urgent ON failures, manual disarm OFF and independent siren cutoff
+- No changes to HomeKit entity IDs or the adaptive zone engine
+
 ## v1.0.5 — robust frontend resource auto-loading in storage mode
 
 - Fixed the missing fallback when Lovelace storage resource registration fails

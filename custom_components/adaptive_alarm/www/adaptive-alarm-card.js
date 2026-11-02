@@ -12,10 +12,16 @@ const STATE_NAMES = {
 
 class AdaptiveAlarmCard extends HTMLElement {
   setConfig(config) {
-    if (config.entity && !config.entity.startsWith("alarm_control_panel.")) {
+    if (!config || typeof config !== "object" || Array.isArray(config)) {
+      throw new Error("Adaptive Alarm: nell'editor scheda usa 'type: custom:adaptive-alarm-card' SENZA il trattino iniziale.");
+    }
+    if (config.entity !== undefined && (
+      typeof config.entity !== "string" ||
+      !config.entity.startsWith("alarm_control_panel.")
+    )) {
       throw new Error("Adaptive Alarm: entity deve essere alarm_control_panel.*");
     }
-    this._config = config || {};
+    this._config = config;
     if (!this.shadowRoot) this.attachShadow({mode: "open"});
     this._render();
   }

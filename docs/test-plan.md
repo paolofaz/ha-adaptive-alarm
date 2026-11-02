@@ -55,6 +55,17 @@ hassfest. These checks do not establish real Zigbee relay reliability.
 
 ## Physical siren (only after the old alarm is no longer in control)
 
+- Start HA before Zigbee2MQTT: siren initially unknown/unavailable is normal,
+  no immediate error notification or traceback, and OFF is deferred.
+  Once Z2M entity and service become available, the queued OFF is attempted.
+- After two minutes of ongoing unavailability, emit one warning and event.
+  If a device is available but an OFF call actually fails, keep normal
+  failure reporting and bounded retries.
+- Manual ON requested while unavailable is NOT silently deferred: it must
+  continue to be reported as an actionable output failure.
+
+
+
 1. With physical output **OFF**, test all alarm states: no real siren calls
    must occur, even if an old siren entity is already configured.
 2. Configure the intended Zigbee2MQTT `siren.*` entity and independently test

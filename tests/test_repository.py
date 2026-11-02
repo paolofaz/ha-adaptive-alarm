@@ -91,7 +91,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_physical_siren_output_opt_in(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "1.0.5")
+        self.assertEqual(manifest["version"], "1.0.6")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": self.controller.siren_output_enabled', panel)

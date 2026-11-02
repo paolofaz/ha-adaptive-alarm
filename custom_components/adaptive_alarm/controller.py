@@ -1,8 +1,8 @@
-"""Home Assistant adapter for a serialized, dry-run alarm machine.
+"""Home Assistant adapter for Adaptive Alarm.
 
-This module invokes only opted-in light.turn_on / safe light.turn_off and
-explicitly selected Home Assistant notify actions. Sirens, locks, switches, RF
-and MQTT have no actuator path.
+Physical siren and deterrent-light outputs are separately opt-in.
+The Zigbee siren is never retriggered simply because a TRIGGERED
+session was restored after Home Assistant restart.
 """
 
 from __future__ import annotations
@@ -50,6 +50,7 @@ from .engine.light_expiry import (
 from .notifications import async_send_notification, validate_targets
 from .engine.vibration_links import validated_vibration_links
 from .engine.siren_output import validate_real_siren
+from .engine.siren_startup import SirenStartupOffGate
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,6 +76,8 @@ class AdaptiveAlarmController:
         if self.siren_output_enabled:
             validate_real_siren(self.siren_entity)
         self._siren_off_retry_after = 0.0
+        self._siren_starting = True
+        self._siren_startup_off = SirenStartupOffGate()
         self.siren_last_error: str | None = None
         self._siren_reported_failures: set[str] = set()
         self.deterrent_enabled = entry.options.get(CONF_DETERRENT_ENABLED) is True
@@ -205,21 +208,56 @@ class AdaptiveAlarmController:
                 return
             if not activate and phase == Phase.TRIGGERED and not shutdown:
                 return
-            if not activate and not force and self.hass.states.is_state(entity, "off"):
+            now = time.time()
+            service = "turn_on" if activate else "turn_off"
+            state = self.hass.states.get(entity)
+            available = (
+                state is not None
+                and state.state not in ("unknown", "unavailable")
+                and self.hass.services.has_service(domain, service)
+            )
+            # The siren and its Z2M service usually become available a few
+            # seconds AFTER Home Assistant startup. Defer the initial OFF
+            # without recording an error or alarming the user, then retry
+            # automatically on the existing one-second tick.
+            if not activate and self._siren_startup_off.defer(
+                initializing=self._siren_starting, available=available, now=now,
+            ):
+                if self._siren_startup_off.warning_due(now):
+                    _LOGGER.warning(
+                        "Siren %s is still unavailable 120s after startup; "
+                        "OFF will be requested as soon as Zigbee2MQTT recovers",
+                        entity,
+                    )
+                    self._events([{
+                        "type": "siren_startup_still_unavailable", "siren": entity,
+                    }])
+                    if self.notify_events.get("zone_fault", True):
+                        self.hass.async_create_task(self._notify_text(
+                            f"Adaptive Alarm: sirena {self._friendly_name(entity)} "
+                            "ancora non disponibile dopo l'avvio. "
+                            "Controlla Zigbee2MQTT."
+                        ))
+                return
+            # A pending startup OFF is a genuine safety request even if HA
+            # claims the siren is OFF; never trust an early restored state.
+            pending_startup_off = not activate and self._siren_startup_off.pending
+            if not activate and not force and not pending_startup_off and (
+                self.hass.states.is_state(entity, "off")
+            ):
                 self._siren_off_retry_after = 0.0
                 self._siren_reported_failures.discard("off")
                 return
-            now = time.time()
-            if not activate and not force and now < self._siren_off_retry_after:
+            if not activate and now < self._siren_off_retry_after and (
+                pending_startup_off or not force
+            ):
                 return
             if not activate:
                 self._siren_off_retry_after = now + 30
-            service = "turn_on" if activate else "turn_off"
             try:
-                state = self.hass.states.get(entity)
                 if state is None or state.state in ("unknown", "unavailable"):
                     raise RuntimeError("Configured siren is unavailable")
-                if not self.hass.services.has_service(domain, service):
+                if not available:
                     raise RuntimeError("Siren service is unavailable")
                 await self.hass.services.async_call(
                     domain, service, {},
@@ -241,6 +279,8 @@ class AdaptiveAlarmController:
                             f"({self._friendly_name(entity)}). Controlla Zigbee2MQTT."
                         ))
             else:
+                if not activate:
+                    self._siren_startup_off.completed()
                 self.siren_last_error = None
                 self._siren_reported_failures.discard("on" if activate else "off")
                 self._events([{
@@ -323,6 +363,9 @@ class AdaptiveAlarmController:
             await self.async_tick()
         # Never re-send a physical ON on Home Assistant restart.
         await self._sync_outputs(force=True)
+        # From here on, explicit physical actions report failures normally;
+        # a pending startup OFF remains deferred until Z2M comes online.
+        self._siren_starting = False
 
     async def async_stop(self) -> None:
         """Stop outputs during graceful unload; retain session unchanged."""

@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.5**
+**Home Assistant security integration — v1.0.6**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -190,6 +190,19 @@ your *existing* YAML dashboard:
 ```yaml
 - type: custom:adaptive-alarm-card
 ```
+
+**IMPORTANT: In the Home Assistant card editor** (the single-card code
+editor, "Configurazione della scheda"), omit the leading dash because it
+expects a **single mapping**, not a YAML list:
+
+```yaml
+type: custom:adaptive-alarm-card
+title: Antifurto
+```
+
+Use `- type:` ONLY when editing the parent dashboard's `cards:` list.
+An accidental leading dash can cause "No card type configured" or an
+undefined `startsWith` error in the built-in editor.
 
 The card normally detects the Adaptive Alarm panel automatically. If you
 prefer to specify the entity explicitly, use:
