@@ -11,7 +11,7 @@ FLOW = INTEGRATION / "config_flow.py"
 
 EXPECTED_STEPS = (
     "protection", "optional", "vibrations", "deterrent",
-    "notifications", "notification_test", "siren", "timing",
+    "notifications", "notification_events", "notification_test", "siren", "timing",
 )
 PROTECTION_STEPS = ("mandatory", "group", "group_edit", "remove_group")
 
@@ -63,6 +63,11 @@ class FlowLocalizationTests(unittest.TestCase):
                     self.assertIn("data", options[step])
                     self.assertTrue(options[step]["title"])
                 self.assertIn("data", options["deterrent"])
+                self.assertEqual(
+                    set(options["notification_events"]["data"]),
+                    {"notify_on_armed", "notify_on_disarmed", "notify_on_triggered",
+                     "notify_on_rejected", "notify_on_prealert", "notify_on_fault"},
+                )
                 self.assertEqual(set(options["protection"]["menu_options"]), set(PROTECTION_STEPS))
                 self.assertEqual(set(options["protection"]["menu_option_descriptions"]), set(PROTECTION_STEPS))
                 self.assertIn("{groups_summary}", options["protection"]["description"])
@@ -83,8 +88,8 @@ class FlowLocalizationTests(unittest.TestCase):
             )
             timing = tr["options"]["step"]["timing"]
             self.assertEqual(set(timing["data_description"]), {
-                "arming_delay", "vibration_threshold", "vibration_debounce",
-                "vibration_window",
+                "arming_delay", "trigger_duration", "vibration_threshold",
+                "vibration_debounce", "vibration_window",
             })
             mandatory = tr["options"]["step"]["mandatory"]
             self.assertIn("{groups_summary}", mandatory["description"])

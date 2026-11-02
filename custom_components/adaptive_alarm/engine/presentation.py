@@ -66,3 +66,53 @@ def fault_text(zone: str, state: str, name_of: NameOf) -> str:
         f"AVVISO SENSORI: {name_of(zone)} — {issue}. "
         "Nessun allarme scattato automaticamente."
     )
+
+
+def armed_text(protected: Iterable[str], excluded: Iterable[str], pending: Iterable[str]) -> str:
+    """Describe only confirmed, committed arming, never the countdown."""
+    return (
+        "ALLARME INSERITO: protezione attiva. "
+        f"{len(tuple(protected))} contatti protetti, "
+        f"{len(tuple(excluded))} esclusi, {len(tuple(pending))} in attesa."
+    )
+
+
+def arm_rejected_text(
+    problems: Iterable[str], paths: object, name_of: NameOf,
+) -> str:
+    """Render minimum coverage failures with friendly names and group members."""
+    details: list[str] = []
+    for problem in problems:
+        if problem.startswith("mandatory_contact_not_closed:"):
+            entity = problem.split(":", 1)[1]
+            details.append(f"{name_of(entity)} non è chiuso o non è disponibile")
+        elif problem.startswith("alternative_group_not_covered:"):
+            group_name = problem.split(":", 1)[1]
+            groups = getattr(paths, "groups", ())
+            group = next((g for g in groups if g.name == group_name), None)
+            if group is not None:
+                alternatives = " oppure ".join(name_of(c) for c in group.contacts)
+                details.append(
+                    f"gruppo {group_name} non soddisfatto: "
+                    f"nessuno tra {alternatives} risulta chiuso"
+                )
+            else:
+                details.append(f"gruppo {group_name} non soddisfatto")
+        elif problem == "lock_not_locked_or_unavailable":
+            lock = getattr(paths, "lock", None)
+            details.append(
+                f"{name_of(lock)} non risulta bloccata"
+                if lock else "serratura non bloccata o non disponibile"
+            )
+        elif problem == "protection_not_configured":
+            details.append("nessun requisito di protezione configurato")
+        elif problem == "entry_not_closed_or_unavailable":
+            details.append("contatto di ingresso non chiuso o non disponibile")
+        elif problem == "no_minimum_path":
+            details.append("nessun percorso minimo di protezione soddisfatto")
+        else:
+            details.append(f"requisito non soddisfatto ({problem})")
+    return (
+        "INSERIMENTO RIFIUTATO: " + "; ".join(details or ["requisiti non soddisfatti"])
+        + ". L'allarme rimane disinserito."
+    )

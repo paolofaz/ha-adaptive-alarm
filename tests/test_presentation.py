@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from custom_components.adaptive_alarm.engine.presentation import (
     group_summary, prealert_text, trigger_text, fault_text,
+    armed_text, arm_rejected_text,
 )
 
 
@@ -34,6 +35,26 @@ class PresentationTests(unittest.TestCase):
             "Sala: Finestra Sala or Persiana Sala; Bagno: Finestra Bagno",
         )
         self.assertEqual(group_summary([], name_of), "—")
+
+    def test_arm_notifications_are_human_readable(self):
+        groups = [SimpleNamespace(
+            name="Sala", contacts=(
+                "binary_sensor.window_living", "binary_sensor.shutter_living",
+            )
+        )]
+        rules = SimpleNamespace(groups=groups, lock="lock.porta")
+        text = arm_rejected_text([
+            "alternative_group_not_covered:Sala",
+            "mandatory_contact_not_closed:binary_sensor.window_bath",
+            "lock_not_locked_or_unavailable",
+        ], rules, name_of)
+        self.assertIn("Finestra Sala oppure Persiana Sala", text)
+        self.assertIn("Finestra Bagno", text)
+        self.assertIn("lock.porta", text)
+        self.assertIn("rimane disinserito", text)
+        self.assertIn("3 contatti protetti", armed_text(
+            ["a", "b", "c"], ["d"], ["e"],
+        ))
 
     def test_prealert_identifies_window_and_sensor(self):
         message = prealert_text(

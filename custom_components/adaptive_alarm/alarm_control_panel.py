@@ -48,7 +48,7 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
             "identifiers": {(DOMAIN, controller.entry.entry_id)},
             "name": "Adaptive Alarm",
             "manufacturer": "Adaptive Alarm (community)",
-            "model": "Dry-run preview",
+            "model": "Beta — siren disabled",
         }
 
     async def async_added_to_hass(self) -> None:

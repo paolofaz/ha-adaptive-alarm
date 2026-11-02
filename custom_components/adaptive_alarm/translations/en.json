@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Adaptive Alarm — new configuration",
-        "description": "Enter only the integration name. After setup, open Configure to select required contacts, alternative groups, optional sensors, vibrations and an inactive siren. No physical commands are sent.",
+        "description": "Create Adaptive Alarm. Then configure required and alternative groups, optional contacts, vibration, notifications and timing. Physical siren output is disabled.",
         "data": {
           "name": "Integration name"
         }
@@ -27,19 +27,21 @@
           "vibrations": "Vibration sensors (any number)",
           "deterrent": "Deterrent lights on first hit (optional)",
           "notifications": "Phone notifications (HA App, Telegram, others)",
+          "notification_events": "Notification event switches",
           "notification_test": "Send test notification",
-          "siren": "Optional siren (INERT / DISABLED)",
+          "siren": "Siren (output disabled)",
           "timing": "Arming timing and vibration confirmation"
         },
-        "description": "Choose a section. The siren stays disabled. Real deterrent lighting is possible only after explicitly enabling it in its own settings.",
+        "description": "Configure protection, vibrations, notification events and timing. Physical siren output is disabled in this beta; deterrent lights require explicit opt-in.",
         "menu_option_descriptions": {
           "protection": "View and manage required contacts and all groups together.",
           "optional": "Add contacts that do not block arming.",
           "vibrations": "Add, edit, or remove any number of sensors, each with its own physical contact.",
           "deterrent": "OFF by default: physical lighting only after explicit opt-in.",
           "notifications": "Choose explicit HA notify targets. Telegram Bot uses notify entities.",
+          "notification_events": "Enable each event separately. All events use the destinations configured under Phone notifications.",
           "notification_test": "Only sends a message to configured targets, without triggering the alarm.",
-          "siren": "Optional siren selection, without any actuation.",
+          "siren": "Configure a siren device; physical output disabled.",
           "timing": "Set exit delay, debounce, window and hit threshold 2 or 3. Protected contacts returning open trigger automatically."
         }
       },
@@ -72,7 +74,7 @@
       },
       "optional": {
         "title": "Optional contacts",
-        "description": "Optional contacts do not block arming. Closed ones are protected. Unknown/unavailable ones are Pending: first CLOSED enrolls, first OPEN excludes. Contacts already OPEN stay excluded for that session.",
+        "description": "Optional contacts do not block arming. Closed contacts are protected; initially unreadable contacts can enroll on their first closed observation. Already-open contacts are excluded for the session.",
         "data": {
           "optional": "Other monitored contacts (not required to arm)"
         }
@@ -87,26 +89,28 @@
         }
       },
       "siren": {
-        "title": "Optional siren (INERT / DISABLED)",
-        "description": "Save an optional siren or switch entity for future use. NO service calls will be made, even when simulated triggering occurs. Leave empty during testing.",
+        "title": "Siren (output disabled)",
+        "description": "Select a siren device for future use. In this beta, physical siren output stays disabled: Adaptive Alarm does not turn it on or off.",
         "data": {
-          "siren": "Optional siren (configuration only, NEVER activated)"
+          "siren": "Siren device (not controlled)"
         }
       },
       "timing": {
-        "title": "Arming timing and vibration confirmation",
-        "description": "Hits count per sensor: one hit generates a prealert; 2 or 3 hits from the SAME sensor within the window create a simulated trigger.\\n\\n**Offline recovery (automatic):** a protected contact stays protected during HA/Zigbee2MQTT outages and across restarts. If it returns CLOSED the session continues; if OPEN, the simulated alarm triggers. Contacts UNKNOWN at arming are PENDING: first return CLOSED enrolls them; first return OPEN excludes them for that session. Mandatory contacts and minimum groups must be covered at arming; no recovery policy choice is needed.",
+        "title": "Alarm timing and vibration confirmation",
+        "description": "Set exit delay and triggered duration. After the timeout the system returns to armed_away without discarding protected zones. Configure vibration confirmation. Offline protected zones remain protected and initially unreadable optional zones remain pending.",
         "data": {
           "arming_delay": "Exit delay (seconds)",
           "vibration_debounce": "Repeated-hit filter (seconds)",
           "vibration_window": "Maximum hit confirmation time (seconds)",
-          "vibration_threshold": "Hits from same sensor to trigger (2 or 3)"
+          "vibration_threshold": "Hits from same sensor to trigger (2 or 3)",
+          "trigger_duration": "Triggered alarm duration (seconds, 30–3600)"
         },
         "data_description": {
           "arming_delay": "Exit countdown before required contacts are checked; 0 = immediate check.",
           "vibration_threshold": "2 or 3 valid hits from the same sensor. Threshold 1 is not allowed.",
           "vibration_debounce": "Minimum time between hits from the same sensor; closer events are ignored (e.g. 3 s).",
-          "vibration_window": "Time in which 2 or 3 valid hits must arrive from the same sensor (e.g. 20 s)."
+          "vibration_window": "Time in which 2 or 3 valid hits must arrive from the same sensor (e.g. 20 s).",
+          "trigger_duration": "Return to armed_away without losing the session after this duration. Timer survives a restart. Does not actuate a physical siren."
         }
       },
       "vibration_add": {
@@ -181,6 +185,18 @@
         "description": "The selected group's name and contacts are pre-filled in the next form.",
         "data": {
           "name": "Group to edit"
+        }
+      },
+      "notification_events": {
+        "title": "Notification events",
+        "description": "Choose which Adaptive Alarm events use the shared Home Assistant recipients configured under Phone notifications. Disable events already notified by Apple Home to avoid duplicates. HomeKit's native alerts are independent.",
+        "data": {
+          "notify_on_armed": "Successfully armed",
+          "notify_on_disarmed": "Disarmed",
+          "notify_on_triggered": "Alarm triggered",
+          "notify_on_rejected": "Arming rejected (with reasons)",
+          "notify_on_prealert": "Vibration prealert",
+          "notify_on_fault": "Sensor anomalies"
         }
       }
     },
