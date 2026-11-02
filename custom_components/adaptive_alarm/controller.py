@@ -51,6 +51,7 @@ from .engine.light_expiry import (
 from .notifications import async_send_notification, validate_targets
 from .engine.vibration_links import validated_vibration_links
 from .engine.fake_siren import validate_fake_siren_helper, fake_siren_target
+from .engine.siren_output import validate_real_siren
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,12 +74,8 @@ class AdaptiveAlarmController:
         self.siren_output_enabled = (
             entry.options.get(CONF_SIREN_OUTPUT_ENABLED) is True
         )
-        if self.siren_output_enabled and (
-            not self.siren_entity or not self.siren_entity.startswith(
-                ("siren.", "switch.")
-            )
-        ):
-            raise ValueError("Siren output requires a selected siren/switch entity")
+        if self.siren_output_enabled:
+            validate_real_siren(self.siren_entity)
         self._siren_off_retry_after = 0.0
         self.fake_siren_enabled = entry.options.get(CONF_FAKE_SIREN_ENABLED) is True
         raw_helper = entry.options.get(CONF_FAKE_SIREN_HELPER)

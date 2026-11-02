@@ -76,7 +76,7 @@ class FlowLocalizationTests(unittest.TestCase):
                 self.assertNotIn("**", options["mandatory"]["description"])
                 self.assertEqual(
                     set(options["siren"]["data"]),
-                    {"siren", "fake_siren_enabled", "fake_siren_helper"},
+                    {"siren", "siren_output_enabled", "fake_siren_enabled", "fake_siren_helper"},
                 )
                 self.assertIn("data", options["group_edit"])
                 self.assertNotIn("remove_group", options["init"]["menu_options"])

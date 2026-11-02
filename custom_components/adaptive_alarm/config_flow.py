@@ -36,6 +36,7 @@ from .engine.presentation import group_summary, vibration_summary
 from .engine.vibration_links import VibrationConfigurationError, validated_vibration_links
 from .notifications import async_send_notification, validate_targets
 from .engine.fake_siren import validate_fake_siren_helper
+from .engine.siren_output import validate_real_siren
 
 
 OPTIONS_MENU_STEPS = (
@@ -568,8 +569,11 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 update = self._with(siren=user_input.get("siren") or None)
                 enabled = user_input.get(CONF_FAKE_SIREN_ENABLED) is True
                 physical_enabled = user_input.get(CONF_SIREN_OUTPUT_ENABLED) is True
-                if physical_enabled and not update.siren:
-                    errors["base"] = "siren_entity_required"
+                if physical_enabled:
+                    if not update.siren:
+                        errors["base"] = "siren_entity_required"
+                    else:
+                        validate_real_siren(update.siren)
                 helper = user_input.get(CONF_FAKE_SIREN_HELPER) or None
                 if helper is not None:
                     validate_fake_siren_helper(helper)
