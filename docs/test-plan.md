@@ -1,3 +1,35 @@
+# Adaptive Alarm test plan — current v0.10.0 beta 1
+
+## v0.10.0 beta acceptance
+
+1. Upgrade HACS without deleting the integration. Confirm existing mandatory
+   contacts, OR groups, vibrations, safe deterrent lighting and notify targets
+   remain unchanged; the physical siren cannot be commanded.
+2. Confirm `Notification events` offers six independent switches: armed,
+   disarmed, triggered, rejected, vibration prealert, sensor faults. Destination
+   entities/actions come only from the existing `Phone notifications` page.
+3. Test zero-delay and 60-second-delayed rejected arming: the panel stays
+   disarmed and, if rejected alerts are enabled, the push uses friendly contact
+   names and OR group member names. If notifications are disabled, no push.
+4. Verify `armed_away` and `disarmed` messages only when those switches
+   are ON. Confirm HomeKit / Apple Casa continues to receive native alarm
+   state notifications independently. There is no PIN requirement change.
+5. Trigger with a safe test sensor. Verify `triggered_until` and wait for the
+   chosen timer. State returns automatically to `armed_away` with the same
+   protected zone session. If the contact stays OPEN, no repeated alarms.
+   Close, then re-open it: the next real opening triggers again.
+6. During `triggered`, disarm manually: timed return MUST NOT occur. Restart
+   Home Assistant during a trigger: the original deadline survives. Test
+   restart while an already-open contact is held and confirm no alert loop.
+7. Opt-in deterrent lights that were switched on during this session remain
+   ON through trigger auto-rearm until manual disarm, subject to already
+   documented safety checks and conservative light ownership.
+8. Keep the physical siren under the **old** system's sole control; do not
+   migrate the siren, RF, LED, cameras, or presence automations as part of
+   this beta. Run in parallel until the later final acceptance stage.
+
+## Previous acceptance plans
+
 # Adaptive Alarm test plan — current v0.9.1
 
 ## Current v0.9.1 acceptance (simulation only)

@@ -1,4 +1,4 @@
-# Safety — v0.8.0 alpha
+# Safety — v0.10.0 beta 1
 
 ## Real outputs
 
@@ -79,3 +79,24 @@ Health distinguishes `unknown`, `unavailable`, `missing`, `open` and
 `unexpected` protected contact states. This never demotes a Protected sensor.
 Both `unknown` and `unavailable` are unreadable for security. The unified
 group editor remains blocked while a session is arming or active.
+
+## v0.10.0 beta — trigger timeout and notification privacy
+
+A timer controls the duration of the `triggered` **state** (default 300 s).
+It does not activate a physical siren. On expiry the same protected session
+is restored as `armed_away`; protected contacts that were still OPEN are
+temporarily held until they return CLOSED and only then may trigger again.
+This held-open set is persisted and is not the same as exclusion. A protected
+contact that was closed and later opens continues to trigger even after HA/Z2M
+outages. Timer deadlines persist across HA restarts. Upgrading an old
+triggered snapshot starts a new full timeout instead of disarming silently.
+
+Conservative deterrent-light OFF stays suspended after triggering until a
+user disarms, including after an automatic return to armed_away. Any stale
+light claims are invalidated on restart, as before.
+
+All Home Assistant notification categories are independently controlled but
+share the same optional recipient list and global switch. Apple Home native
+notifications are not controlled by these switches. Reject notifications are
+sent only for a real rejection (after the exit deadline or zero-delay check).
+No RF, GPS presence, PIN, camera, LED, or physical siren actuation is added.
