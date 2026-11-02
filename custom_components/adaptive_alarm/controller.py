@@ -31,6 +31,7 @@ from .const import (
     CONF_NOTIFY_ON_ARMED, CONF_NOTIFY_ON_DISARMED, CONF_NOTIFY_ON_TRIGGERED,
     CONF_NOTIFY_ON_REJECTED, CONF_NOTIFY_ON_PREALERT, CONF_NOTIFY_ON_FAULT,
     CONF_TRIGGER_DURATION, DEFAULT_TRIGGER_DURATION,
+    CONF_SIREN_OUTPUT_ENABLED,
     CONF_FAKE_SIREN_ENABLED, CONF_FAKE_SIREN_HELPER,
     CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
     VIBRATION_ASSIGNMENTS,
@@ -68,7 +69,17 @@ class AdaptiveAlarmController:
         d = entry.data
         self.paths = rules_for_config(d, entry.options)
         self.lock_entity = self.paths.lock
-        self.siren_entity = self.paths.siren  # inert metadata; no siren services
+        self.siren_entity = self.paths.siren
+        self.siren_output_enabled = (
+            entry.options.get(CONF_SIREN_OUTPUT_ENABLED) is True
+        )
+        if self.siren_output_enabled and (
+            not self.siren_entity or not self.siren_entity.startswith(
+                ("siren.", "switch.")
+            )
+        ):
+            raise ValueError("Siren output requires a selected siren/switch entity")
+        self._siren_off_retry_after = 0.0
         self.fake_siren_enabled = entry.options.get(CONF_FAKE_SIREN_ENABLED) is True
         raw_helper = entry.options.get(CONF_FAKE_SIREN_HELPER)
         self.fake_siren_helper = (
@@ -228,6 +239,62 @@ class AdaptiveAlarmController:
                     "helper": helper, "requested_state": desired,
                 }])
 
+    async def _request_physical_siren(
+        self, *, activate: bool = False, force: bool = False,
+    ) -> None:
+        """Command physical siren only on fresh alarm events, never HA restore.
+
+        The Zigbee device must independently enforce a maximum ON duration.
+        OFF is retried if the device is unavailable or still reports ON.
+        """
+        if not self.siren_output_enabled or not self.siren_entity:
+            return
+        entity = self.siren_entity
+        domain = entity.split(".", 1)[0]
+        async with self._guard:
+            phase = self.machine.phase
+            if activate and phase != Phase.TRIGGERED:
+                return
+            if not activate and phase == Phase.TRIGGERED:
+                return
+            if not activate and self.hass.states.is_state(entity, "off"):
+                self._siren_off_retry_after = 0.0
+                return
+            now = time.time()
+            if not activate and not force and now < self._siren_off_retry_after:
+                return
+            if not activate:
+                self._siren_off_retry_after = now + 30
+            service = "turn_on" if activate else "turn_off"
+            try:
+                state = self.hass.states.get(entity)
+                if state is None or state.state in ("unknown", "unavailable"):
+                    raise RuntimeError("Configured siren is unavailable")
+                if not self.hass.services.has_service(domain, service):
+                    raise RuntimeError("Siren service is unavailable")
+                await self.hass.services.async_call(
+                    domain, service, {},
+                    target={"entity_id": entity}, blocking=True,
+                )
+            except Exception:
+                _LOGGER.exception("Siren %s request failed: %s", service, entity)
+                self._events([{
+                    "type": "siren_request_failed", "siren": entity,
+                    "requested_state": "on" if activate else "off",
+                }])
+            else:
+                self._events([{
+                    "type": "siren_requested", "siren": entity,
+                    "requested_state": "on" if activate else "off",
+                }])
+
+    async def _sync_outputs(
+        self, *, triggered: bool = False, force: bool = False,
+    ) -> None:
+        # Recheck phase under the output lock: never send late ON after disarm.
+        await self._request_physical_siren(activate=triggered, force=force)
+        await self._sync_fake_siren_state(force=force)
+
     async def async_start(self) -> None:
         """Load persisted state, attach listeners, then reconcile faults."""
         stored = await self._store.async_load()
@@ -289,7 +356,8 @@ class AdaptiveAlarmController:
             # An expired deadline after HA restart must never briefly turn
             # the virtual siren ON before the first one-second timer tick.
             await self.async_tick()
-        await self._sync_fake_siren_state(force=True)
+        # Never re-send a physical ON on Home Assistant restart.
+        await self._sync_outputs(force=True)
 
     async def async_stop(self) -> None:
         """Release callbacks; leave persisted session untouched."""
@@ -371,7 +439,7 @@ class AdaptiveAlarmController:
             )
             await self._notify_events(emitted)
             if any(event.get("type") == "triggered" for event in emitted):
-                await self._sync_fake_siren_state(force=True)
+                await self._sync_outputs(triggered=True, force=True)
             await self._refresh_faults()
             # Readiness is derived from actual states, even while disarmed.
             self._events([])
@@ -405,7 +473,7 @@ class AdaptiveAlarmController:
                 self._request_deterrent_lights(events),
             )
             if any(event.get("type") == "triggered" for event in events):
-                await self._sync_fake_siren_state(force=True)
+                await self._sync_outputs(triggered=True, force=True)
         elif zone == self.lock_entity:
             if self.machine.active and getattr(new_state, "state", None) != "locked":
                 await self._apply(
@@ -691,11 +759,13 @@ class AdaptiveAlarmController:
             ) + self.machine.reconcile(states, now=now)
         )
         # Reconciling OPEN protected contacts also recovers a missed state
-        # event, including right after a restart. Siren remains simulated.
+        # event, including right after a restart. Physical siren is opt-in.
         await self._notify_events(events)
         await self._refresh_faults()
         await self._expire_deterrent_lights()
-        await self._sync_fake_siren_state()
+        await self._sync_outputs(
+            triggered=any(event.get("type") == "triggered" for event in events),
+        )
 
     async def async_arm(self) -> list[dict[str, Any]]:
         events = await self._apply(
@@ -710,7 +780,7 @@ class AdaptiveAlarmController:
 
     async def async_disarm(self) -> list[dict[str, Any]]:
         events = await self._apply(self.machine.disarm)
-        await self._sync_fake_siren_state(force=True)
+        await self._sync_outputs(force=True)
         await self._notify_events(events)
         return events
 
@@ -719,6 +789,6 @@ class AdaptiveAlarmController:
             lambda: self.machine.trigger("manual_test", now=time.time())
         )
         if events:
-            await self._sync_fake_siren_state(force=True)
+            await self._sync_outputs(triggered=True, force=True)
         await self._notify_events(events)
         return events

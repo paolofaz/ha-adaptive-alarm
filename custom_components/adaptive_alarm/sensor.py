@@ -32,7 +32,7 @@ class AdaptiveDiagnostic(SensorEntity):
             "identifiers": {(DOMAIN, controller.entry.entry_id)},
             "name": "Adaptive Alarm",
             "manufacturer": "Adaptive Alarm (community)",
-            "model": "Beta — siren disabled",
+            "model": "Adaptive Alarm 1.0",
         }
 
     async def async_added_to_hass(self) -> None:
@@ -87,12 +87,12 @@ class AdaptiveDiagnostic(SensorEntity):
             )
             return {
                 "fault": self.controller.machine.fault or None,
-                "simulation_only": True,
                 "triggered_until": self.controller.machine.triggered_until,
                 "trigger_cause": self.controller.machine.trigger_cause,
                 "held_open_zones": sorted(self.controller.machine.held_open_zones),
                 "siren_configured": bool(self.controller.siren_entity),
-                "siren_enabled": False,
+                "siren_enabled": self.controller.siren_output_enabled,
+                "siren_entity": self.controller.siren_entity,
                 "fake_siren_enabled": self.controller.fake_siren_enabled,
                 "fake_siren_helper": self.controller.fake_siren_helper,
                 "deterrent_enabled": self.controller.deterrent_enabled,

@@ -25,6 +25,7 @@ from .const import (
     CONF_NOTIFY_ON_ARMED, CONF_NOTIFY_ON_DISARMED, CONF_NOTIFY_ON_TRIGGERED,
     CONF_NOTIFY_ON_REJECTED, CONF_NOTIFY_ON_PREALERT, CONF_NOTIFY_ON_FAULT,
     CONF_FAKE_SIREN_ENABLED, CONF_FAKE_SIREN_HELPER,
+    CONF_SIREN_OUTPUT_ENABLED,
     CONF_TRIGGER_DURATION, DEFAULT_TRIGGER_DURATION,
     DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DEFAULT_NAME, DOMAIN,
@@ -560,21 +561,25 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
         return self.async_abort(reason="notification_test_sent")
 
     async def async_step_siren(self, user_input: dict[str, Any] | None = None):
-        """Real hardware stays inert; opt-in simulator is input_boolean only."""
+        """Physical siren and optional helper output have separate settings."""
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
                 update = self._with(siren=user_input.get("siren") or None)
                 enabled = user_input.get(CONF_FAKE_SIREN_ENABLED) is True
+                physical_enabled = user_input.get(CONF_SIREN_OUTPUT_ENABLED) is True
+                if physical_enabled and not update.siren:
+                    errors["base"] = "siren_entity_required"
                 helper = user_input.get(CONF_FAKE_SIREN_HELPER) or None
                 if helper is not None:
                     validate_fake_siren_helper(helper)
                 if enabled and helper is None:
                     errors["base"] = "fake_siren_helper_required"
-                else:
+                if not errors:
                     return self._save(
                         protection=update,
                         other={
+                            CONF_SIREN_OUTPUT_ENABLED: physical_enabled,
                             CONF_FAKE_SIREN_ENABLED: enabled,
                             CONF_FAKE_SIREN_HELPER: helper,
                         },
@@ -594,6 +599,10 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             }): selector.EntitySelector(selector.EntitySelectorConfig(
                 domain=["siren", "switch"]
             )),
+            vol.Required(
+                CONF_SIREN_OUTPUT_ENABLED,
+                default=opts.get(CONF_SIREN_OUTPUT_ENABLED, False),
+            ): bool,
             vol.Required(
                 CONF_FAKE_SIREN_ENABLED,
                 default=opts.get(CONF_FAKE_SIREN_ENABLED, False),
