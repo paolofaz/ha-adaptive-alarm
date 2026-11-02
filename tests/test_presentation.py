@@ -4,7 +4,7 @@ import unittest
 from types import SimpleNamespace
 
 from custom_components.adaptive_alarm.engine.presentation import (
-    group_summary, prealert_text, trigger_text, fault_text,
+    group_summary, vibration_summary, prealert_text, trigger_text, fault_text,
     armed_text, arm_rejected_text,
 )
 
@@ -55,6 +55,24 @@ class PresentationTests(unittest.TestCase):
         self.assertIn("3 contatti protetti", armed_text(
             ["a", "b", "c"], ["d"], ["e"],
         ))
+
+    def test_group_and_vibration_summaries_for_options_menu(self):
+        groups = [
+            SimpleNamespace(name="Sala", contacts=("binary_sensor.window_living",)),
+            SimpleNamespace(name="Bagno", contacts=("binary_sensor.window_bath",)),
+        ]
+        summary = group_summary(groups, name_of, line_separator="\n", prefix="- ")
+        self.assertEqual(
+            summary, "- Sala: Finestra Sala\n- Bagno: Finestra Bagno"
+        )
+        self.assertEqual(
+            vibration_summary([
+                {"sensor": "binary_sensor.vib_living",
+                 "contact": "binary_sensor.window_living"},
+            ], name_of),
+            "- Vibrazione Sala → Finestra Sala",
+        )
+        self.assertEqual(vibration_summary([], name_of), "—")
 
     def test_prealert_identifies_window_and_sensor(self):
         message = prealert_text(

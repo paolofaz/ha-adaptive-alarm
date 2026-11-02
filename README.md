@@ -1,4 +1,4 @@
-# Adaptive Alarm — v0.10.0 beta 1
+# Adaptive Alarm — v0.11.0 release candidate 1
 
 Configurable Home Assistant intruder-alarm engine, with HACS support. **The physical siren remains disabled while the alarm state machine is operational**, and supports explicitly opted-in **real deterrent lighting** and **Home Assistant push notifications**. Sirens and locking hardware are still inert.
 
@@ -250,3 +250,55 @@ fixed-code replay risk and GPS-dependent automatic disarming before putting
 a physical siren into service. Test this beta alongside the existing
 operational alarm, not as a replacement.
 
+
+## v0.11.0 RC1 — configuration overview and virtual siren acceptance
+
+- **Required contacts and groups**: the main submenu and the mandatory
+  contacts form list all the configured groups and their actual friendly
+  sensor names, one group per line. Home Assistant translations contain actual
+  newline characters instead of a literal `\\n` sequence; other option-page
+  descriptions are corrected as well.
+- **Vibration sensors**: the submenu now includes a read-only list of ALL
+  configured sensor → actual monitored contact links, using Home Assistant
+  friendly names. Adding/editing/removing links is unchanged.
+- **Virtual siren test mode**: in **Configure → Physical siren and helper
+  simulation**, you may separately enable the option **Virtual helper output**
+  and select **only** an `input_boolean` helper. The physical siren/switch
+  field remains **metadata only and never receives a service call**.
+  The integration requests `input_boolean.turn_on` when an alarm enters
+  `triggered`, and `input_boolean.turn_off` upon timed return to
+  `armed_away` or an explicit disarm. After an HA restart it reconciles the
+  current alarm phase with the helper; if the old trigger deadline already
+  expired, it processes expiry before requesting any helper state. Failed
+  requests emit `fake_siren_request_failed` with a 30-second retry interval.
+
+### Create a safe siren simulator in Home Assistant
+
+1. Go to **Settings → Devices & services → Helpers → Create helper → Toggle**.
+   Name it **Sirena fittizia**, obtaining an entity such as
+   `input_boolean.sirena_fittizia`. The default helper restore-state
+   behavior is sufficient; Adaptive Alarm reconciles its state after startup.
+2. In Adaptive Alarm **Configure → Sirena fisica e simulazione con helper**,
+   do **not** use the original real siren switch for the simulated helper.
+   Instead choose the newly created **input_boolean** and enable the separate
+   virtual helper output switch. It is OFF by default on all installs.
+3. Listen to state changes of the helper or build an ordinary HA automation
+   with `input_boolean.sirena_fittizia` as trigger and your preferred
+   `notify` action as its output. The ON and OFF state transitions mark
+   when a physical siren *would* start and stop.
+4. Test a simulated trigger and timed return after the configured duration.
+   Test manual disarm and an HA restart while triggered. The phone may have a
+   delivery delay, so use the helper state history as the timing reference.
+
+**Safety rule:** Do not add an automation that copies the fake helper's ON
+state to a real siren, switch, Shelly relay, MQTT device, or physical actuator.
+Doing so defeats the safety boundary of this RC. The existing physical siren
+must remain under the original alarm's sole control while both systems are
+running in parallel. The old physical siren selection is still stored but
+NEVER driven by the RC. Do not use the test output as a substitute for a
+reviewed, independently fail-safe physical siren adapter.
+
+HomeKit continues to receive the original `alarm_control_panel` states;
+the virtual helper is a separate Home Assistant test indicator and need not
+be exposed to Apple Home. Household presence, RF remotes, Shelly LED,
+Telegram photographs, and generic scripts remain external automations.

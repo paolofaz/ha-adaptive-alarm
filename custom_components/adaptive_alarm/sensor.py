@@ -93,6 +93,8 @@ class AdaptiveDiagnostic(SensorEntity):
                 "held_open_zones": sorted(self.controller.machine.held_open_zones),
                 "siren_configured": bool(self.controller.siren_entity),
                 "siren_enabled": False,
+                "fake_siren_enabled": self.controller.fake_siren_enabled,
+                "fake_siren_helper": self.controller.fake_siren_helper,
                 "deterrent_enabled": self.controller.deterrent_enabled,
                 "deterrent_hold_after_trigger": self.controller.machine.deterrent_hold_after_trigger,
                 "deterrent_auto_off_enabled": self.controller.deterrent_auto_off,

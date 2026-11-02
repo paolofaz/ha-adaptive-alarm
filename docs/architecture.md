@@ -1,4 +1,4 @@
-# Architecture — v0.10.0 beta 1 (adaptive protection)
+# Architecture — v0.11.0 RC1 (adaptive protection)
 
 The deterministic engine accepts `ProtectionRules`: a list of mandatory binary contacts, named groups of alternatives, optional contacts, optional lock and inert siren metadata.
 
@@ -50,3 +50,20 @@ The HomeKit Bridge consumes the original `alarm_control_panel` unchanged;
 there is still only the `armed_away` arming mode and no integration-level PIN.
 Shelly LED, presence, Telegram photos and any RF handling stay external to
 this engine. The physical siren is inert.
+
+## v0.11.0 RC1 — rendering and simulated siren
+
+`group_summary` accepts optional per-group line separation and prefix;
+`vibration_summary` renders friendly sensor-to-contact links. The Options
+Flow provides these through `description_placeholders` without altering
+stored rules. Italian and English translations use real newlines rather
+than literal backslash-n sequences.
+
+An independently opted-in `input_boolean` output provides phase-cycle
+observability. The config flow and adapter both validate its domain with
+`engine.fake_siren.validate_fake_siren_helper`. A dedicated guarded
+`_sync_fake_siren_state` maps TRIGGERED → on and other phases → off,
+serialized against alarm commits. The adapter never routes the existing
+physical siren metadata to an output. Only selected `input_boolean`
+actions are called, with a throttled recovery path for unavailable helpers.
+HomeKit consumes the existing alarm panel unchanged.

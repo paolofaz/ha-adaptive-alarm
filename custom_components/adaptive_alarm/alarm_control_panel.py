@@ -68,6 +68,8 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
             "simulation_only": True,
             "siren_configured": bool(self.controller.siren_entity),
             "siren_enabled": False,
+            "fake_siren_enabled": self.controller.fake_siren_enabled,
+            "fake_siren_helper": self.controller.fake_siren_helper,
             "fault": self.controller.machine.fault or None,
             "triggered_until": self.controller.machine.triggered_until,
             "trigger_cause": self.controller.machine.trigger_cause,

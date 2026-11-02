@@ -35,8 +35,14 @@ class PackagingTests(unittest.TestCase):
             'async_call("switch"',
         )
         controller = (DOMAIN / "controller.py").read_text()
-        self.assertEqual(controller.count("services.async_call("), 2)
+        self.assertEqual(controller.count("services.async_call("), 3)
         self.assertIn('"light", "turn_on"', controller)
+        self.assertIn('"input_boolean", service', controller)
+        self.assertIn('blocking=True', controller)
+        self.assertIn('validate_fake_siren_helper(raw_helper)', controller)
+        self.assertIn('if not self.fake_siren_enabled', controller)
+        self.assertNotIn('async_call("siren"', controller)
+        self.assertNotIn('async_call("switch"', controller)
         for component in DOMAIN.rglob("*.py"):
             source = component.read_text()
             for phrase in forbidden:
@@ -65,7 +71,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_siren_metadata_cannot_activate_outputs(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "0.10.0")
+        self.assertEqual(manifest["version"], "0.11.0")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": False', panel)
