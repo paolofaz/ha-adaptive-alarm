@@ -8,14 +8,7 @@
   # entity: alarm_control_panel.YOUR_REAL_ENTITY_ID
   title: Antifurto
 #
-# If Lovelace resource_mode is YAML, declare the module once in the
-# EXISTING lovelace: section of configuration.yaml:
-#
-# lovelace:
-#   resource_mode: yaml
-#   resources:
-#     - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.3
-#       type: module
-#
-# When resources are managed via storage, they are installed automatically.
+# The module is loaded automatically in resource_mode: storage AND yaml.
+# No lovelace.resources entry is needed in configuration.yaml.
+# The card position in the existing dashboard is still chosen by the user.
 # This integration never creates dashboards or changes the user's YAML.

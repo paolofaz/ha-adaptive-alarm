@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.4 — automatic Lovelace card loading in YAML resource mode
+
+- Fixed the card JavaScript not being loaded automatically when `lovelace.resource_mode: yaml`
+- Uses Home Assistant's frontend extra module registration without writing user YAML
+- Keeps the existing storage-mode resource registration
+- Unregisters the extra module when the integration is unloaded
+- UI placement remains user-defined via `type: custom:adaptive-alarm-card`
+- No changes to alarm engine, siren, HomeKit, or notifications
+
 ## v1.0.3 — HACS submission preparation
 
 - Lovelace card: stable icon when disarmed, arming or armed; flashes only in `triggered`
