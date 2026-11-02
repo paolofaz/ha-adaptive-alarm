@@ -541,7 +541,10 @@ class AdaptiveAlarmController:
         notices: list[str] = []
         events: list[dict[str, Any]] = []
         async with self._guard:
-            if self.machine.phase == Phase.TRIGGERED:
+            if (
+                self.machine.phase == Phase.TRIGGERED
+                or self.machine.deterrent_hold_after_trigger
+            ):
                 return
             now = time.time()
             session = self.machine.session

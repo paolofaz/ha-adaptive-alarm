@@ -51,6 +51,19 @@ class RuntimeTests(unittest.TestCase):
             {"type": "triggered", "cause": "entry"}
         ])
 
+    def test_triggered_light_hold_survives_timeout_until_manual_disarm(self):
+        alarm = armed()
+        alarm.trigger("manual_test", now=200)
+        self.assertTrue(alarm.deterrent_hold_after_trigger)
+        alarm.tick(snapshot(), locked=True, now=500)
+        self.assertEqual(alarm.phase, Phase.ARMED_AWAY)
+        self.assertTrue(alarm.deterrent_hold_after_trigger)
+        rebooted = AlarmMachine(PATHS, ZONES)
+        rebooted.restore(alarm.snapshot())
+        self.assertTrue(rebooted.deterrent_hold_after_trigger)
+        rebooted.disarm()
+        self.assertFalse(rebooted.deterrent_hold_after_trigger)
+
     def test_trigger_timer_disarm_cancels_and_does_not_rearm(self):
         alarm = armed()
         alarm.trigger("manual_test", now=200)

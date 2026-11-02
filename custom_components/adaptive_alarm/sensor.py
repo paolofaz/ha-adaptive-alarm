@@ -94,6 +94,7 @@ class AdaptiveDiagnostic(SensorEntity):
                 "siren_configured": bool(self.controller.siren_entity),
                 "siren_enabled": False,
                 "deterrent_enabled": self.controller.deterrent_enabled,
+                "deterrent_hold_after_trigger": self.controller.machine.deterrent_hold_after_trigger,
                 "deterrent_auto_off_enabled": self.controller.deterrent_auto_off,
                 "deterrent_off_delay_seconds": self.controller.deterrent_off_delay,
                 "deterrent_lights_waiting_for_on": sorted(

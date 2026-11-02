@@ -48,6 +48,9 @@ class AlarmMachine:
     vibration_filtered: int = 0
     # Persisted so HA restarts cannot repeat a one-time light request.
     deterrent_requested: bool = False
+    # Once an alarm was triggered, safe light expiry remains suspended until
+    # a manual disarm, even after the triggered timeout re-arms the session.
+    deterrent_hold_after_trigger: bool = False
 
     def __post_init__(self) -> None:
         if not 30 <= self.trigger_duration <= 3600:
@@ -85,6 +88,7 @@ class AlarmMachine:
                 return [{"type": "arm_rejected", "problems": list(eligibility.problems)}]
         self.fault = ""
         self.deterrent_requested = False
+        self.deterrent_hold_after_trigger = False
         self.triggered_until = None
         self.trigger_cause = None
         self.held_open_zones.clear()
@@ -224,6 +228,7 @@ class AlarmMachine:
         if self.phase != Phase.ARMED_AWAY:
             return []
         self.phase = Phase.TRIGGERED
+        self.deterrent_hold_after_trigger = True
         self.trigger_cause = cause
         self.triggered_until = (
             now + self.trigger_duration if now is not None else None
@@ -245,6 +250,7 @@ class AlarmMachine:
         self.held_open_zones.clear()
         self.fault = ""
         self.deterrent_requested = False
+        self.deterrent_hold_after_trigger = False
         self._clear_vibration()
         return [{"type": "disarmed"}]
 
@@ -327,6 +333,7 @@ class AlarmMachine:
             "held_open_zones": sorted(self.held_open_zones),
             "fault": self.fault,
             "deterrent_requested": self.deterrent_requested,
+            "deterrent_hold_after_trigger": self.deterrent_hold_after_trigger,
         }
 
     def restore(self, data: Mapping[str, Any] | None) -> list[dict[str, Any]]:
@@ -416,6 +423,10 @@ class AlarmMachine:
                 bool(data.get("deterrent_requested", False))
                 if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) else False
             )
+            self.deterrent_hold_after_trigger = (
+                bool(data.get("deterrent_hold_after_trigger", phase == Phase.TRIGGERED))
+                if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) else False
+            )
             self.fault = str(data.get("fault") or "")
             if phase == Phase.ARMING:
                 self.phase = Phase.DISARMED
@@ -434,6 +445,7 @@ class AlarmMachine:
         except (KeyError, TypeError, ValueError, AttributeError) as exc:
             self.phase = Phase.FAULT
             self.deterrent_requested = False
+            self.deterrent_hold_after_trigger = False
             self.session = None
             self.arming_until = None
             self.triggered_until = None
