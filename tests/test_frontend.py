@@ -12,7 +12,7 @@ class FrontendTests(unittest.TestCase):
         frontend = (BASE / "frontend.py").read_text()
         card = (BASE / "www" / "adaptive-alarm-card.js").read_text()
         integration = (BASE / "__init__.py").read_text()
-        self.assertIn('CARD_PATH = "/adaptive-alarm/adaptive-alarm-card.js"', frontend)
+        self.assertIn('CARD_PATH = "/adaptive_alarm/adaptive-alarm-card.js"', frontend)
         self.assertIn('resource_mode == "yaml"', frontend)
         self.assertIn("async_register_static_paths", frontend)
         self.assertIn('"res_type": "module"', frontend)

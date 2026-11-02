@@ -14,7 +14,7 @@
 # lovelace:
 #   resource_mode: yaml
 #   resources:
-#     - url: /adaptive-alarm/adaptive-alarm-card.js?v=1.0.1
+#     - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.1
 #       type: module
 #
 # When resources are managed via storage, they are installed automatically.

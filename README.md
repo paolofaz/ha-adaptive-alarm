@@ -146,7 +146,7 @@ arming/disarming commands of its own.
 The JS module is served automatically at:
 
 ```
-/adaptive-alarm/adaptive-alarm-card.js
+/adaptive_alarm/adaptive-alarm-card.js
 ```
 
 If Lovelace **resources use storage mode**, the integration registers the
@@ -161,7 +161,7 @@ under the existing `lovelace:` key in `configuration.yaml` (do not duplicate
 lovelace:
   resource_mode: yaml
   resources:
-    - url: /adaptive-alarm/adaptive-alarm-card.js?v=1.0.1
+    - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.1
       type: module
 ```
 

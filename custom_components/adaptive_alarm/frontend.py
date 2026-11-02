@@ -13,7 +13,7 @@ from typing import Any
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-CARD_PATH = "/adaptive-alarm/adaptive-alarm-card.js"
+CARD_PATH = "/adaptive_alarm/adaptive-alarm-card.js"
 CARD_RESOURCE = f"{CARD_PATH}?v=1.0.1"
 CARD_FILE = Path(__file__).parent / "www" / "adaptive-alarm-card.js"
 _STATIC_READY = "_card_static_ready"
