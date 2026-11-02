@@ -95,7 +95,7 @@ def classify_opening(
 ) -> EventAction:
     """Classify an observation using the frozen protected-zone set.
 
-    Startup observations are not proof of an intrusion.
+    Startup observations must not silently exclude a protected zone.
     """
     if zone not in session.known_zones:
         return EventAction.IGNORE

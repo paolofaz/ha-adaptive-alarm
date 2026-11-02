@@ -309,6 +309,12 @@ class AdaptiveAlarmController:
             restored_events = await self._apply(
                 lambda: self.machine.reconcile(current, now=time.time())
             )
+            # A NEW opening discovered after restarting from ARMED_AWAY
+            # must sound the siren, just like a normal contact event.
+            # A session restored already TRIGGERED takes the other branch
+            # below and must NOT replay the physical siren ON.
+            if any(event.get("type") == "triggered" for event in restored_events):
+                await self._sync_outputs(triggered=True, force=True)
             await self._notify_events(restored_events)
             await self._refresh_faults()
         if self.machine.phase == Phase.TRIGGERED:

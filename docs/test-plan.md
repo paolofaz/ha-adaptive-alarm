@@ -31,6 +31,10 @@ hassfest. These checks do not establish real Zigbee relay reliability.
    non-aggregation of different sources.
 5. Restart HA and Zigbee2MQTT during armed, triggered and disconnected
    contact conditions; ensure no silent loss of protection.
+   When an ARMED_AWAY session finds an OPEN protected contact at restart,
+   ensure a fresh TRIGGERED event requests real siren ON before notifications.
+   A previously TRIGGERED session must NOT replay siren ON just because
+   Home Assistant restarted.
 6. Verify HomeKit and iPhone shortcuts reference the new panel and
    notifications are not duplicated unnecessarily.
 7. Test deterrent light ON/OFF with a manually adjusted light, a slow
