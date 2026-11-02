@@ -1,180 +1,60 @@
-# Adaptive Alarm test plan — current v0.11.0 RC1
+# Adaptive Alarm 1.0 — acceptance tests
 
-## v0.11.0 RC1 acceptance
+## Automated tests (CI)
 
-1. Confirm Required contacts and groups shows a clean multi-line summary,
-   including the actual Sala/Bagno groups and their friendly contact names.
-   The Mandatory contacts screen must show the SAME group summary. Literal
-   `\\n` and `**` should not appear anywhere in UI descriptions.
-2. Confirm Vibration sensors displays every already-configured
-   source → physical contact link. Add/edit/remove still function.
-3. Create an ordinary Toggle helper `input_boolean.sirena_fittizia`.
-   Configure it in **Siren → virtual test helper** and enable the separate
-   opt-in flag. Keep real siren / switches unconnected to this output and
-   verify no physical device receives any commands.
-4. Trigger Adaptive Alarm: the helper becomes ON; verify the time it turns ON
-   and the `triggered_until` value. After the configured trigger duration,
-   the panel returns `armed_away` and the helper becomes OFF.
-5. Trigger and disarm before the deadline: helper must become OFF immediately
-   and there must be no later re-arm. Restart Home Assistant during
-   `triggered`: the helper must be reconciled with the restored state.
-   Restart after the deadline: the helper must remain OFF.
-6. Leave the virtual output OFF by default on an existing installation:
-   it must not cause `input_boolean` service calls. Failed requests must
-   never change alarm state or activate physical hardware.
-7. Verify all v0.10.0 tests below, especially notification switches,
-   HomeKit, Protected/Pending/Excluded preservation, light-safe auto-off,
-   and no physical siren actuation.
+Run `python -m unittest discover -s tests -v`; CI also runs HACS and
+hassfest. These checks do not establish real Zigbee relay reliability.
 
-## Previous v0.10.0 beta acceptance
+## Installation and migration
 
-1. Upgrade HACS without deleting the integration. Confirm existing mandatory
-   contacts, OR groups, vibrations, safe deterrent lighting and notify targets
-   remain unchanged; the physical siren cannot be commanded.
-2. Confirm `Notification events` offers six independent switches: armed,
-   disarmed, triggered, rejected, vibration prealert, sensor faults. Destination
-   entities/actions come only from the existing `Phone notifications` page.
-3. Test zero-delay and 60-second-delayed rejected arming: the panel stays
-   disarmed and, if rejected alerts are enabled, the push uses friendly contact
-   names and OR group member names. If notifications are disabled, no push.
-4. Verify `armed_away` and `disarmed` messages only when those switches
-   are ON. Confirm HomeKit / Apple Casa continues to receive native alarm
-   state notifications independently. There is no PIN requirement change.
-5. Trigger with a safe test sensor. Verify `triggered_until` and wait for the
-   chosen timer. State returns automatically to `armed_away` with the same
-   protected zone session. If the contact stays OPEN, no repeated alarms.
-   Close, then re-open it: the next real opening triggers again.
-6. During `triggered`, disarm manually: timed return MUST NOT occur. Restart
-   Home Assistant during a trigger: the original deadline survives. Test
-   restart while an already-open contact is held and confirm no alert loop.
-7. Opt-in deterrent lights that were switched on during this session remain
-   ON through trigger auto-rearm until manual disarm, subject to already
-   documented safety checks and conservative light ownership.
-8. Keep the physical siren under the **old** system's sole control; do not
-   migrate the siren, RF, LED, cameras, or presence automations as part of
-   this beta. Run in parallel until the later final acceptance stage.
+- Upgrade without deleting the existing config entry. Verify panel entity
+  unique ID and HomeKit remain unchanged.
+- Confirm previous groups, mandatory contacts, optional contacts, vibration
+  links, notifications, deterrent lights and stored session are retained.
+- The new real siren option must default to **OFF** on upgrade.
+- Inspect the automatically installed `/adaptive-alarm` dashboard for
+  status, groups, Protected/Pending/Excluded contacts, anomalies and counts.
+  Edit dashboard; subsequent reload must not overwrite user edits.
 
-## Previous acceptance plans
+## Alarm functionality
 
-# Adaptive Alarm test plan — current v0.9.1
+1. Arm and reject with invalid mandatory contact / group / lock. Confirm
+   only valid requirements become `armed_away`.
+2. Verify optional contacts initially open are excluded and initially
+   unknown become Pending, joining only on first CLOSED state.
+3. Verify normal protected opening triggers; after the timeout the original
+   session remains armed with a held-open zone, and only close→open
+   generates a fresh alert.
+4. Verify vibration prealert (first hit), confirmed second/third hit, and
+   non-aggregation of different sources.
+5. Restart HA and Zigbee2MQTT during armed, triggered and disconnected
+   contact conditions; ensure no silent loss of protection.
+6. Verify HomeKit and iPhone shortcuts reference the new panel and
+   notifications are not duplicated unnecessarily.
+7. Test deterrent light ON/OFF with a manually adjusted light, a slow
+   acknowledgement and after HA restart.
 
-## Current v0.9.1 acceptance (simulation only)
+## Physical siren (only after the old alarm is no longer in control)
 
-The v0.9.0 presence observer was removed. Confirm that Configure has **no**
-Presence consistency alerts entry, no `presence_mismatch` events originate
-from the integration and the existing external Home Assistant presence
-entities/automations are unaffected. All v0.8.0 alarm tests still apply.
+1. With physical output **OFF**, test all alarm states: no real siren calls
+   must occur, even if an old siren entity is already configured.
+2. Configure the intended Zigbee2MQTT siren/switch and independently test
+   its actual automatic 5-minute device cutoff.
+3. Enable physical output; trigger once; verify it audibly turns ON,
+   the engine timer runs, and an OFF request is delivered on timeout.
+4. Trigger again and disarm before timeout: OFF must be requested promptly.
+5. Disconnect Zigbee2MQTT / power-cycle HA during trigger and ensure
+   hardware cutoff stops sounding even if software cannot deliver OFF.
+6. Restart with TRIGGERED stored: the controller must **not re-send ON**.
+   After expiry it must return to ARMED_AWAY with protected zones.
+7. Confirm service errors are logged and `siren_request_failed` is emitted.
+   Confirm at most one system has write ownership of the physical siren.
+8. If any item fails, turn physical output OFF and keep the archived YAML
+   system available for rollback, never operating both simultaneously.
 
-1. Configure → Contatti obbligatori e gruppi must show every configured
-   group and its friendly contact names. Verify adding and editing a group
-   (fields pre-filled), and safely deleting a disposable test group. Group
-   actions must not appear as separate top-level menu items. Do not delete
-   any real required group during a live alarm.
-2. Restart Home Assistant while armed and Zigbee2MQTT sensors briefly return
-   `unknown` or `unavailable`: protected zones remain protected; Health may
-   show `degraded`, then `ok`. The Health attribute
-   `protected_zone_problem_states` identifies the actual raw reason.
-3. Arm with an optional contact initially `unknown`: verify Pending →
-   Protected when first CLOSED, then opening triggers. New session:
-   Pending → Excluded when first OPEN. Both match `unavailable` behavior.
-4. A protected contact recovering OPEN must trigger a simulated alarm;
-   an unreadable mandatory contact still blocks arming at the deadline.
-5. Re-test notifications, light activation and conservative auto-off, same
-   sensor vibration threshold 2/3, and confirm the siren remains inert.
+## External automation audit
 
-## Historical test plans (older versions)
-
-# Generic protection alpha — safe test plan
-
-Leave the old hardware-controlling YAML alarm disarmed while physically opening its contacts. **Do not connect the simulated event bus to a siren.**
-
-1. After HACS update to v0.4.0 and restart, confirm the existing user's rules were preserved: mandatory porta, lock and Sala/Bagno alternative groups.
-2. Open Configure → Mandatory. Check the mandatory contacts and optional lock; the old values should be prefilled. Reopen Configure to review groups or add a new one.
-3. Verify your four Sala/Bagno combinations and verify readiness turns off if the door or optional lock is unsecured.
-4. With a positive exit delay, press Arm while the door is still open; close and lock it before the deadline. If requirements then hold, Armed Away is shown. Otherwise, arm is rejected with details in `fault`.
-5. Verify every closed contact is protected at commit and excluded contacts stay excluded, even after closing and reopening (wind case).
-6. In a separate test profile/installation, configure one mandatory front door and optional windows, **without groups or lock**, and verify it can arm. Empty rules must never arm.
-7. Add a new alternative group and edit it using the same group name; after disarming, removing it must change readiness as expected.
-8. With a vibration sensor associated with its actual window contact, ensure a window excluded at arm time ignores impulses, even if its shutter happens to be closed.
-9. In Options → Siren, leave empty. If you deliberately select a test siren entity for UI verification, **confirm that no physical action is sent** on trigger. Do not try this against your physical siren.
-10. Restart while armed (simulation only), confirm the protected zone set is restored exactly and never recreated from current sensor states.
-11. Try editing configuration while Arming/Armed Away/Triggered: the change must be refused until Disarm.
-
-These steps have not been executed on your actual HA runtime. GitHub CI only covers Python unit tests, manifest checks, HACS and hassfest.
-
-## v0.5.0: new per-source vibration and light deterrence
-
-1. Leave **Deterrent lights OFF** and any siren unconfigured for initial tests. Choose a replacement vibration sensor known to publish separate rising edges every ~5 s; do not expect DJT11LM to do this.
-2. Open Configure → Vibrations → Add, and pair one sensor to its real door/window contact. Repeat with 4+ dummy/test sensors if needed to verify the menu scales. Test Edit and Remove only when disarmed.
-3. Under Timing, choose threshold 2, debounce 3 s, window 20 s. Arm while the linked window is closed; verify its contact is included in the frozen protected zone set.
-4. Generate one real impulse: exactly one `vibration_prealert`, panel remains `armed_away`. A second `off → on` edge after at least 3 s and before 20 s from the first should produce simulated `triggered`.
-5. Disarm, re-arm; choose threshold 3. One impulse = prealert, second = `vibration_progress`, third = simulated trigger. Different sensors must **never** help reach the threshold.
-6. With the linked window OPEN at insertion, confirm impulses are ignored regardless of its shutter. Close and re-open the window later: it remains excluded.
-7. Confirm a debounce-rejected edge and an expired sequence do not trigger; wait 20 s after a prealert and confirm the next edge creates a fresh prealert.
-8. **Only if you explicitly want a real light test:** choose a harmless test `light.` entity, enable the Deterrent lights toggle, and arm. The first valid prealert should request one `light.turn_on`; subsequent hits should not repeat it. Disarming or triggering should **not** turn the light off. Turn it off manually afterward.
-9. Verify the chosen siren never activates. **Do not configure or select a physical siren for these tests.** No switch, lock or RF actuation is permitted.
-10. Restart HA and verify the frozen zone set is restored, with no automatic light activation at boot.
-
-This checklist is a plan for your on-site testing, not a report of physical tests performed.
-
-## v0.6.0 — Phone notification and safe light-off checklist
-
-1. Upgrade HACS and restart HA. Confirm existing contacts, mandatory alternative groups and frozen session remain intact. Siren must remain inert. Configurable hit threshold allows only **2 or 3**, never 1.
-2. With notifications disabled, verify no notify calls occur at prealert/trigger. Configure an actual Companion App `notify.mobile_app_*` or a Telegram Bot `notify.*` chat. Enable and choose **Send test notification**. Verify on the phone; a successful HA action alone is not proof of delivery.
-3. Generate a single valid vibration: a phone PREALARM message but no trigger. A second from the *same* sensor in the window: SIMULATED ALARM notification. Different sensors may not confirm each other. Repeat with threshold 3.
-4. Configure one safe test light initially OFF, enable deterrent and separately enable auto-off (e.g., 30 s). First prealert turns it ON; expiry requests light.turn_off; notification reports action. Avoid hardware siren proxies.
-5. Repeat with test light initially ON: its state must not be touched at all. With two lights (one ON, one OFF), only the originally OFF light is claimed for expiry.
-6. Change brightness/attributes manually after prealert: automatic OFF must be skipped and a warning sent. Simulate unavailable/missing entity and manual OFF likewise.
-7. Trigger simulated alarm before expiry: no light OFF while TRIGGERED; disarm and verify eventual cleanup if still unmodified.
-8. Restart HA while light expiry is pending: no blind OFF after restart; user is warned to check lights manually. Make sure previous sessions do not cause repeated ON calls.
-9. Disable auto-off and confirm v0.5 behavior (lights may remain ON), while push notifications remain independent. Disable notifications and confirm no phone delivery.
-10. Force one missing notify target and a working second target: delivery requests continue to the second target; a `notification_failed` diagnostic event records the failure.
-
-This checklist requires **physical Home Assistant testing**, not just unit tests or HACS/hassfest validators.
-
-## v0.6.2 — delayed state acknowledgement regression
-
-1. Ensure **both** deterrent light activation and the separate **safe
-   automatic turn-off** toggle are enabled. Set 30 s for the test.
-2. Starting with a light OFF, trigger one valid vibration prealert.
-   If Home Assistant reports the light ON 1–5 s after service completion,
-   the `deterrent_light_tracking_confirmed` diagnostic event must appear,
-   and the Health sensor should list it in `deterrent_lights_awaiting_auto_off`.
-3. After 30 s, if the light was not altered, verify
-   `deterrent_light_off_requested` and actual light OFF.
-4. With auto-off disabled, verify the light intentionally remains ON.
-5. With a light originally ON, no automatic turn-off may occur.
-6. Artificially delay the ON state confirmation beyond 15 s; the integration
-   must emit `deterrent_light_tracking_unconfirmed` and leave the light
-   alone, with a phone warning when configured.
-7. Change brightness or toggle the light manually while a timer exists:
-   no automatic turn-off may occur. Triggered simulated alarm must postpone
-   turn-off until disarm; restart must invalidate prior ownership.
-8. Siren remains inert. Use only a harmless test light for live testing.
-
-## v0.7.0 — restored alarm and unavailable Zigbee2MQTT sensors
-
-1. Arm with contacts CLOSED, verify panel `protected_zones`. Restart HA while
-   Z2M sensors are temporarily `unavailable`: no contact may be silently
-   moved into `excluded_zones`. The alarm stays `armed_away` and Health may
-   report `degraded`, but no automatic trigger or siren.
-2. Let protected sensors return CLOSED: verify no alarm or prealarm. Open one
-   afterward: immediate simulated trigger and a cause-specific phone push.
-3. Restart armed, then return one previously protected sensor OPEN (or leave it
-   OPEN before HA listener attaches): it must trigger regardless of any old
-   saved `recovery_policy=notify`.
-4. Re-arm with an OPTIONAL contact initially `unavailable`: it must appear in
-   `pending_zones`. First return CLOSED enrolls it into `protected_zones`.
-   Open it next: trigger. Repeat with first return OPEN: move to
-   `excluded_zones` and never enroll it later in the same session.
-5. Re-arm with a mandatory contact unavailable, or every contact of a required
-   OR group unavailable: **must refuse arming** at the exit deadline.
-6. A window deliberately OPEN at arming remains excluded even if it later
-   closes and re-opens (wind scenario). A paired vibration sensor is ignored
-   unless its physical contact is protected.
-7. Verify legacy v0.6.2 snapshots restore: protected/excluded remain unchanged
-   with zero new pending, and user is not asked to recreate configuration.
-8. Confirm push, deterrent lights, safe auto-off and the inactive physical
-   siren are unchanged.
-
-Use only simulation; physical siren remains unused in this release.
+- Presence auto-disarm, scripts that open locks/gates, HomeKit commands,
+  Telegram photos, LED Shelly, Sonoff RF remotes are **not** migrated.
+- Check every old `alarm_control_panel.allarme_casa` entity reference.
+- Read [Migration checklist](migration-from-yaml.md) before disabling YAML.
