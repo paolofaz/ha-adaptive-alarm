@@ -2,6 +2,11 @@
 
 ## Automated tests (CI)
 
+- In storage mode use only the Lovelace storage resource import when it succeeds.
+  Never also inject the same URL in the early frontend extra module.
+- Simulate frontend scoped custom-element registry replacement after the card
+  module has executed; verify the late re-registration makes the custom
+  element available after the `home-assistant` root is defined.
 - In the reusable Lovelace card, verify the icon is static for `disarmed`,
   `arming` and `armed_away`, flashes only in `triggered`, and respects
   the browser's reduced-motion preference.

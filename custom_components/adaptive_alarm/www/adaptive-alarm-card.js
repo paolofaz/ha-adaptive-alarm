@@ -223,8 +223,26 @@ class AdaptiveAlarmCard extends HTMLElement {
   }
 }
 
-if(!customElements.get("adaptive-alarm-card"))
-  customElements.define("adaptive-alarm-card",AdaptiveAlarmCard);
+// Home Assistant's scoped custom-element registry may replace the native
+// registry AFTER a very early frontend extra-module has already run.
+// In that race the JS executes but HA reports "Custom element doesn't exist".
+// Register immediately, then re-check once the HA root has initialized.
+// https://github.com/home-assistant/frontend/issues/53890
+function registerAdaptiveAlarmCard() {
+  if (!customElements.get("adaptive-alarm-card")) {
+    customElements.define("adaptive-alarm-card", AdaptiveAlarmCard);
+  }
+}
+registerAdaptiveAlarmCard();
+if (typeof window.setInterval === "function") {
+  let checks = 0;
+  const checkHandle = window.setInterval(() => {
+    checks += 1;
+    if (!customElements.get("home-assistant") && checks < 600) return;
+    window.clearInterval(checkHandle);
+    registerAdaptiveAlarmCard();
+  }, 100);
+}
 window.customCards=window.customCards||[];
 if(!window.customCards.some(x=>x.type==="adaptive-alarm-card"))
   window.customCards.push({type:"adaptive-alarm-card",name:"Adaptive Alarm",
