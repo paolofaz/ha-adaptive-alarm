@@ -1,4 +1,4 @@
-# Safety — v0.10.0 beta 1
+# Safety — v0.11.0 RC1
 
 ## Real outputs
 
@@ -100,3 +100,25 @@ share the same optional recipient list and global switch. Apple Home native
 notifications are not controlled by these switches. Reject notifications are
 sent only for a real rejection (after the exit deadline or zero-delay check).
 No RF, GPS presence, PIN, camera, LED, or physical siren actuation is added.
+
+## v0.11.0 RC1 — input_boolean-only virtual siren
+
+The RC allows an **explicitly opted-in virtual output**, validated strictly
+as an existing `input_boolean.<id>` entity. ONLY the Home Assistant
+`input_boolean.turn_on` and `input_boolean.turn_off` services may be used;
+no `siren`, `switch`, RF, MQTT, script, lock or arbitrary service routing
+is introduced. Default disabled. The previously configured physical siren
+is inert metadata and cannot receive commands.
+
+Requests are serialized with state changes and set `on` only while the
+phase is `triggered`. Return to armed, manual disarm and startup recovery
+request `off`. On restart, expired trigger deadlines are processed before
+the virtual siren can be turned on. The helper state is checked before
+issuing another command, and failures are logged and throttled with a
+30-second retry delay. This is an **observability mechanism**, not a
+physical siren driver.
+
+Any user automation that connects this virtual helper to a physical
+siren or other actuator would defeat this separation and MUST NOT be created.
+Live siren control remains excluded until full field acceptance and a
+fail-safe hardware adapter are separately reviewed.

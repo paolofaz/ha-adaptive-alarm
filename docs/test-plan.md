@@ -1,6 +1,32 @@
-# Adaptive Alarm test plan — current v0.10.0 beta 1
+# Adaptive Alarm test plan — current v0.11.0 RC1
 
-## v0.10.0 beta acceptance
+## v0.11.0 RC1 acceptance
+
+1. Confirm Required contacts and groups shows a clean multi-line summary,
+   including the actual Sala/Bagno groups and their friendly contact names.
+   The Mandatory contacts screen must show the SAME group summary. Literal
+   `\\n` and `**` should not appear anywhere in UI descriptions.
+2. Confirm Vibration sensors displays every already-configured
+   source → physical contact link. Add/edit/remove still function.
+3. Create an ordinary Toggle helper `input_boolean.sirena_fittizia`.
+   Configure it in **Siren → virtual test helper** and enable the separate
+   opt-in flag. Keep real siren / switches unconnected to this output and
+   verify no physical device receives any commands.
+4. Trigger Adaptive Alarm: the helper becomes ON; verify the time it turns ON
+   and the `triggered_until` value. After the configured trigger duration,
+   the panel returns `armed_away` and the helper becomes OFF.
+5. Trigger and disarm before the deadline: helper must become OFF immediately
+   and there must be no later re-arm. Restart Home Assistant during
+   `triggered`: the helper must be reconciled with the restored state.
+   Restart after the deadline: the helper must remain OFF.
+6. Leave the virtual output OFF by default on an existing installation:
+   it must not cause `input_boolean` service calls. Failed requests must
+   never change alarm state or activate physical hardware.
+7. Verify all v0.10.0 tests below, especially notification switches,
+   HomeKit, Protected/Pending/Excluded preservation, light-safe auto-off,
+   and no physical siren actuation.
+
+## Previous v0.10.0 beta acceptance
 
 1. Upgrade HACS without deleting the integration. Confirm existing mandatory
    contacts, OR groups, vibrations, safe deterrent lighting and notify targets
