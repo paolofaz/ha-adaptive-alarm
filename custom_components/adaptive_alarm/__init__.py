@@ -60,4 +60,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return False
     await hass.data[DOMAIN][entry.entry_id].async_stop()
     hass.data[DOMAIN].pop(entry.entry_id, None)
+    # Only the automatically injected module is unregistered. Storage
+    # resources and all user YAML dashboards remain unmodified.
+    from .frontend import async_unregister_card
+    async_unregister_card(hass)
     return True

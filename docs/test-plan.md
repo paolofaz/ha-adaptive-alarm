@@ -26,8 +26,9 @@ hassfest. These checks do not establish real Zigbee relay reliability.
   Verify it lists Protected/Pending/Excluded sensors, state, siren and anomalies,
   including the Health sensor's contact problem details.
   Verify no additional dashboard is installed and user YAML is never modified.
-  With storage resources, confirm automatic JS registration; with YAML
-  resources, confirm the documented one-time `lovelace.resources` entry.
+  With storage resources, confirm automatic JS registration. With YAML
+  resources, confirm registration via the frontend extra module URL without
+  modifying configuration.yaml or the existing Lovelace dashboard.
 
 ## Alarm functionality
 

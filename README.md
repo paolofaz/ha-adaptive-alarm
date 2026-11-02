@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.3**
+**Home Assistant security integration — v1.0.4**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -161,23 +161,21 @@ The JS module is served automatically at:
 /adaptive_alarm/adaptive-alarm-card.js
 ```
 
-If Lovelace **resources use storage mode**, the integration registers the
-module resource automatically. A YAML-managed dashboard may still use storage
-resources; these settings are independent.
+**The JavaScript module is loaded automatically in both Lovelace resource
+modes**, after installing the integration and restarting Home Assistant:
+- **Storage resources:** the module is registered in Lovelace resources.
+- **YAML resources (`resource_mode: yaml`):** the integration uses Home
+  Assistant's `frontend.add_extra_js_url` module API, so it works without
+  adding a `resources:` entry or modifying `configuration.yaml`.
 
-If your `lovelace` resources use **YAML mode**, add the following *once*
-under the existing `lovelace:` key in `configuration.yaml` (do not duplicate
-`lovelace:`):
+These settings are independent of whether the dashboard itself has
+`mode: yaml`. In YAML resource mode the automatically loaded module may
+**not appear on the Resources list**; that is expected because it is
+registered through the frontend, not the Lovelace storage collection.
 
-```yaml
-lovelace:
-  resource_mode: yaml
-  resources:
-    - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.3
-      type: module
-```
-
-Then add **one card** in the `cards:` list of your *existing* YAML dashboard:
+**You still choose where the card appears:** the integration intentionally
+does not edit or create dashboards. Add one card in the `cards:` list of
+your *existing* YAML dashboard:
 
 ```yaml
 - type: custom:adaptive-alarm-card
@@ -193,8 +191,10 @@ prefer to specify the entity explicitly, use:
 ```
 
 Replace `YOUR_REAL_ENTITY_ID` with the actual entity from Home Assistant.
-With YAML resources, reload Lovelace resources or restart HA, then refresh
-your browser. With storage resources, simply refresh after the upgrade.
+After upgrading, restart Home Assistant and fully reload the browser page.
+Do **not** add a manual resource for Adaptive Alarm. If you previously added
+one in YAML while troubleshooting, you may remove that entry once the
+new auto-loader is confirmed working, to avoid loading the module twice.
 
 An existing separate `Adaptive Alarm` dashboard that was created by v1.0.0
 is **not deleted automatically**: Home Assistant may contain user edits.
