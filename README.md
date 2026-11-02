@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.5**
+**Home Assistant security integration — v1.0.6**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -105,9 +105,10 @@ retired every old YAML automation that can command the same siren.**
    substitute for an actual hardware test.
 3. Only then enable **Physical siren output**. It is disabled on every
    upgraded installation until you explicitly change the setting.
-4. A new trigger requests `turn_on`. Disarming, expiry of the trigger period
-   and graceful integration unload request `turn_off`. Failed OFF requests
-   are reported and retried while the integration is operational.
+4. A new trigger requests `turn_on`. Disarming and expiry of the trigger
+   period request `turn_off`, with retries for failed requests.
+   **Startup and integration unload do not command the siren**: restarting
+   Home Assistant must not prematurely silence a valid physical alarm.
 5. **On Home Assistant restart**, a previously active `triggered` state does
    not automatically resend `turn_on` to the siren. However, when an
    `armed_away` session is restored and an already-open protected contact
@@ -190,6 +191,19 @@ your *existing* YAML dashboard:
 ```yaml
 - type: custom:adaptive-alarm-card
 ```
+
+**IMPORTANT: In the Home Assistant card editor** (the single-card code
+editor, "Configurazione della scheda"), omit the leading dash because it
+expects a **single mapping**, not a YAML list:
+
+```yaml
+type: custom:adaptive-alarm-card
+title: Antifurto
+```
+
+Use `- type:` ONLY when editing the parent dashboard's `cards:` list.
+An accidental leading dash can cause "No card type configured" or an
+undefined `startsWith` error in the built-in editor.
 
 The card normally detects the Adaptive Alarm panel automatically. If you
 prefer to specify the entity explicitly, use:

@@ -47,7 +47,7 @@ class PackagingTests(unittest.TestCase):
             self.assertIn("config", translation)
 
     def test_no_physical_actuation_services(self):
-        """Any future siren output requires an explicit, reviewed release."""
+        """Physical siren requests need explicit opt-in and an event."""
         forbidden = (
             "mqtt.publish",
             "lock.unlock",
@@ -57,8 +57,9 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('"light", "turn_on"', controller)
         self.assertIn('blocking=True', controller)
         self.assertIn('self.siren_output_enabled', controller)
-        self.assertIn('if activate and phase != Phase.TRIGGERED', controller)
-        self.assertIn('not activate and not force', controller)
+        self.assertIn('if phase != Phase.TRIGGERED:', controller)
+        self.assertIn('if not self._siren_off_pending:', controller)
+        self.assertIn('self._siren_off_pending = True', controller)
         self.assertNotIn('input_boolean', controller)
         self.assertNotIn('fake_siren', controller)
         self.assertIn('event.get("type") == "trigger_timeout_rearmed"', controller)
@@ -91,7 +92,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_physical_siren_output_opt_in(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "1.0.5")
+        self.assertEqual(manifest["version"], "1.0.6")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": self.controller.siren_output_enabled', panel)

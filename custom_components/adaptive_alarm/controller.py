@@ -75,6 +75,8 @@ class AdaptiveAlarmController:
         if self.siren_output_enabled:
             validate_real_siren(self.siren_entity)
         self._siren_off_retry_after = 0.0
+        # OFF retries begin only on explicit disarm or trigger timeout.
+        self._siren_off_pending = False
         self.siren_last_error: str | None = None
         self._siren_reported_failures: set[str] = set()
         self.deterrent_enabled = entry.options.get(CONF_DETERRENT_ENABLED) is True
@@ -188,12 +190,11 @@ class AdaptiveAlarmController:
 
     async def _request_physical_siren(
         self, *, activate: bool = False, force: bool = False,
-        shutdown: bool = False,
     ) -> None:
-        """Command physical siren only on fresh alarm events, never HA restore.
+        """Operate siren on actual alarm events, never HA startup or unload.
 
-        The Zigbee device must independently enforce a maximum ON duration.
-        OFF is retried if the device is unavailable or still reports ON.
+        Explicit disarm or trigger expiry schedules an OFF retry. The
+        Zigbee device independently limits physical sound duration.
         """
         if not self.siren_output_enabled or not self.siren_entity:
             return
@@ -201,14 +202,22 @@ class AdaptiveAlarmController:
         domain = entity.split(".", 1)[0]
         async with self._guard:
             phase = self.machine.phase
-            if activate and phase != Phase.TRIGGERED:
-                return
-            if not activate and phase == Phase.TRIGGERED and not shutdown:
-                return
-            if not activate and not force and self.hass.states.is_state(entity, "off"):
-                self._siren_off_retry_after = 0.0
-                self._siren_reported_failures.discard("off")
-                return
+            if activate:
+                if phase != Phase.TRIGGERED:
+                    return
+                self._siren_off_pending = False
+            else:
+                if phase == Phase.TRIGGERED:
+                    return
+                if force:
+                    self._siren_off_pending = True
+                if not self._siren_off_pending:
+                    return
+                if not force and self.hass.states.is_state(entity, "off"):
+                    self._siren_off_pending = False
+                    self._siren_off_retry_after = 0.0
+                    self._siren_reported_failures.discard("off")
+                    return
             now = time.time()
             if not activate and not force and now < self._siren_off_retry_after:
                 return
@@ -321,12 +330,13 @@ class AdaptiveAlarmController:
             # An expired deadline after HA restart must never briefly turn
             # the physical siren ON before the first timer tick.
             await self.async_tick()
-        # Never re-send a physical ON on Home Assistant restart.
-        await self._sync_outputs(force=True)
+        # Never command the physical siren merely because HA started.
 
     async def async_stop(self) -> None:
-        """Stop outputs during graceful unload; retain session unchanged."""
-        await self._request_physical_siren(force=True, shutdown=True)
+        """Unsubscribe without silencing an ongoing physical siren alarm.
+
+        On restart, the Zigbee device's own cutoff remains authoritative.
+        """
         for unsubscribe in self._remove_callbacks:
             unsubscribe()
         self._remove_callbacks.clear()

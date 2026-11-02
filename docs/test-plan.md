@@ -55,6 +55,17 @@ hassfest. These checks do not establish real Zigbee relay reliability.
 
 ## Physical siren (only after the old alarm is no longer in control)
 
+- Startup with Zigbee2MQTT not yet ready: no spontaneous siren ON/OFF
+  calls, no error notification for missing siren on normal HA start.
+- Restart HA while physical siren is sounding due to an already TRIGGERED
+  alarm: no implicit OFF or ON on startup/unload; Zigbee hardware cutoff
+  continues independently.
+- Actual disarm and alarm timeout must still request OFF (and retry failed
+  requests). A fresh trigger cancels pending OFF retry.
+- New intrusion discovered during restart from ARMED_AWAY still requests
+  ON; when Z2M is not available this genuine failure is reported.
+
+
 1. With physical output **OFF**, test all alarm states: no real siren calls
    must occur, even if an old siren entity is already configured.
 2. Configure the intended Zigbee2MQTT `siren.*` entity and independently test

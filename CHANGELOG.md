@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.6 — single-card editor syntax and correct siren lifecycle
+
+- Documented YAML for Home Assistant single-card editor without a leading dash
+- Clearer Lovelace card configuration validation
+- Removed unconditional siren OFF on Home Assistant startup and unload
+- Preserved ON for fresh alarms and OFF on disarm or actual timer expiry
+- Retries only explicit OFF commands; a fresh alarm cancels old retries
+- No changes to HomeKit IDs or adaptive zone protection
+
 ## v1.0.5 — robust frontend resource auto-loading in storage mode
 
 - Fixed the missing fallback when Lovelace storage resource registration fails
