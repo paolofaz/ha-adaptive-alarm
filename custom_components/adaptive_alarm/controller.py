@@ -77,6 +77,8 @@ class AdaptiveAlarmController:
         if self.siren_output_enabled:
             validate_real_siren(self.siren_entity)
         self._siren_off_retry_after = 0.0
+        self.siren_last_error: str | None = None
+        self._siren_reported_failures: set[str] = set()
         self.fake_siren_enabled = entry.options.get(CONF_FAKE_SIREN_ENABLED) is True
         raw_helper = entry.options.get(CONF_FAKE_SIREN_HELPER)
         self.fake_siren_helper = (
@@ -257,6 +259,7 @@ class AdaptiveAlarmController:
                 return
             if not activate and self.hass.states.is_state(entity, "off"):
                 self._siren_off_retry_after = 0.0
+                self._siren_reported_failures.discard("off")
                 return
             now = time.time()
             if not activate and not force and now < self._siren_off_retry_after:
@@ -274,13 +277,24 @@ class AdaptiveAlarmController:
                     domain, service, {},
                     target={"entity_id": entity}, blocking=True,
                 )
-            except Exception:
+            except Exception as exc:
                 _LOGGER.exception("Siren %s request failed: %s", service, entity)
+                action = "on" if activate else "off"
+                self.siren_last_error = f"{entity}: {action} ({type(exc).__name__})"
                 self._events([{
                     "type": "siren_request_failed", "siren": entity,
-                    "requested_state": "on" if activate else "off",
+                    "requested_state": action,
                 }])
+                if action not in self._siren_reported_failures:
+                    self._siren_reported_failures.add(action)
+                    if self.notify_events.get("zone_fault", True):
+                        self.hass.async_create_task(self._notify_text(
+                            f"Adaptive Alarm: comando sirena {action} non riuscito "
+                            f"({self._friendly_name(entity)}). Controlla Zigbee2MQTT."
+                        ))
             else:
+                self.siren_last_error = None
+                self._siren_reported_failures.discard("on" if activate else "off")
                 self._events([{
                     "type": "siren_requested", "siren": entity,
                     "requested_state": "on" if activate else "off",

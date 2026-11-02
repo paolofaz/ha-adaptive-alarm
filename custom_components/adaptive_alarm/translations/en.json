@@ -160,7 +160,7 @@
       },
       "notifications": {
         "title": "Phone notifications (HA App, Telegram, others)",
-        "description": "OFF by default. Select one or more notify.* entities (including modern Telegram Bot chat targets), or notify.mobile_app_* and other existing HA notify actions. Do not enter Telegram credentials here; configure the bot separately in Home Assistant. Test sends a real message. Accepted service request does not guarantee delivery to the phone.",
+        "description": "Select Home Assistant notify entities and services. All event categories share the same recipients. A successful verification request does not guarantee delivery to the phone.",
         "data": {
           "notifications_enabled": "Enable phone notifications",
           "notification_entities": "Notify entities (Telegram Bot, etc.)",
@@ -222,8 +222,8 @@
       "no_groups": "No alternative groups to remove.",
       "unlink_vibration_first": "Unlink the vibration sensor from that contact before removing it from the protection rules.",
       "no_vibrations": "No vibration sensors are configured.",
-      "notification_test_sent": "Test notification request sent. Check the phone: action success does not guarantee delivery.",
-      "notification_test_failed": "At least one test destination is missing or returned an error. Check logs.",
+      "notification_test_sent": "Verification message requested. Check your phone: this does not guarantee delivery.",
+      "notification_test_failed": "One or more recipients rejected the verification message. Check logs.",
       "notification_no_targets": "Select at least one target to enable notifications.",
       "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted."
     }

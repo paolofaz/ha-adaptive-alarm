@@ -160,7 +160,7 @@
       },
       "notifications": {
         "title": "Notifiche sul telefono (App HA, Telegram, altri)",
-        "description": "OFF per impostazione predefinita. Seleziona una o più entità notify.* (inclusi i destinatari del nuovo Telegram Bot) oppure azioni notify.mobile_app_* e altre notify già configurate. Non inserire chiavi Telegram: configura il bot separatamente in Home Assistant. Il test invia davvero un messaggio. Il servizio può confermare la richiesta, non necessariamente la consegna al telefono.",
+        "description": "Seleziona le entità notify.* o i servizi notify di Home Assistant già configurati. I destinatari sono condivisi da tutte le categorie abilitate nella pagina «Eventi da notificare». Un messaggio di verifica accettato non garantisce la consegna al telefono.",
         "data": {
           "notifications_enabled": "Abilita notifiche push dal sistema",
           "notification_entities": "Destinatari come entità notify (Telegram Bot, ecc.)",
@@ -222,8 +222,8 @@
       "no_groups": "Non sono presenti gruppi alternativi da rimuovere.",
       "unlink_vibration_first": "Scollega prima il sensore di vibrazione dalla zona che vuoi rimuovere, quindi modifica le regole.",
       "no_vibrations": "Non hai configurato sensori di vibrazione.",
-      "notification_test_sent": "Richiesta di notifica di prova inviata. Controlla il telefono: l'esito del servizio non garantisce la consegna.",
-      "notification_test_failed": "Almeno un destinatario della prova non è raggiungibile o ha restituito errore. Controlla i registri.",
+      "notification_test_sent": "Messaggio di verifica richiesto. Controlla il telefono: la richiesta non garantisce la consegna.",
+      "notification_test_failed": "Uno o più destinatari non hanno accettato il messaggio di verifica. Controlla i registri.",
       "notification_no_targets": "Scegli almeno un destinatario per abilitare le notifiche.",
       "invalid_notification_target": "Destinatario non valido: sono ammessi solo servizi/entità notify."
     }
