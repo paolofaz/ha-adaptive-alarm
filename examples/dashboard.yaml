@@ -9,6 +9,7 @@
   title: Antifurto
 #
 # The module is loaded automatically in resource_mode: storage AND yaml.
+# In storage mode the frontend provides a fallback if Resources cannot be updated.
 # No lovelace.resources entry is needed in configuration.yaml.
 # The card position in the existing dashboard is still chosen by the user.
 # This integration never creates dashboards or changes the user's YAML.

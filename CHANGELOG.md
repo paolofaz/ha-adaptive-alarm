@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.5 — robust frontend resource auto-loading in storage mode
+
+- Fixed the missing fallback when Lovelace storage resource registration fails
+- Loads the bundled JS module via Home Assistant frontend in both resource modes
+- Still attempts to create/update the visible resource record in storage mode
+- Emits actionable error logs instead of making card loading depend on storage
+- Includes regression tests for collection errors and unavailable Lovelace data
+- No changes to the alarm, Zigbee siren, HomeKit or configuration state
+
 ## v1.0.4 — automatic Lovelace card loading in YAML resource mode
 
 - Fixed the card JavaScript not being loaded automatically when `lovelace.resource_mode: yaml`
