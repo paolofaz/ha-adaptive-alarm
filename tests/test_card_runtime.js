@@ -22,7 +22,20 @@ global.customElements={
   define:(name,cls)=>registered.set(name,cls),
   get:(name)=>registered.get(name),
 };
-global.window={customCards:[]};
+let registryRecheck;
+let intervalCleared=false;
+global.window={
+  customCards:[],
+  setInterval:(callback,ms)=>{
+    assert.equal(ms,100);
+    registryRecheck=callback;
+    return 7;
+  },
+  clearInterval:(handle)=>{
+    assert.equal(handle,7);
+    intervalCleared=true;
+  },
+};
 require("../custom_components/adaptive_alarm/www/adaptive-alarm-card.js");
 const Card=registered.get("adaptive-alarm-card");
 assert.ok(Card);
@@ -90,4 +103,21 @@ assert.throws(()=>second.setConfig({entity:"switch.unsafe"}), /alarm_control_pan
 assert.throws(()=>second.setConfig({entity:24}), /alarm_control_panel/);
 assert.throws(()=>second.setConfig([{type:"custom:adaptive-alarm-card"}]), /SENZA il trattino/);
 assert.throws(()=>second.setConfig(null), /SENZA il trattino/);
-console.log("Adaptive Alarm Lovelace card: runtime and health rendering OK");
+
+// Simulate Home Assistant loading the card before its scoped registry
+// polyfill. The polyfill later replaces the global registry, losing the
+// original definition. The delayed registration must restore it.
+assert.equal(typeof registryRecheck,"function");
+const polyfillRegistry=new Map();
+global.customElements={
+  define:(name,cls)=>polyfillRegistry.set(name,cls),
+  get:(name)=>polyfillRegistry.get(name),
+};
+registryRecheck();
+assert.equal(customElements.get("adaptive-alarm-card"),undefined);
+assert.equal(intervalCleared,false);
+customElements.define("home-assistant",FakeElement);
+registryRecheck();
+assert.equal(customElements.get("adaptive-alarm-card"),Card);
+assert.equal(intervalCleared,true);
+console.log("Adaptive Alarm Lovelace card: runtime, Health and registry-race recovery OK");

@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.7 — Home Assistant frontend custom-element registry race
+
+- Fixed a potential race where an extra-module registers a card before
+  Home Assistant installs its scoped custom-element registry polyfill
+- Uses one native Lovelace resource import in storage mode, not a duplicate
+  early frontend import of the same URL
+- In YAML mode or storage error, retains frontend fallback and registers
+  the card again after the HA root is initialized when needed
+- Adds a JavaScript regression test simulating the registry replacement
+- Does not alter the alarm engine, siren, HomeKit or sensor rules
+
 ## v1.0.6 — single-card editor syntax and correct siren lifecycle
 
 - Documented YAML for Home Assistant single-card editor without a leading dash

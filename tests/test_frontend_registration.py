@@ -82,9 +82,9 @@ class RegistrationTests(IsolatedAsyncioTestCase):
             resources.async_create_item.assert_awaited_once_with(
                 {"url": CARD_RESOURCE, "res_type": "module"}
             )
-            frontend.add_extra_js_url.assert_called_once_with(hass, CARD_RESOURCE)
+            frontend.add_extra_js_url.assert_not_called()
             async_unregister_card(hass)
-            frontend.remove_extra_js_url.assert_called_once_with(hass, CARD_RESOURCE)
+            frontend.remove_extra_js_url.assert_not_called()
 
     async def test_storage_resource_failure_falls_back_to_frontend(self):
         resources = SimpleNamespace(
@@ -119,8 +119,9 @@ class RegistrationTests(IsolatedAsyncioTestCase):
             async_update_item=AsyncMock(),
         )
         hass = self.make_hass(mode="storage", resources=resources)
-        with mock_homeassistant_frontend():
+        with mock_homeassistant_frontend() as frontend:
             await async_register_card(hass)
+            frontend.add_extra_js_url.assert_not_called()
             resources.async_create_item.assert_not_awaited()
             resources.async_update_item.assert_awaited_once_with(
                 "owned-record",
