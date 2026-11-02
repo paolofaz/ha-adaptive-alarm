@@ -29,20 +29,17 @@ class PackagingTests(unittest.TestCase):
         forbidden = (
             "mqtt.publish",
             "lock.unlock",
-            "switch.turn_on",
-            "siren.turn_on",
-            'async_call("siren"',
-            'async_call("switch"',
         )
         controller = (DOMAIN / "controller.py").read_text()
-        self.assertEqual(controller.count("services.async_call("), 3)
+        self.assertEqual(controller.count("services.async_call("), 4)
         self.assertIn('"light", "turn_on"', controller)
         self.assertIn('"input_boolean", service', controller)
         self.assertIn('blocking=True', controller)
         self.assertIn('validate_fake_siren_helper(raw_helper)', controller)
         self.assertIn('if not self.fake_siren_enabled', controller)
-        self.assertNotIn('async_call("siren"', controller)
-        self.assertNotIn('async_call("switch"', controller)
+        self.assertIn('self.siren_output_enabled', controller)
+        self.assertIn('if activate and phase != Phase.TRIGGERED', controller)
+        self.assertIn('if not self.siren_output_enabled', controller)
         for component in DOMAIN.rglob("*.py"):
             source = component.read_text()
             for phrase in forbidden:
@@ -67,14 +64,14 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("CONF_DETERRENT_ENABLED", flow)
         self.assertIn("CONF_DETERRENT_LIGHTS", flow)
         self.assertIn("DEFAULT_DETERRENT_ENABLED = False", const)
-        self.assertNotIn('services.async_call("siren"', source)
+        self.assertIn('self.siren_output_enabled', source)
 
-    def test_siren_metadata_cannot_activate_outputs(self):
+    def test_physical_siren_output_opt_in(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "0.11.0")
+        self.assertEqual(manifest["version"], "1.0.0")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
-        self.assertIn('"siren_enabled": False', panel)
+        self.assertIn('"siren_enabled": self.controller.siren_output_enabled', panel)
         self.assertIn("self.siren_entity = self.paths.siren", controller)
         sensor = (DOMAIN / "sensor.py").read_text()
         self.assertIn('"pending_zones"', sensor)

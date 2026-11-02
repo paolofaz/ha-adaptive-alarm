@@ -91,7 +91,7 @@ class PresentationTests(unittest.TestCase):
         )
         self.assertIn("Finestra Sala", message)
         self.assertIn("Vibrazione Sala", message)
-        self.assertIn("ALLARME SIMULATO", message)
+        self.assertIn("ALLARME:", message)
         self.assertNotIn("binary_sensor.", message)
 
     def test_contact_trigger_identifies_open_contact(self):

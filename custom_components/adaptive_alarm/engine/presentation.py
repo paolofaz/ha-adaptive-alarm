@@ -59,12 +59,12 @@ def trigger_text(
         else:
             detail = f"vibrazioni ripetute dal sensore {name_of(source)}"
     elif cause == "manual_test":
-        detail = "attivazione manuale di prova"
+        detail = "attivazione manuale"
     elif cause.startswith("binary_sensor."):
         detail = f"apertura del contatto {name_of(cause)}"
     else:
         detail = f"causa: {cause}"
-    return f"ALLARME SIMULATO: {detail}. Sirena fisica NON attivata."
+    return f"ALLARME: {detail}."
 
 
 def fault_text(zone: str, state: str, name_of: NameOf) -> str:

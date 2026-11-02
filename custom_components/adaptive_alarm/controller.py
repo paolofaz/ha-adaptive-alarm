@@ -241,6 +241,7 @@ class AdaptiveAlarmController:
 
     async def _request_physical_siren(
         self, *, activate: bool = False, force: bool = False,
+        shutdown: bool = False,
     ) -> None:
         """Command physical siren only on fresh alarm events, never HA restore.
 
@@ -255,7 +256,7 @@ class AdaptiveAlarmController:
             phase = self.machine.phase
             if activate and phase != Phase.TRIGGERED:
                 return
-            if not activate and phase == Phase.TRIGGERED:
+            if not activate and phase == Phase.TRIGGERED and not shutdown:
                 return
             if not activate and self.hass.states.is_state(entity, "off"):
                 self._siren_off_retry_after = 0.0
@@ -360,7 +361,8 @@ class AdaptiveAlarmController:
         await self._sync_outputs(force=True)
 
     async def async_stop(self) -> None:
-        """Release callbacks; leave persisted session untouched."""
+        """Stop outputs during graceful unload; retain session unchanged."""
+        await self._request_physical_siren(force=True, shutdown=True)
         for unsubscribe in self._remove_callbacks:
             unsubscribe()
         self._remove_callbacks.clear()
@@ -437,9 +439,9 @@ class AdaptiveAlarmController:
                     zone, previous, current, now=now
                 )
             )
-            await self._notify_events(emitted)
             if any(event.get("type") == "triggered" for event in emitted):
                 await self._sync_outputs(triggered=True, force=True)
+            await self._notify_events(emitted)
             await self._refresh_faults()
             # Readiness is derived from actual states, even while disarmed.
             self._events([])
@@ -465,15 +467,13 @@ class AdaptiveAlarmController:
                     )),
                 )
             )
-            # Do not make an urgent prealert wait for slow Zigbee/Wi-Fi
-            # lights (or delay real lighting on a slow notify provider).
-            # The prealert never claims the physical lights actually switched.
+            # Siren service call takes priority over notification latency.
+            if any(event.get("type") == "triggered" for event in events):
+                await self._sync_outputs(triggered=True, force=True)
             await asyncio.gather(
                 self._notify_events(events),
                 self._request_deterrent_lights(events),
             )
-            if any(event.get("type") == "triggered" for event in events):
-                await self._sync_outputs(triggered=True, force=True)
         elif zone == self.lock_entity:
             if self.machine.active and getattr(new_state, "state", None) != "locked":
                 await self._apply(
@@ -760,12 +760,12 @@ class AdaptiveAlarmController:
         )
         # Reconciling OPEN protected contacts also recovers a missed state
         # event, including right after a restart. Physical siren is opt-in.
-        await self._notify_events(events)
-        await self._refresh_faults()
-        await self._expire_deterrent_lights()
         await self._sync_outputs(
             triggered=any(event.get("type") == "triggered" for event in events),
         )
+        await self._notify_events(events)
+        await self._refresh_faults()
+        await self._expire_deterrent_lights()
 
     async def async_arm(self) -> list[dict[str, Any]]:
         events = await self._apply(

@@ -554,7 +554,7 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             return self.async_abort(reason="notification_no_targets")
         result = await async_send_notification(
             self.hass, entities=entity_ids, services=names,
-            message="Test Adaptive Alarm: canale notifiche configurato correttamente. Nessun allarme attivato.",
+            message="Adaptive Alarm: canale notifiche configurato correttamente.",
         )
         if result["failed"]:
             return self.async_abort(reason="notification_test_failed")
