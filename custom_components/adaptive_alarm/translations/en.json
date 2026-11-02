@@ -29,7 +29,7 @@
           "notifications": "Phone notifications (HA App, Telegram, others)",
           "notification_events": "Notification event switches",
           "notification_test": "Verify notification recipients",
-          "siren": "Siren and indicator",
+          "siren": "Zigbee2MQTT siren",
           "timing": "Arming timing and vibration confirmation"
         },
         "description": "Configure protection, vibration, notifications, timing, lights and siren. Physical outputs require explicit opt-in.",
@@ -41,7 +41,7 @@
           "notifications": "Choose explicit HA notify targets. Telegram Bot uses notify entities.",
           "notification_events": "Enable each event separately. All events use the destinations configured under Phone notifications.",
           "notification_test": "Send a verification message to configured recipients.",
-          "siren": "Configure siren and indicator. Physical output requires explicit opt-in.",
+          "siren": "Choose your siren.* entity and separately enable physical control.",
           "timing": "Set exit delay, debounce, window and hit threshold 2 or 3. Protected contacts returning open trigger automatically."
         }
       },
@@ -89,13 +89,11 @@
         }
       },
       "siren": {
-        "title": "Siren and indicator",
-        "description": "Select the Zigbee2MQTT siren. Enable physical output only after confirming the device's independent automatic cutoff. The siren activates on alarm and turns off on disarm or at the trigger deadline. Physical output is disabled by default. An input_boolean ON/OFF indicator is optional.",
+        "title": "Zigbee2MQTT siren",
+        "description": "Select your siren.* entity provided by Zigbee2MQTT. Enable physical output only after verifying the device’s independent automatic cutoff. The system sends siren.turn_on on trigger and siren.turn_off on disarm or trigger timeout. Disabled by default.",
         "data": {
-          "siren": "Zigbee2MQTT siren (siren or switch entity)",
-          "fake_siren_enabled": "Enable helper indicator",
-          "fake_siren_helper": "Indicator helper (input_boolean)",
-          "siren_output_enabled": "Enable physical siren output"
+          "siren": "Zigbee2MQTT siren (siren.*)",
+          "siren_output_enabled": "Enable physical siren control"
         }
       },
       "timing": {
@@ -213,8 +211,6 @@
       "notification_no_targets": "Select at least one target to enable notifications.",
       "notification_service_missing": "The chosen notify service is not available.",
       "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted.",
-      "fake_siren_helper_required": "Select an input_boolean for the indicator.",
-      "invalid_fake_siren_helper": "Only a valid input_boolean helper is allowed.",
       "siren_entity_required": "Select a siren entity before enabling physical output."
     },
     "abort": {

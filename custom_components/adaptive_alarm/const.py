@@ -77,7 +77,3 @@ DEFAULT_TRIGGER_DURATION = 300
 # Physical siren requires explicit enablement, including on upgrades.
 CONF_SIREN_OUTPUT_ENABLED = "siren_output_enabled"
 
-# RC opt-in siren lifecycle test: strict virtual toggle helper ONLY.
-# Configured physical siren metadata remains permanently inert.
-CONF_FAKE_SIREN_ENABLED = "fake_siren_enabled"
-CONF_FAKE_SIREN_HELPER = "fake_siren_helper"

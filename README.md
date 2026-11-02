@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.0**
+**Home Assistant security integration — v1.0.1**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -39,14 +39,12 @@ must always be closed.
 - **Notifications:** one shared list of Home Assistant notification recipients,
   plus six independent event switches: armed, disarmed, triggered, rejected,
   vibration prealert and sensor anomalies.
-- **Sirens:** Zigbee2MQTT `siren` or `switch` entities are supported
-  with a separate **physical output enabled** switch, **OFF by default**.
-  The device **must** have a verified independent auto-off timer before you
-  enable physical output. An optional `input_boolean` serves as an
-  ON/OFF indicator independently.
-- **Dashboard:** an editable, native Lovelace dashboard is installed once at
-  `/adaptive-alarm`, with alarm control, status, protected/pending/excluded
-  contacts and diagnostics. No JavaScript packages or HACS cards needed.
+- **Siren:** native Zigbee2MQTT `siren.*` entities can be configured with
+  a dedicated physical output switch, **OFF by default**. Independently
+  configured hardware cutoff is strongly recommended.
+- **Lovelace card:** a compact `custom:adaptive-alarm-card` displays alarm
+  state, protected/pending/excluded sensors and diagnostics inside your
+  **existing dashboard**. No new dashboard is created.
 
 ## Installation / upgrading
 
@@ -56,13 +54,11 @@ must always be closed.
 3. Navigate to **Settings → Devices & services → Adaptive Alarm → Configure**.
 4. Configure required contacts and groups, optional contacts, vibration
    associations, timing and notifications.
-5. Confirm the panel exists and the `Adaptive Alarm` dashboard appears in the
-   sidebar; you can also open `/adaptive-alarm` in Home Assistant.
+5. Add the reusable Adaptive Alarm card to your existing YAML dashboard (see the Lovelace section).
 
 **Existing users:** never delete and recreate the integration to upgrade.
 The same config entry, entity unique IDs, options and protected session are
-retained. Dashboard creation is best-effort: it is not allowed to prevent the
-alarm from starting, and an existing dashboard is never overwritten.
+retained. The optional Lovelace resource is independent from alarm operation.
 
 ## Configuration details
 
@@ -101,8 +97,8 @@ while keeping rejected/prealert/sensor anomalies ON.
 **Keep physical output disabled until you have verified the device and
 retired every old YAML automation that can command the same siren.**
 
-1. Configure an existing Zigbee2MQTT `siren.*` or `switch.*` entity under
-   **Configure → Siren and indicator**.
+1. Configure an existing Zigbee2MQTT `siren.*` entity under
+   **Configure → Zigbee2MQTT siren**.
 2. Verify in the Zigbee2MQTT device controls that the siren has an
    **independent** cutoff; for a 300-second alarm phase, a 5-minute device
    cutoff is a reasonable backup. These are separate timers; neither can
@@ -122,8 +118,6 @@ device physically switched on/off. Monitor the actual Z2M entity and test the
 device's auto-off in a controlled manner. Never share physical siren ownership
 with the retired YAML system.
 
-The separate optional `input_boolean` indicator follows the alarm state
-and can be used to check ON/OFF timing without activating hardware.
 
 ## HomeKit / Apple Casa
 
@@ -141,24 +135,64 @@ depends on the security of those *external commands*. Avoid fixed-code
 RF remotes for disarming a real security system, and validate GPS presence
 before relying on it to unlock or disarm a house.
 
-## Dashboard and diagnostics
+## Lovelace card for an existing dashboard
 
-The integration automatically creates the **Adaptive Alarm** sidebar dashboard
-on first setup. It combines built-in alarm-panel, glance, entities and markdown
-cards. Read-only lists come from the current alarm panel attributes:
+Adaptive Alarm does **not** create a second dashboard. Its custom card shows
+the alarm status, counts and friendly names of Protected/Pending/Excluded
+contacts, current sensor states, arming routes, fault diagnostics and the siren
+status. It uses the existing `alarm_control_panel` and does not issue
+arming/disarming commands of its own.
 
-- `protected_zones`: contacts locked into the active monitoring session.
-- `pending_zones`: optional contacts waiting for their first known state.
-- `excluded_zones`: optional contacts deliberately outside this episode.
-- `minimum_routes`: required groups/paths satisfied at arming.
-- `triggered_until`, `trigger_cause` and `fault`: current episode details.
-- **Health** diagnostics: `ready`, `not_ready`, `ok`, `degraded`,
-  `triggered`, `critical`, with problem details.
+The JS module is served automatically at:
 
-The dashboard is editable. It is **never overwritten** during upgrades.
-If Home Assistant does not expose Lovelace storage when the integration loads,
-dashboard installation is logged as a non-critical issue; the alarm still
-operates normally.
+```
+/adaptive_alarm/adaptive-alarm-card.js
+```
+
+If Lovelace **resources use storage mode**, the integration registers the
+module resource automatically. A YAML-managed dashboard may still use storage
+resources; these settings are independent.
+
+If your `lovelace` resources use **YAML mode**, add the following *once*
+under the existing `lovelace:` key in `configuration.yaml` (do not duplicate
+`lovelace:`):
+
+```yaml
+lovelace:
+  resource_mode: yaml
+  resources:
+    - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.1
+      type: module
+```
+
+Then add **one card** in the `cards:` list of your *existing* YAML dashboard:
+
+```yaml
+- type: custom:adaptive-alarm-card
+```
+
+The card normally detects the Adaptive Alarm panel automatically. If you
+prefer to specify the entity explicitly, use:
+
+```yaml
+- type: custom:adaptive-alarm-card
+  entity: alarm_control_panel.YOUR_REAL_ENTITY_ID
+  title: Antifurto
+```
+
+Replace `YOUR_REAL_ENTITY_ID` with the actual entity from Home Assistant.
+With YAML resources, reload Lovelace resources or restart HA, then refresh
+your browser. With storage resources, simply refresh after the upgrade.
+
+An existing separate `Adaptive Alarm` dashboard that was created by v1.0.0
+is **not deleted automatically**: Home Assistant may contain user edits.
+If you no longer want it, remove it manually in Settings → Dashboards.
+
+### Diagnostics
+
+The panel exposes Protected, Pending, Excluded, `minimum_routes`,
+`triggered_until`, `trigger_cause` and `fault`; sensor Health also reports
+relevant offline and abnormal contact states.
 
 Listen to `adaptive_alarm_event` in **Developer Tools → Events** for
 detailed machine-readable state transitions and output failure events.

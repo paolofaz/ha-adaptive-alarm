@@ -94,8 +94,6 @@ class AdaptiveDiagnostic(SensorEntity):
                 "siren_enabled": self.controller.siren_output_enabled,
                 "siren_entity": self.controller.siren_entity,
                 "siren_last_error": self.controller.siren_last_error,
-                "fake_siren_enabled": self.controller.fake_siren_enabled,
-                "fake_siren_helper": self.controller.fake_siren_helper,
                 "deterrent_enabled": self.controller.deterrent_enabled,
                 "deterrent_hold_after_trigger": self.controller.machine.deterrent_hold_after_trigger,
                 "deterrent_auto_off_enabled": self.controller.deterrent_auto_off,

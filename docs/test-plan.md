@@ -12,9 +12,11 @@ hassfest. These checks do not establish real Zigbee relay reliability.
 - Confirm previous groups, mandatory contacts, optional contacts, vibration
   links, notifications, deterrent lights and stored session are retained.
 - The new real siren option must default to **OFF** on upgrade.
-- Inspect the automatically installed `/adaptive-alarm` dashboard for
-  status, groups, Protected/Pending/Excluded contacts, anomalies and counts.
-  Edit dashboard; subsequent reload must not overwrite user edits.
+- Add the `custom:adaptive-alarm-card` card to an existing YAML dashboard.
+  Verify it lists Protected/Pending/Excluded sensors, state, siren and anomalies.
+  Verify no additional dashboard is installed and user YAML is never modified.
+  With storage resources, confirm automatic JS registration; with YAML
+  resources, confirm the documented one-time `lovelace.resources` entry.
 
 ## Alarm functionality
 
@@ -38,7 +40,7 @@ hassfest. These checks do not establish real Zigbee relay reliability.
 
 1. With physical output **OFF**, test all alarm states: no real siren calls
    must occur, even if an old siren entity is already configured.
-2. Configure the intended Zigbee2MQTT siren/switch and independently test
+2. Configure the intended Zigbee2MQTT `siren.*` entity and independently test
    its actual automatic 5-minute device cutoff.
 3. Enable physical output; trigger once; verify it audibly turns ON,
    the engine timer runs, and an OFF request is delivered on timeout.

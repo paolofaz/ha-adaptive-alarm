@@ -1,7 +1,9 @@
 # Adaptive Alarm 1.0 — operational safeguards
 
-**Physical output remains OFF by default.** A real `siren` or `switch`
-can be selected and enabled separately only after device-level testing.
+**Physical output remains OFF by default.** Select a native `siren.*` entity
+in the configuration and enable it separately only after device-level testing.
+Previously configured `switch.*` metadata can still be recognized internally
+for compatibility, but the current editor only offers native sirens.
 
 The physical Zigbee2MQTT siren must have an independent automatic cutoff
 verified on the device. The 300-second Home Assistant `triggered` timer and
@@ -28,7 +30,7 @@ from the same sensor are required for trigger. Deterrent lights have
 independent explicit opt-in and safe ON/OFF ownership. After trigger,
 light auto-off remains suspended until manual disarm.
 
-The dashboard creation is noncritical and must not block the alarm.
+The Lovelace card resource setup is noncritical and must not block the alarm.
 No YAML automations, HomeKit configuration, RF remotes, Telegram photos,
 locks or gates are edited by the integration. No PIN is added; external
 presence automations and iPhone shortcuts must be secured independently.

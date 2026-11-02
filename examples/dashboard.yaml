@@ -1,19 +1,21 @@
-# Example cards for a Lovelace view.
-# Replace the entity IDs with those actually created on your Home Assistant.
-type: vertical-stack
-cards:
-  - type: markdown
-    content: |
-      ## Adaptive Alarm — SIMULATION ONLY
-      No physical siren, RF or lock services are controlled by this preview.
-  - type: alarm-panel
-    entity: alarm_control_panel.adaptive_alarm
-    states:
-      - arm_away
-  - type: entities
-    title: Protection and diagnostics
-    entities:
-      - binary_sensor.adaptive_alarm_ready_to_arm
-      - sensor.adaptive_alarm_protected_zones
-      - sensor.adaptive_alarm_excluded_zones
-      - sensor.adaptive_alarm_health
+# Reusable Adaptive Alarm card for an EXISTING Lovelace YAML dashboard.
+# Add this under the existing view's cards: list:
+#
+#   - type: custom:adaptive-alarm-card
+#
+# Optional: specify the exact alarm entity and title:
+- type: custom:adaptive-alarm-card
+  # entity: alarm_control_panel.YOUR_REAL_ENTITY_ID
+  title: Antifurto
+#
+# If Lovelace resource_mode is YAML, declare the module once in the
+# EXISTING lovelace: section of configuration.yaml:
+#
+# lovelace:
+#   resource_mode: yaml
+#   resources:
+#     - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.1
+#       type: module
+#
+# When resources are managed via storage, they are installed automatically.
+# This integration never creates dashboards or changes the user's YAML.
