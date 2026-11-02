@@ -28,6 +28,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await controller.async_stop()
         hass.data[DOMAIN].pop(entry.entry_id, None)
         raise
+    # Lovelace dashboard is created idempotently. A dashboard failure must
+    # never prevent the alarm engine from operating.
+    from .dashboard import async_ensure_dashboard
+    try:
+        await async_ensure_dashboard(hass, entry.entry_id)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception(
+            "Adaptive Alarm dashboard could not be installed; alarm is unaffected"
+        )
     entry.async_on_unload(entry.add_update_listener(async_update_options))
     return True
 
