@@ -1,0 +1,38 @@
+name: Publish stable release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "custom_components/adaptive_alarm/manifest.json"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create version tag and release when notes are present
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(python -c 'import json; print(json.load(open("custom_components/adaptive_alarm/manifest.json"))["version"])')"
+          NOTES="docs/releases/v${VERSION}.md"
+          if [[ ! -f "$NOTES" ]]; then
+            echo "Release notes $NOTES not found; leaving the version unpublished."
+            exit 0
+          fi
+          if gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v${VERSION} already exists."
+            exit 0
+          fi
+          gh release create "v${VERSION}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Adaptive Alarm v${VERSION}" \
+            --notes-file "$NOTES" \
+            --latest

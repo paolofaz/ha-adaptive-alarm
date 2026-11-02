@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.1**
+**Home Assistant security integration — v1.0.2**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -108,10 +108,12 @@ retired every old YAML automation that can command the same siren.**
 4. A new trigger requests `turn_on`. Disarming, expiry of the trigger period
    and graceful integration unload request `turn_off`. Failed OFF requests
    are reported and retried while the integration is operational.
-5. **On Home Assistant restart**, a restored `triggered` state does not
-   automatically resend `turn_on` to the siren; this avoids unexpected
-   extended sound after recovery. The device's independent cutoff is essential
-   when Home Assistant, MQTT or the Zigbee coordinator are down.
+5. **On Home Assistant restart**, a previously active `triggered` state does
+   not automatically resend `turn_on` to the siren. However, when an
+   `armed_away` session is restored and an already-open protected contact
+   causes a **new** trigger during startup reconciliation, the siren is
+   commanded ON. These are intentionally different cases. The device's
+   independent cutoff remains essential during Home Assistant or Zigbee outages.
 
 A successful Home Assistant service call is **not proof** that the Zigbee
 device physically switched on/off. Monitor the actual Z2M entity and test the
@@ -143,6 +145,9 @@ contacts, current sensor states, arming routes, fault diagnostics and the siren
 status. It uses the existing `alarm_control_panel` and does not issue
 arming/disarming commands of its own.
 
+The card also displays the Health sensor status and names of protected
+contacts with active faults or unavailable states.
+
 The JS module is served automatically at:
 
 ```
@@ -161,7 +166,7 @@ under the existing `lovelace:` key in `configuration.yaml` (do not duplicate
 lovelace:
   resource_mode: yaml
   resources:
-    - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.1
+    - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.2
       type: module
 ```
 
