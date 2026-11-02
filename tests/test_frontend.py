@@ -45,7 +45,7 @@ class FrontendTests(unittest.TestCase):
     def test_readme_describes_single_yaml_card(self):
         readme = (ROOT / "README.md").read_text()
         self.assertIn("custom:adaptive-alarm-card", readme)
-        self.assertIn("resource_mode: yaml", readme)
+        self.assertIn("YAML mode", readme)
         self.assertNotIn("automatically creates the", readme)
 
 
