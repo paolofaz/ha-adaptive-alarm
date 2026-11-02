@@ -47,7 +47,7 @@
       },
       "mandatory": {
         "title": "Contatti obbligatori e serratura facoltativa",
-        "description": "Tutti i contatti in questo elenco devono essere chiusi. Se configurata, anche la serratura deve risultare bloccata.\\n\\nGruppi alternativi configurati:\\n{groups_summary}\\n\\nI contatti dei gruppi non devono essere duplicati tra gli obbligatori.",
+        "description": "Tutti i contatti in questo elenco devono essere chiusi. Se configurata, anche la serratura deve risultare bloccata.\n\nGruppi alternativi configurati:\n{groups_summary}\n\nI contatti dei gruppi non devono essere duplicati tra gli obbligatori.",
         "data": {
           "mandatory": "Contatti sempre obbligatori (tutti chiusi)",
           "lock": "Serratura facoltativa (deve essere bloccata)"
@@ -81,7 +81,7 @@
       },
       "vibrations": {
         "title": "Sensori di vibrazione (numero libero)",
-        "description": "Sensori associati ai contatti fisici:\\n{vibration_summary}\\n\\nI colpi vengono conteggiati per singolo sensore. Puoi aggiungere, modificare o eliminare le associazioni qui sotto.",
+        "description": "Sensori associati ai contatti fisici:\n{vibration_summary}\n\nI colpi vengono conteggiati per singolo sensore. Puoi aggiungere, modificare o eliminare le associazioni qui sotto.",
         "menu_options": {
           "vibration_add": "Aggiungi sensore vibrazione",
           "vibration_edit": "Modifica contatto associato",
@@ -90,7 +90,7 @@
       },
       "siren": {
         "title": "Sirena fisica e simulazione con helper",
-        "description": "L'eventuale sirena fisica resta SOLO memorizzata: non riceve mai comandi.\\n\\nPer collaudare la durata dell'allarme puoi abilitare separatamente una sirena fittizia scegliendo un helper input_boolean. L'helper viene acceso in triggered e spento al ritorno in armed_away o al disinserimento. Non collegare questo helper a uno switch o a una sirena reale tramite automazioni.",
+        "description": "L'eventuale sirena fisica resta SOLO memorizzata: non riceve mai comandi.\n\nPer collaudare la durata dell'allarme puoi abilitare separatamente una sirena fittizia scegliendo un helper input_boolean. L'helper viene acceso in triggered e spento al ritorno in armed_away o al disinserimento. Non collegare questo helper a uno switch o a una sirena reale tramite automazioni.",
         "data": {
           "siren": "Sirena fisica (solo configurazione, NON comandata)",
           "fake_siren_enabled": "Abilita uscita di prova su helper (OFF predefinito)",
@@ -168,7 +168,7 @@
       },
       "protection": {
         "title": "Contatti obbligatori e gruppi",
-        "description": "Tutti i contatti obbligatori devono essere chiusi. Ogni gruppo è obbligatorio; al suo interno basta un contatto chiuso.\\n\\nGruppi configurati:\\n{groups_summary}\\n\\nDa qui puoi modificare contatti, gruppi e serratura. Non puoi cambiare la configurazione mentre l'allarme è inserito.",
+        "description": "Tutti i contatti obbligatori devono essere chiusi. Ogni gruppo è obbligatorio; al suo interno basta un contatto chiuso.\n\nGruppi configurati:\n{groups_summary}\n\nDa qui puoi modificare contatti, gruppi e serratura. Non puoi cambiare la configurazione mentre l'allarme è inserito.",
         "menu_options": {
           "mandatory": "Modifica contatti obbligatori e serratura",
           "group": "Aggiungi gruppo",
@@ -227,4 +227,4 @@
     }
   },
   "selector": {}
-}\n
+}

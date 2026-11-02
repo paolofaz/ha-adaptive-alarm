@@ -38,6 +38,11 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(controller.count("services.async_call("), 3)
         self.assertIn('"light", "turn_on"', controller)
         self.assertIn('"input_boolean", service', controller)
+        self.assertIn('blocking=True', controller)
+        self.assertIn('validate_fake_siren_helper(raw_helper)', controller)
+        self.assertIn('if not self.fake_siren_enabled', controller)
+        self.assertNotIn('async_call("siren"', controller)
+        self.assertNotIn('async_call("switch"', controller)
         for component in DOMAIN.rglob("*.py"):
             source = component.read_text()
             for phrase in forbidden:

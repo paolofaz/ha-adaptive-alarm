@@ -47,7 +47,7 @@
       },
       "mandatory": {
         "title": "Mandatory contacts and optional lock",
-        "description": "All contacts in this list must be closed. If configured, the lock must be locked.\\n\\nConfigured alternative groups:\\n{groups_summary}\\n\\nDo not also add the alternative-group contacts as mandatory.",
+        "description": "All contacts in this list must be closed. If configured, the lock must be locked.\n\nConfigured alternative groups:\n{groups_summary}\n\nDo not also add the alternative-group contacts as mandatory.",
         "data": {
           "mandatory": "Required binary contacts (all closed)",
           "lock": "Optional door lock (must be locked)"
@@ -81,7 +81,7 @@
       },
       "vibrations": {
         "title": "Vibration sensors (any number)",
-        "description": "Vibration sensors linked to physical contacts:\\n{vibration_summary}\\n\\nHits are counted independently per sensor. Add, edit or remove associations using the menu below.",
+        "description": "Vibration sensors linked to physical contacts:\n{vibration_summary}\n\nHits are counted independently per sensor. Add, edit or remove associations using the menu below.",
         "menu_options": {
           "vibration_add": "Add vibration sensor",
           "vibration_edit": "Edit linked contact",
@@ -90,7 +90,7 @@
       },
       "siren": {
         "title": "Physical siren and helper simulation",
-        "description": "Any physical siren is stored as metadata ONLY and never receives commands.\\n\\nTo test alarm duration, separately enable a virtual siren using an input_boolean helper. It turns on in triggered and off at the return to armed_away or disarm. Do not connect this helper to any real siren or switch using automations.",
+        "description": "Any physical siren is stored as metadata ONLY and never receives commands.\n\nTo test alarm duration, separately enable a virtual siren using an input_boolean helper. It turns on in triggered and off at the return to armed_away or disarm. Do not connect this helper to any real siren or switch using automations.",
         "data": {
           "siren": "Physical siren (metadata only, NEVER controlled)",
           "fake_siren_enabled": "Enable virtual helper output (OFF by default)",
@@ -168,7 +168,7 @@
       },
       "protection": {
         "title": "Required contacts and groups",
-        "description": "All mandatory contacts must be closed. Every alternative group is required; one closed contact per group is sufficient.\\n\\nConfigured groups:\\n{groups_summary}\\n\\nEdit contacts, groups and the lock here. Configuration cannot change while the alarm is armed.",
+        "description": "All mandatory contacts must be closed. Every alternative group is required; one closed contact per group is sufficient.\n\nConfigured groups:\n{groups_summary}\n\nEdit contacts, groups and the lock here. Configuration cannot change while the alarm is armed.",
         "menu_options": {
           "mandatory": "Edit mandatory contacts and lock",
           "group": "Add a group",
@@ -227,4 +227,4 @@
     }
   },
   "selector": {}
-}\n
+}
