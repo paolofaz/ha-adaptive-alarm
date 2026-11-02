@@ -79,3 +79,14 @@ Health distinguishes `unknown`, `unavailable`, `missing`, `open` and
 `unexpected` protected contact states. This never demotes a Protected sensor.
 Both `unknown` and `unavailable` are unreadable for security. The unified
 group editor remains blocked while a session is arming or active.
+
+## v0.9.0 — presence consistency notifications
+
+The optional observer emits informational push messages only. People are
+reported at home only when their configured `person`, `device_tracker` or
+`input_select` entity is explicitly `home`. Empty-house warnings require
+explicit `on` from a dedicated certainly-empty binary sensor, `locked`
+from the already configured required door lock and `disarmed` phase, all
+continuously satisfied for 120 s. No action is taken on unknown/unavailable
+states. Alert latch resets after normal state; it does not resend every tick.
+The observer never arms, disarms, triggers, activates sirens or controls lights.

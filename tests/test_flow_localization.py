@@ -11,7 +11,7 @@ FLOW = INTEGRATION / "config_flow.py"
 
 EXPECTED_STEPS = (
     "protection", "optional", "vibrations", "deterrent",
-    "notifications", "notification_test", "siren", "timing",
+    "notifications", "presence", "notification_test", "siren", "timing",
 )
 PROTECTION_STEPS = ("mandatory", "group", "group_edit", "remove_group")
 
@@ -63,6 +63,13 @@ class FlowLocalizationTests(unittest.TestCase):
                     self.assertIn("data", options[step])
                     self.assertTrue(options[step]["title"])
                 self.assertIn("data", options["deterrent"])
+                self.assertIn("data", options["presence"])
+                self.assertIn("presence", options["init"]["menu_options"])
+                self.assertEqual(
+                    set(options["presence"]["data"]),
+                    {"presence_home_enabled", "presence_home_entities",
+                     "presence_empty_enabled", "presence_empty_sensor"},
+                )
                 self.assertEqual(set(options["protection"]["menu_options"]), set(PROTECTION_STEPS))
                 self.assertEqual(set(options["protection"]["menu_option_descriptions"]), set(PROTECTION_STEPS))
                 self.assertIn("{groups_summary}", options["protection"]["description"])
