@@ -95,7 +95,18 @@ class AdaptiveAlarmCard extends HTMLElement {
       h2 {font-size:18px; margin:0; font-weight:650;}
       .subtitle {font-size:12px; color:var(--secondary-text-color); margin:4px 0 0;}
       .state {font-size:14px; font-weight:700; border-radius:12px; padding:7px 10px;
-        background:var(--secondary-background-color);}
+        background:var(--secondary-background-color); display:flex;
+        align-items:center; gap:6px;}
+      .alarm-state-icon {--mdc-icon-size:21px;flex-shrink:0;animation:none;}
+      .alarm-state-icon.is-triggered {color:var(--error-color,#d33);
+        animation:adaptive-alarm-triggered-flash 1.15s ease-in-out infinite;}
+      @keyframes adaptive-alarm-triggered-flash {
+        0%, 100% {opacity:1;}
+        50% {opacity:.12;}
+      }
+      @media (prefers-reduced-motion:reduce) {
+        .alarm-state-icon.is-triggered {animation:none;}
+      }
       .state.armed {color:var(--success-color,#32a16d);}
       .state.alarm {color:var(--error-color,#d33); background:var(--secondary-background-color);}
       .state.disarmed {color:var(--secondary-text-color);}
@@ -139,10 +150,18 @@ class AdaptiveAlarmCard extends HTMLElement {
     const name=this._add(header,"div","");
     this._add(name,"h2","",this._config.title||"Adaptive Alarm");
     this._add(name,"div","subtitle","Riepilogo protezione in tempo reale");
-    const status=this._add(header,"span","state",
-      STATE_NAMES[alarm.state]||alarm.state);
+    const status=this._add(header,"div","state");
     status.classList.add(alarm.state==="triggered"?"alarm":
       alarm.state==="armed_away"?"armed":"disarmed");
+    const statusIcon=this._add(status,"ha-icon","alarm-state-icon");
+    const icons={
+      disarmed:"mdi:shield-off", arming:"mdi:shield-sync",
+      armed_away:"mdi:shield-lock", triggered:"mdi:shield-alert",
+    };
+    statusIcon.setAttribute("icon",icons[alarm.state]||"mdi:shield-outline");
+    // Do not animate arming or armed states; only a genuine alarm.
+    if(alarm.state==="triggered")statusIcon.classList.add("is-triggered");
+    this._add(status,"span","state-label",STATE_NAMES[alarm.state]||alarm.state);
 
     const protectedZones=attrs.protected_zones||[];
     const pendingZones=attrs.pending_zones||[];

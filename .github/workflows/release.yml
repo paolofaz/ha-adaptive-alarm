@@ -1,29 +1,51 @@
-name: Publish stable release
+name: Publish stable release after validation
 
 on:
-  push:
+  workflow_run:
+    workflows: ["HACS and hassfest validation"]
+    types: [completed]
     branches: [main]
-    paths:
-      - "custom_components/adaptive_alarm/manifest.json"
 
 permissions:
   contents: write
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Create version tag and release when notes are present
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Checkout the exact validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate code and run tests before release
         shell: bash
         run: |
           set -euo pipefail
+          python -m compileall -q custom_components tests
+          python -m unittest discover -s tests -v
+          node --check custom_components/adaptive_alarm/www/adaptive-alarm-card.js
+          node tests/test_card_runtime.js
+      - name: Publish versioned GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$MAIN_SHA" != "$VALIDATED_SHA" ]]; then
+            echo "Main advanced since validation; skipping obsolete release."
+            exit 0
+          fi
           VERSION="$(python -c 'import json; print(json.load(open("custom_components/adaptive_alarm/manifest.json"))["version"])')"
           NOTES="docs/releases/v${VERSION}.md"
           if [[ ! -f "$NOTES" ]]; then
-            echo "Release notes $NOTES not found; leaving the version unpublished."
+            echo "Release notes $NOTES absent; leaving version unpublished."
             exit 0
           fi
           if gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -32,7 +54,7 @@ jobs:
           fi
           gh release create "v${VERSION}" \
             --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
+            --target "$VALIDATED_SHA" \
             --title "Adaptive Alarm v${VERSION}" \
             --notes-file "$NOTES" \
             --latest
