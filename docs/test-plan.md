@@ -40,7 +40,7 @@ hassfest. These checks do not establish real Zigbee relay reliability.
 
 1. With physical output **OFF**, test all alarm states: no real siren calls
    must occur, even if an old siren entity is already configured.
-2. Configure the intended Zigbee2MQTT siren/switch and independently test
+2. Configure the intended Zigbee2MQTT `siren.*` entity and independently test
    its actual automatic 5-minute device cutoff.
 3. Enable physical output; trigger once; verify it audibly turns ON,
    the engine timer runs, and an OFF request is delivered on timeout.

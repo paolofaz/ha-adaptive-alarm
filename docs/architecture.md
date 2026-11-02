@@ -24,8 +24,9 @@ Notifications are driven by six independent switches sharing one
 recipient list. HomeKit consumes the standard `alarm_control_panel`;
 its entity identity is unchanged on upgrades.
 
-The physical siren adapter is disabled by default and accepts only
-configured `siren` or `switch` entity domains. A fresh trigger requests
+The physical siren adapter is disabled by default. The configuration UI
+selects native `siren.*` entities; existing `switch.*` configurations are
+still accepted internally for backwards compatibility. A fresh trigger requests
 ON before other side effects. Disarm, trigger expiry and graceful unload
 request OFF. No physical ON is replayed after a restored TRIGGERED state.
 The device independent auto-off must be configured outside the integration.

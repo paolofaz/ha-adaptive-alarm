@@ -97,7 +97,7 @@ while keeping rejected/prealert/sensor anomalies ON.
 **Keep physical output disabled until you have verified the device and
 retired every old YAML automation that can command the same siren.**
 
-1. Configure an existing Zigbee2MQTT `siren.*` or `switch.*` entity under
+1. Configure an existing Zigbee2MQTT `siren.*` entity under
    **Configure → Zigbee2MQTT siren**.
 2. Verify in the Zigbee2MQTT device controls that the siren has an
    **independent** cutoff; for a 300-second alarm phase, a 5-minute device
