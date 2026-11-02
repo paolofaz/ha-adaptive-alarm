@@ -27,8 +27,9 @@ its entity identity is unchanged on upgrades.
 The physical siren adapter is disabled by default. The configuration UI
 selects native `siren.*` entities; existing `switch.*` configurations are
 still accepted internally for backwards compatibility. A fresh trigger requests
-ON before other side effects. Disarm, trigger expiry and graceful unload
-request OFF. No physical ON is replayed after a restored TRIGGERED state.
+ON before other side effects. Disarm and trigger expiry request OFF and retry failed commands.
+Startup and integration unload never request arbitrary OFF. No physical
+ON is replayed after a restored TRIGGERED state.
 The device independent auto-off must be configured outside the integration.
 
 Deterrent lights may be turned on once per armed session and turned off

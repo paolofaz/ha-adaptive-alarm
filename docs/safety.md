@@ -12,10 +12,11 @@ prevent any software OFF command from being delivered. A HA service call
 returning successfully does not prove the Zigbee device acted.
 
 On a new trigger the integration requests ON before push notifications.
-On manual disarm, timeout or graceful unload it requests OFF, with
-bounded retries if the device remains unavailable/ON. After HA restart an
-already-triggered session is restored without an automatic re-send of ON,
-preventing unexpected repeated siren sound. If your protection requirements
+On manual disarm or trigger timeout it requests OFF, with bounded retries
+if the device remains unavailable/ON. Neither startup nor unload sends
+arbitrary siren commands, so an active physical alarm is not cut short
+by Home Assistant restarting. After HA restart an already-triggered
+session is restored without automatically re-sending ON. If your protection requirements
 need sounding on restart, that needs a separate supervised design.
 
 Mandatory contacts and one route per required alternative group must be

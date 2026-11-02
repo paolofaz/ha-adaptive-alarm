@@ -1,14 +1,13 @@
 # Changelog
 
-## v1.0.6 — card-editor syntax and Zigbee2MQTT startup sequencing
+## v1.0.6 — single-card editor syntax and correct siren lifecycle
 
-- Documented the correct single-card editor YAML without a leading dash
-- More helpful validation for malformed or missing Lovelace card configuration
-- Defers startup siren OFF until Zigbee2MQTT is available, without error spam
-- Retries the pending startup OFF, including after a temporarily unavailable siren
-- Warns once if the device remains unreachable for more than two minutes
-- Preserves urgent ON failures, manual disarm OFF and independent siren cutoff
-- No changes to HomeKit entity IDs or the adaptive zone engine
+- Documented YAML for Home Assistant single-card editor without a leading dash
+- Clearer Lovelace card configuration validation
+- Removed unconditional siren OFF on Home Assistant startup and unload
+- Preserved ON for fresh alarms and OFF on disarm or actual timer expiry
+- Retries only explicit OFF commands; a fresh alarm cancels old retries
+- No changes to HomeKit IDs or adaptive zone protection
 
 ## v1.0.5 — robust frontend resource auto-loading in storage mode
 

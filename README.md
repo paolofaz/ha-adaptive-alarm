@@ -105,9 +105,10 @@ retired every old YAML automation that can command the same siren.**
    substitute for an actual hardware test.
 3. Only then enable **Physical siren output**. It is disabled on every
    upgraded installation until you explicitly change the setting.
-4. A new trigger requests `turn_on`. Disarming, expiry of the trigger period
-   and graceful integration unload request `turn_off`. Failed OFF requests
-   are reported and retried while the integration is operational.
+4. A new trigger requests `turn_on`. Disarming and expiry of the trigger
+   period request `turn_off`, with retries for failed requests.
+   **Startup and integration unload do not command the siren**: restarting
+   Home Assistant must not prematurely silence a valid physical alarm.
 5. **On Home Assistant restart**, a previously active `triggered` state does
    not automatically resend `turn_on` to the siren. However, when an
    `armed_away` session is restored and an already-open protected contact
