@@ -29,20 +29,22 @@ configured `siren` or `switch` entity domains. A fresh trigger requests
 ON before other side effects. Disarm, trigger expiry and graceful unload
 request OFF. No physical ON is replayed after a restored TRIGGERED state.
 The device independent auto-off must be configured outside the integration.
-A separate `input_boolean` indicator can follow alarm phase.
 
 Deterrent lights may be turned on once per armed session and turned off
 only after conservatively confirmed ownership; they are not physical sirens.
 
 ## Lovelace
 
-`dashboard.build_dashboard` generates a standard built-in-card dashboard
-without any custom frontend JS. On initial setup, `async_ensure_dashboard`
-creates a dedicated Lovelace storage dashboard `adaptive-alarm` once,
-using registered entity IDs, and does not overwrite an existing one.
-Dashboard creation failures are nonfatal. Home Assistant's internal
-Lovelace collection API may vary between releases; installation is
-best-effort and should be checked after upgrades.
+`frontend.async_register_card` serves a versioned JavaScript custom card.
+For storage-managed resources it registers/updates the module URL through
+Lovelace resource collection. YAML-managed resources require a one-time
+`lovelace.resources` entry in the user's configuration. It never edits YAML,
+does not install dashboards, and is independent from the alarm engine.
+
+`www/adaptive-alarm-card.js` renders a read-only, entity-driven card using
+the current panel attributes; dynamic entity labels use DOM `textContent`
+instead of HTML to avoid injection. The card requires only one `type:`
+declaration in the existing dashboard.
 
 ## Integration boundary
 

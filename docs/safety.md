@@ -28,7 +28,7 @@ from the same sensor are required for trigger. Deterrent lights have
 independent explicit opt-in and safe ON/OFF ownership. After trigger,
 light auto-off remains suspended until manual disarm.
 
-The dashboard creation is noncritical and must not block the alarm.
+The Lovelace card resource setup is noncritical and must not block the alarm.
 No YAML automations, HomeKit configuration, RF remotes, Telegram photos,
 locks or gates are edited by the integration. No PIN is added; external
 presence automations and iPhone shortcuts must be secured independently.

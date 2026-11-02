@@ -88,7 +88,7 @@ class AdaptiveAlarmCard extends HTMLElement {
       .state {font-size:14px; font-weight:700; border-radius:12px; padding:7px 10px;
         background:var(--secondary-background-color);}
       .state.armed {color:var(--success-color,#32a16d);}
-      .state.alarm {color:var(--error-color,#d33); background:var(--error-color,transparent);}
+      .state.alarm {color:var(--error-color,#d33); background:var(--secondary-background-color);}
       .state.disarmed {color:var(--secondary-text-color);}
       .stats {display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;
         margin:17px 0 13px;}
