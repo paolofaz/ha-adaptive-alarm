@@ -145,6 +145,9 @@ contacts, current sensor states, arming routes, fault diagnostics and the siren
 status. It uses the existing `alarm_control_panel` and does not issue
 arming/disarming commands of its own.
 
+The card also displays the Health sensor status and names of protected
+contacts with active faults or unavailable states.
+
 The JS module is served automatically at:
 
 ```

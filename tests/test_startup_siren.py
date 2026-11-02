@@ -12,7 +12,7 @@ import pathlib
 import unittest
 
 from custom_components.adaptive_alarm.engine.runtime import AlarmMachine, Phase
-from tests.test_runtime import PATHS, ZONES, C, O, armed, snapshot
+from test_runtime import PATHS, ZONES, O, armed, snapshot
 
 
 CONTROLLER = pathlib.Path(__file__).resolve().parents[1] / (
@@ -54,7 +54,7 @@ class SirenStartupRegressionTests(unittest.TestCase):
                             and "self.machine.phase == Phase.ARMED_AWAY"
                             in ast.unparse(node.test))
         src = "\n".join(ast.unparse(item) for item in armed_branch.body)
-        self.assertIn('event.get("type") == "triggered"', src)
+        self.assertIn("event.get('type') == 'triggered'", src)
         self.assertIn("self._sync_outputs(triggered=True, force=True)", src)
         self.assertIn("self._notify_events(restored_events)", src)
         self.assertLess(

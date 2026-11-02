@@ -13,7 +13,8 @@ hassfest. These checks do not establish real Zigbee relay reliability.
   links, notifications, deterrent lights and stored session are retained.
 - The new real siren option must default to **OFF** on upgrade.
 - Add the `custom:adaptive-alarm-card` card to an existing YAML dashboard.
-  Verify it lists Protected/Pending/Excluded sensors, state, siren and anomalies.
+  Verify it lists Protected/Pending/Excluded sensors, state, siren and anomalies,
+  including the Health sensor's contact problem details.
   Verify no additional dashboard is installed and user YAML is never modified.
   With storage resources, confirm automatic JS registration; with YAML
   resources, confirm the documented one-time `lovelace.resources` entry.

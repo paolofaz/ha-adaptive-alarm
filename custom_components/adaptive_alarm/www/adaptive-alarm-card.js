@@ -47,6 +47,15 @@ class AdaptiveAlarmCard extends HTMLElement {
     return matches[0] || null;
   }
 
+  _findHealth() {
+    const states = this._hass?.states || {};
+    return Object.values(states).find((st) =>
+      st.entity_id.startsWith("sensor.") &&
+      typeof st.attributes?.protected_zone_problem_states === "object" &&
+      Array.isArray(st.attributes?.active_zone_monitoring)
+    ) || null;
+  }
+
   _section(parent, title, zones, empty) {
     const outer = this._add(parent, "section", "section");
     const heading = this._add(outer, "div", "section-title");
@@ -155,7 +164,14 @@ class AdaptiveAlarmCard extends HTMLElement {
 
     const detail=this._add(card,"section","section");
     this._add(detail,"div","section-title").textContent="Diagnostica";
+    const health=this._findHealth();
+    const problemStates=health?.attributes?.protected_zone_problem_states || {};
     const lines=[
+      ["Salute sensori", health?.state || "Non disponibile"],
+      ["Contatti anomali", Object.keys(problemStates).length ?
+        Object.entries(problemStates).map(([id, reason]) =>
+          (this._hass.states[id]?.attributes?.friendly_name || id) + ": " + reason
+        ).join("; ") : "Nessuno"],
       ["Requisiti attivi",(attrs.minimum_routes||[]).join(", ")||"—"],
       ["Ultima causa",attrs.trigger_cause||"—"],
       ["Problema",attrs.fault||"Nessuno"],
