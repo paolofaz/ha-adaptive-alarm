@@ -82,9 +82,30 @@ class RegistrationTests(IsolatedAsyncioTestCase):
             resources.async_create_item.assert_awaited_once_with(
                 {"url": CARD_RESOURCE, "res_type": "module"}
             )
-            frontend.add_extra_js_url.assert_not_called()
+            frontend.add_extra_js_url.assert_called_once_with(hass, CARD_RESOURCE)
             async_unregister_card(hass)
-            frontend.remove_extra_js_url.assert_not_called()
+            frontend.remove_extra_js_url.assert_called_once_with(hass, CARD_RESOURCE)
+
+    async def test_storage_resource_failure_falls_back_to_frontend(self):
+        resources = SimpleNamespace(
+            async_get_info=AsyncMock(side_effect=RuntimeError("resource unavailable")),
+            async_items=Mock(),
+            async_create_item=AsyncMock(),
+            async_update_item=AsyncMock(),
+        )
+        hass = self.make_hass(mode="storage", resources=resources)
+        with mock_homeassistant_frontend() as frontend:
+            await async_register_card(hass)
+            frontend.add_extra_js_url.assert_called_once_with(hass, CARD_RESOURCE)
+            hass.http.async_register_static_paths.assert_awaited_once()
+            resources.async_create_item.assert_not_awaited()
+
+    async def test_absent_lovelace_data_still_loads_frontend(self):
+        hass = self.make_hass(mode="storage")
+        hass.data.pop("lovelace")
+        with mock_homeassistant_frontend() as frontend:
+            await async_register_card(hass)
+            frontend.add_extra_js_url.assert_called_once_with(hass, CARD_RESOURCE)
 
     async def test_storage_resources_upgrade_existing_entry_in_place(self):
         resources = SimpleNamespace(

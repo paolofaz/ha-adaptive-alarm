@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.4**
+**Home Assistant security integration — v1.0.5**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -162,10 +162,20 @@ The JS module is served automatically at:
 ```
 
 **The JavaScript module is loaded automatically in both Lovelace resource
-modes**, after installing the integration and restarting Home Assistant:
-- **Storage resources:** the module is registered in Lovelace resources.
-- **YAML resources (`resource_mode: yaml`):** the integration uses Home
-  Assistant's `frontend.add_extra_js_url` module API, so it works without
+modes**, after installing the integration and restarting Home Assistant.
+The integration uses Home Assistant's `frontend.add_extra_js_url` API
+**also in storage mode**, so the card works even if the separate Lovelace
+resource collection cannot be updated. In storage mode it *also attempts*
+to register the resource in Settings → Dashboards → Resources.
+
+If the storage entry is missing but the card loads, the frontend fallback
+is working. If both fail, look for **"Adaptive Alarm card registration failed"**
+or **"automatic Lovelace storage resource registration failed"** in
+Settings → System → Logs and report the exact error.
+
+- **Storage resources:** frontend module loads automatically; storage
+  resource is created or updated whenever the HA collection permits it.
+- **YAML resources (`resource_mode: yaml`):** frontend module loads without
   adding a `resources:` entry or modifying `configuration.yaml`.
 
 These settings are independent of whether the dashboard itself has
@@ -192,9 +202,9 @@ prefer to specify the entity explicitly, use:
 
 Replace `YOUR_REAL_ENTITY_ID` with the actual entity from Home Assistant.
 After upgrading, restart Home Assistant and fully reload the browser page.
-Do **not** add a manual resource for Adaptive Alarm. If you previously added
-one in YAML while troubleshooting, you may remove that entry once the
-new auto-loader is confirmed working, to avoid loading the module twice.
+Do **not** add a manual resource for Adaptive Alarm. If you previously added a resource manually while troubleshooting,
+you can remove the duplicate **only after confirming the card still loads**
+on a complete browser refresh.
 
 An existing separate `Adaptive Alarm` dashboard that was created by v1.0.0
 is **not deleted automatically**: Home Assistant may contain user edits.
