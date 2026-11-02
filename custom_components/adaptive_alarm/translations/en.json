@@ -29,7 +29,7 @@
           "notifications": "Phone notifications (HA App, Telegram, others)",
           "notification_events": "Notification event switches",
           "notification_test": "Send test notification",
-          "siren": "Siren (output disabled)",
+          "siren": "Physical siren and helper simulation",
           "timing": "Arming timing and vibration confirmation"
         },
         "description": "Configure protection, vibrations, notification events and timing. Physical siren output is disabled in this beta; deterrent lights require explicit opt-in.",
@@ -41,13 +41,13 @@
           "notifications": "Choose explicit HA notify targets. Telegram Bot uses notify entities.",
           "notification_events": "Enable each event separately. All events use the destinations configured under Phone notifications.",
           "notification_test": "Only sends a message to configured targets, without triggering the alarm.",
-          "siren": "Configure a siren device; physical output disabled.",
+          "siren": "Real device remains inert; optional ON/OFF test using input_boolean only.",
           "timing": "Set exit delay, debounce, window and hit threshold 2 or 3. Protected contacts returning open trigger automatically."
         }
       },
       "mandatory": {
         "title": "Mandatory contacts and optional lock",
-        "description": "Every contact in this list is mandatory. The optional lock must be locked if selected.\\n\\n**Configured alternative groups:** {groups_summary}\\n\\nManage groups from Required contacts and groups; do not duplicate group contacts here.",
+        "description": "All contacts in this list must be closed. If configured, the lock must be locked.\\n\\nConfigured alternative groups:\\n{groups_summary}\\n\\nDo not also add the alternative-group contacts as mandatory.",
         "data": {
           "mandatory": "Required binary contacts (all closed)",
           "lock": "Optional door lock (must be locked)"
@@ -81,7 +81,7 @@
       },
       "vibrations": {
         "title": "Vibration sensors (any number)",
-        "description": "Link each vibration sensor to its actual mounted contact. Hits are counted per sensor; different windows cannot confirm one another.",
+        "description": "Vibration sensors linked to physical contacts:\\n{vibration_summary}\\n\\nHits are counted independently per sensor. Add, edit or remove associations using the menu below.",
         "menu_options": {
           "vibration_add": "Add vibration sensor",
           "vibration_edit": "Edit linked contact",
@@ -89,10 +89,12 @@
         }
       },
       "siren": {
-        "title": "Siren (output disabled)",
-        "description": "Select a siren device for future use. In this beta, physical siren output stays disabled: Adaptive Alarm does not turn it on or off.",
+        "title": "Physical siren and helper simulation",
+        "description": "Any physical siren is stored as metadata ONLY and never receives commands.\\n\\nTo test alarm duration, separately enable a virtual siren using an input_boolean helper. It turns on in triggered and off at the return to armed_away or disarm. Do not connect this helper to any real siren or switch using automations.",
         "data": {
-          "siren": "Siren device (not controlled)"
+          "siren": "Physical siren (metadata only, NEVER controlled)",
+          "fake_siren_enabled": "Enable virtual helper output (OFF by default)",
+          "fake_siren_helper": "input_boolean helper for the virtual siren"
         }
       },
       "timing": {
@@ -166,7 +168,7 @@
       },
       "protection": {
         "title": "Required contacts and groups",
-        "description": "Every required contact must be closed. Every alternative group is required too, but ONE closed contact per group is enough.\\n\\n**Configured groups:** {groups_summary}\\n\\nEdit required contacts, add, edit or remove groups here. Changes are blocked while armed.",
+        "description": "All mandatory contacts must be closed. Every alternative group is required; one closed contact per group is sufficient.\\n\\nConfigured groups:\\n{groups_summary}\\n\\nEdit contacts, groups and the lock here. Configuration cannot change while the alarm is armed.",
         "menu_options": {
           "mandatory": "Edit mandatory contacts and lock",
           "group": "Add a group",
@@ -209,7 +211,9 @@
       "invalid_deterrent_lights": "Only light entities are permitted.",
       "notification_no_targets": "Select at least one target to enable notifications.",
       "notification_service_missing": "The chosen notify service is not available.",
-      "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted."
+      "invalid_notification_target": "Invalid notification target: only notify services/entities are permitted.",
+      "fake_siren_helper_required": "Select an input_boolean helper to enable the virtual siren.",
+      "invalid_fake_siren_helper": "Only a valid input_boolean helper is allowed."
     },
     "abort": {
       "active_session": "Disarm the alarm before changing protection rules or settings.",
@@ -223,4 +227,4 @@
     }
   },
   "selector": {}
-}
+}\n

@@ -71,6 +71,13 @@ class FlowLocalizationTests(unittest.TestCase):
                 self.assertEqual(set(options["protection"]["menu_options"]), set(PROTECTION_STEPS))
                 self.assertEqual(set(options["protection"]["menu_option_descriptions"]), set(PROTECTION_STEPS))
                 self.assertIn("{groups_summary}", options["protection"]["description"])
+                self.assertIn("{vibration_summary}", options["vibrations"]["description"])
+                self.assertNotIn("\\n", options["protection"]["description"])
+                self.assertNotIn("**", options["mandatory"]["description"])
+                self.assertEqual(
+                    set(options["siren"]["data"]),
+                    {"siren", "fake_siren_enabled", "fake_siren_helper"},
+                )
                 self.assertIn("data", options["group_edit"])
                 self.assertNotIn("remove_group", options["init"]["menu_options"])
                 self.assertNotIn("group", options["init"]["menu_options"])
@@ -80,6 +87,8 @@ class FlowLocalizationTests(unittest.TestCase):
         self.assertNotIn('translation_key="recovery_policy"', flow)
         self.assertNotIn("vol.Required(CONF_RECOVERY_POLICY", flow)
         self.assertIn('"groups_summary": group_summary(', flow)
+        self.assertIn('"vibration_summary": vibration_summary(', flow)
+        self.assertIn('line_separator="\\n", prefix="- "', flow)
         self.assertIn('options.remove("remove_group")', flow)
         self.assertIn("NumberSelectorMode.BOX", flow)
         for language in ("it", "en"):

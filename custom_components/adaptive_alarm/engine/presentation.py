@@ -13,15 +13,28 @@ NameOf = Callable[[str], str]
 
 def group_summary(
     groups: Iterable[object], name_of: NameOf, *, alternative_word: str = "oppure",
+    line_separator: str = "; ", prefix: str = "",
 ) -> str:
     """Summarize every mandatory OR group without changing its logic."""
     rendered = []
     for group in groups:
         contacts = " " + alternative_word + " "
         rendered.append(
-            f"{group.name}: " + contacts.join(name_of(c) for c in group.contacts)
+            prefix + f"{group.name}: " + contacts.join(name_of(c) for c in group.contacts)
         )
-    return "; ".join(rendered) if rendered else "—"
+    return line_separator.join(rendered) if rendered else "—"
+
+
+def vibration_summary(
+    links: Iterable[dict[str, str]], name_of: NameOf,
+    *, empty_text: str = "—",
+) -> str:
+    """Present all mounted vibration associations without changing their IDs."""
+    lines = [
+        f"- {name_of(link['sensor'])} → {name_of(link['contact'])}"
+        for link in links
+    ]
+    return "\n".join(lines) if lines else empty_text
 
 
 def prealert_text(source: str, contact: str, name_of: NameOf) -> str:

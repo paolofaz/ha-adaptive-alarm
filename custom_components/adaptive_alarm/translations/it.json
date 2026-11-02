@@ -29,7 +29,7 @@
           "notifications": "Notifiche sul telefono (App HA, Telegram, altri)",
           "notification_events": "Eventi da notificare",
           "notification_test": "Invia una notifica di prova",
-          "siren": "Sirena (uscita disabilitata)",
+          "siren": "Sirena fisica e simulazione con helper",
           "timing": "Tempi inserimento e conferma vibrazioni"
         },
         "description": "Configura protezione, vibrazioni, notifiche e tempi. La sirena fisica è disabilitata in questa beta; le luci deterrenti sono comandate solo se abilitate.",
@@ -41,13 +41,13 @@
           "notifications": "Scegli destinatari notify di Home Assistant, attivazione volontaria. Telegram Bot usa le entità notify.",
           "notification_events": "Attiva o disattiva ogni evento indipendentemente. I destinatari restano quelli scelti in Notifiche sul telefono.",
           "notification_test": "Invia soltanto un messaggio ai destinatari configurati, senza avviare l'allarme.",
-          "siren": "Dispositivo sirena configurabile; uscita fisica disabilitata.",
+          "siren": "Dispositivo reale non comandato; facoltativa prova ON/OFF con solo input_boolean.",
           "timing": "Imposta ritardo di inserimento, filtro colpi, finestra e soglia 2 o 3. La protezione dal ritorno online aperto è automatica."
         }
       },
       "mandatory": {
         "title": "Contatti obbligatori e serratura facoltativa",
-        "description": "Tutti i contatti di questo elenco sono obbligatori. La serratura, se configurata, deve essere bloccata.\\n\\n**Gruppi alternativi configurati:** {groups_summary}\\n\\nPuoi gestire i gruppi dalla sezione «Contatti obbligatori e gruppi». Non duplicare i loro contatti in questo elenco.",
+        "description": "Tutti i contatti in questo elenco devono essere chiusi. Se configurata, anche la serratura deve risultare bloccata.\\n\\nGruppi alternativi configurati:\\n{groups_summary}\\n\\nI contatti dei gruppi non devono essere duplicati tra gli obbligatori.",
         "data": {
           "mandatory": "Contatti sempre obbligatori (tutti chiusi)",
           "lock": "Serratura facoltativa (deve essere bloccata)"
@@ -81,7 +81,7 @@
       },
       "vibrations": {
         "title": "Sensori di vibrazione (numero libero)",
-        "description": "Associa ciascun sensore al contatto su cui è montato. Gli impulsi sono conteggiati per singolo sensore; finestre diverse non si confermano a vicenda.",
+        "description": "Sensori associati ai contatti fisici:\\n{vibration_summary}\\n\\nI colpi vengono conteggiati per singolo sensore. Puoi aggiungere, modificare o eliminare le associazioni qui sotto.",
         "menu_options": {
           "vibration_add": "Aggiungi sensore vibrazione",
           "vibration_edit": "Modifica contatto associato",
@@ -89,10 +89,12 @@
         }
       },
       "siren": {
-        "title": "Sirena (uscita disabilitata)",
-        "description": "Seleziona il dispositivo da usare in futuro. Nella beta l'uscita sirena resta disabilitata: Adaptive Alarm non invia comandi di accensione né spegnimento alla sirena.",
+        "title": "Sirena fisica e simulazione con helper",
+        "description": "L'eventuale sirena fisica resta SOLO memorizzata: non riceve mai comandi.\\n\\nPer collaudare la durata dell'allarme puoi abilitare separatamente una sirena fittizia scegliendo un helper input_boolean. L'helper viene acceso in triggered e spento al ritorno in armed_away o al disinserimento. Non collegare questo helper a uno switch o a una sirena reale tramite automazioni.",
         "data": {
-          "siren": "Dispositivo sirena (non comandato)"
+          "siren": "Sirena fisica (solo configurazione, NON comandata)",
+          "fake_siren_enabled": "Abilita uscita di prova su helper (OFF predefinito)",
+          "fake_siren_helper": "Helper input_boolean per sirena fittizia"
         }
       },
       "timing": {
@@ -166,7 +168,7 @@
       },
       "protection": {
         "title": "Contatti obbligatori e gruppi",
-        "description": "I contatti obbligatori devono essere tutti chiusi. Ogni gruppo è obbligatorio, ma al suo interno basta UN contatto chiuso.\\n\\n**Gruppi configurati:** {groups_summary}\\n\\nPuoi modificare i contatti, aggiungere, modificare o eliminare un gruppo da questo menu. Le modifiche sono bloccate a sistema inserito.",
+        "description": "Tutti i contatti obbligatori devono essere chiusi. Ogni gruppo è obbligatorio; al suo interno basta un contatto chiuso.\\n\\nGruppi configurati:\\n{groups_summary}\\n\\nDa qui puoi modificare contatti, gruppi e serratura. Non puoi cambiare la configurazione mentre l'allarme è inserito.",
         "menu_options": {
           "mandatory": "Modifica contatti obbligatori e serratura",
           "group": "Aggiungi gruppo",
@@ -209,7 +211,9 @@
       "invalid_deterrent_lights": "Sono consentite solo entità light.",
       "notification_no_targets": "Scegli almeno un destinatario per abilitare le notifiche.",
       "notification_service_missing": "Il servizio notify selezionato non è disponibile.",
-      "invalid_notification_target": "Destinatario non valido: sono ammessi solo servizi/entità notify."
+      "invalid_notification_target": "Destinatario non valido: sono ammessi solo servizi/entità notify.",
+      "fake_siren_helper_required": "Se abiliti la prova, seleziona un helper input_boolean.",
+      "invalid_fake_siren_helper": "È ammesso soltanto un helper input_boolean valido."
     },
     "abort": {
       "active_session": "Disinserisci l'allarme prima di cambiare configurazione o parametri.",
@@ -223,4 +227,4 @@
     }
   },
   "selector": {}
-}
+}\n

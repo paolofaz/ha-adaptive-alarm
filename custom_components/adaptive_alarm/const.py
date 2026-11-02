@@ -73,3 +73,8 @@ CONF_NOTIFY_ON_FAULT = "notify_on_fault"
 # Duration of the triggered phase, NOT a physical siren activation.
 CONF_TRIGGER_DURATION = "trigger_duration"
 DEFAULT_TRIGGER_DURATION = 300
+
+# RC opt-in siren lifecycle test: strict virtual toggle helper ONLY.
+# Configured physical siren metadata remains permanently inert.
+CONF_FAKE_SIREN_ENABLED = "fake_siren_enabled"
+CONF_FAKE_SIREN_HELPER = "fake_siren_helper"
