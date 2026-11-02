@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible Adaptive Alarm malfunction (no sensitive data).
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Never include passwords, RF codes, tokens, GPS details, camera photos
+        or private home addresses. For security vulnerabilities, use a private
+        report instead of a public issue.
+  - type: input
+    id: adaptive_version
+    attributes:
+      label: Adaptive Alarm version
+      placeholder: "1.0.3"
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.x"
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened?
+      description: Expected versus actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Describe sensor and phase changes without personal identifiers.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs or diagnostic attributes (optional)
+      description: Remove addresses, entity secrets, camera links and tokens.

@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.2**
+**Home Assistant security integration — v1.0.3**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -145,6 +145,13 @@ contacts, current sensor states, arming routes, fault diagnostics and the siren
 status. It uses the existing `alarm_control_panel` and does not issue
 arming/disarming commands of its own.
 
+The icon in **this custom Lovelace card** is steady while disarmed, arming
+or armed, and flashes **only during `triggered`**. Users requesting reduced
+motion see a static alert icon. Home Assistant's built-in `alarm-panel` card
+has its own frontend animation rules (including `arming`); these cannot be
+overridden by the Adaptive Alarm backend. Apple Home animations likewise
+belong to Apple Casa, not the integration.
+
 The card also displays the Health sensor status and names of protected
 contacts with active faults or unavailable states.
 
@@ -166,7 +173,7 @@ under the existing `lovelace:` key in `configuration.yaml` (do not duplicate
 lovelace:
   resource_mode: yaml
   resources:
-    - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.2
+    - url: /adaptive_alarm/adaptive-alarm-card.js?v=1.0.3
       type: module
 ```
 
@@ -234,9 +241,17 @@ Automated tests and HACS/hassfest checks do not substitute for field tests.
 
 ## Development
 
-Run `python -m unittest discover -s tests -v`. The repository includes
-deterministic engine tests, notification and policy tests, dashboard
-construction tests and HACS / hassfest validation workflows.
+Run `python -m unittest discover -s tests -v` and
+`node tests/test_card_runtime.js`. The repository includes deterministic
+engine tests, notification/policy tests, native Lovelace card rendering tests,
+and strict HACS/hassfest validation workflows.
+
+For future inclusion in the default HACS directory, review
+**[HACS publication readiness](docs/HACS_PUBLICATION.md)**. This repository
+is currently installable as a HACS **custom repository**; inclusion in the
+default catalog is a separate review by HACS maintainers. Do not confuse
+passing the local HACS validation action with having been accepted into
+the default catalog.
 
 Report bugs with the Adaptive Alarm version, relevant Health attributes,
 alarm state and anonymized `adaptive_alarm_event` payloads. Do not include

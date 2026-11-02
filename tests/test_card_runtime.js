@@ -77,10 +77,14 @@ for(const [state,expectedIcon,animated] of [
   assert.equal(icon.attributes.icon,expectedIcon);
   assert.equal(icon.className.includes("is-triggered"),animated);
 }
+const style=card.shadowRoot.children[0].textContent;
+assert.ok(style.includes(".alarm-state-icon.is-triggered"));
+assert.ok(style.includes("@media (prefers-reduced-motion:reduce)"));
+assert.ok(!style.includes(".alarm-state-icon.armed"));
 assert.equal(window.customCards.length,1);
 const second=new Card();
 second.setConfig({entity:"alarm_control_panel.adaptive_alarm"});
 second.hass=card._hass;
-assert.ok(second.shadowRoot.textContent.includes("Inserito"));
+assert.ok(second.shadowRoot.textContent.includes("ALLARME SCATTATO"));
 assert.throws(()=>second.setConfig({entity:"switch.unsafe"}), /alarm_control_panel/);
 console.log("Adaptive Alarm Lovelace card: runtime and health rendering OK");

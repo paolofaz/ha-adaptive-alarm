@@ -2,6 +2,16 @@
 
 ## Automated tests (CI)
 
+- In the reusable Lovelace card, verify the icon is static for `disarmed`,
+  `arming` and `armed_away`, flashes only in `triggered`, and respects
+  the browser's reduced-motion preference.
+- Distinguish this component from HA's built-in `alarm-panel` and the
+  HomeKit UI: they have their own animations.
+- The HACS Action must run without ignored checks; the official GitHub
+  Release must be created after HACS/hassfest success.
+
+
+
 Run `python -m unittest discover -s tests -v`; CI also runs HACS and
 hassfest. These checks do not establish real Zigbee relay reliability.
 
