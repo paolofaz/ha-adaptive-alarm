@@ -39,6 +39,8 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('if not self.fake_siren_enabled', controller)
         self.assertIn('self.siren_output_enabled', controller)
         self.assertIn('if activate and phase != Phase.TRIGGERED', controller)
+        self.assertIn('not activate and not force', controller)
+        self.assertIn('event.get("type") == "trigger_timeout_rearmed"', controller)
         self.assertIn('if not self.siren_output_enabled', controller)
         for component in DOMAIN.rglob("*.py"):
             source = component.read_text()

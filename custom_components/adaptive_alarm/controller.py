@@ -257,7 +257,7 @@ class AdaptiveAlarmController:
                 return
             if not activate and phase == Phase.TRIGGERED and not shutdown:
                 return
-            if not activate and self.hass.states.is_state(entity, "off"):
+            if not activate and not force and self.hass.states.is_state(entity, "off"):
                 self._siren_off_retry_after = 0.0
                 self._siren_reported_failures.discard("off")
                 return
@@ -773,6 +773,7 @@ class AdaptiveAlarmController:
         # event, including right after a restart. Physical siren is opt-in.
         await self._sync_outputs(
             triggered=any(event.get("type") == "triggered" for event in events),
+            force=any(event.get("type") == "trigger_timeout_rearmed" for event in events),
         )
         await self._notify_events(events)
         await self._refresh_faults()

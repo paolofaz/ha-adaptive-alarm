@@ -64,7 +64,8 @@ def build_dashboard(
                     f"**Requisiti soddisfatti:** {{{{ (state_attr('{panel}', 'minimum_routes') or []) | join(', ') or '—' }}}}\n\n"
                     f"**Causa ultimo scatto:** {{{{ state_attr('{panel}', 'trigger_cause') or '—' }}}}\n\n"
                     f"**Termine allarme (timestamp):** {{{{ state_attr('{panel}', 'triggered_until') or '—' }}}}\n\n"
-                    f"**Problemi:** {{{{ state_attr('{panel}', 'fault') or 'Nessuno' }}}}"
+                    f"**Problemi:** {{{{ state_attr('{panel}', 'fault') or 'Nessuno' }}}}\n\n"
+                    f"**Errore sirena:** {{{{ state_attr('{panel}', 'siren_last_error') or 'Nessuno' }}}}"
                 )},
                 {"type": "markdown", "content": (
                     "### Sensori con anomalie\n"
