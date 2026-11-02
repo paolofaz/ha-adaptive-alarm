@@ -65,7 +65,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_siren_metadata_cannot_activate_outputs(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "0.7.0")
+        self.assertEqual(manifest["version"], "0.8.0")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": False', panel)
@@ -73,6 +73,8 @@ class PackagingTests(unittest.TestCase):
         sensor = (DOMAIN / "sensor.py").read_text()
         self.assertIn('"pending_zones"', sensor)
         self.assertIn('"minimum_protection_frozen"', sensor)
+        self.assertIn('"protected_zone_problem_states"', sensor)
+        self.assertIn('"protected_zones_unreadable"', sensor)
 
 
 if __name__ == "__main__":

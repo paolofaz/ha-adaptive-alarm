@@ -14,6 +14,15 @@ class ZoneState(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
+def contact_state_from_raw(value: str | None) -> ZoneState:
+    """Map unknown, unavailable and missing HA binary states to unreadable."""
+    if value == "off":
+        return ZoneState.CLOSED
+    if value == "on":
+        return ZoneState.OPEN
+    return ZoneState.UNAVAILABLE
+
+
 class RecoveryPolicy(StrEnum):
     """Response when a protected contact recovers already open."""
 

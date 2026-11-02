@@ -7,6 +7,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DOMAIN
 from .engine.runtime import Phase
+from .engine.health import protected_state_issues
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
@@ -76,6 +77,14 @@ class AdaptiveDiagnostic(SensorEntity):
             }
         if self.kind == "health":
             rules = self.controller.paths
+            protected = session.protected_zones if session else frozenset()
+            issues = protected_state_issues(
+                protected,
+                {
+                    zone: getattr(self.controller.hass.states.get(zone), "state", None)
+                    for zone in protected
+                },
+            )
             return {
                 "fault": self.controller.machine.fault or None,
                 "simulation_only": True,
@@ -98,6 +107,13 @@ class AdaptiveDiagnostic(SensorEntity):
                 "optional_contacts": list(rules.optional),
                 "lock_configured": bool(rules.lock),
                 "protected_zone_problems": sorted(self.controller._active_faults),
+                "protected_zone_problem_states": issues,
+                "protected_zones_unreadable": sorted(
+                    zone for zone, reason in issues.items() if reason != "open"
+                ),
+                "protected_zones_open": sorted(
+                    zone for zone, reason in issues.items() if reason == "open"
+                ),
                 "pending_zones": sorted(session.pending_zones) if session else [],
                 "active_zone_monitoring": sorted(
                     session.protected_zones
