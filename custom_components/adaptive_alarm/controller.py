@@ -32,7 +32,6 @@ from .const import (
     CONF_NOTIFY_ON_REJECTED, CONF_NOTIFY_ON_PREALERT, CONF_NOTIFY_ON_FAULT,
     CONF_TRIGGER_DURATION, DEFAULT_TRIGGER_DURATION,
     CONF_SIREN_OUTPUT_ENABLED,
-    CONF_FAKE_SIREN_ENABLED, CONF_FAKE_SIREN_HELPER,
     CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
     VIBRATION_ASSIGNMENTS,
     DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
@@ -50,7 +49,6 @@ from .engine.light_expiry import (
 )
 from .notifications import async_send_notification, validate_targets
 from .engine.vibration_links import validated_vibration_links
-from .engine.fake_siren import validate_fake_siren_helper, fake_siren_target
 from .engine.siren_output import validate_real_siren
 
 _LOGGER = logging.getLogger(__name__)
@@ -79,15 +77,6 @@ class AdaptiveAlarmController:
         self._siren_off_retry_after = 0.0
         self.siren_last_error: str | None = None
         self._siren_reported_failures: set[str] = set()
-        self.fake_siren_enabled = entry.options.get(CONF_FAKE_SIREN_ENABLED) is True
-        raw_helper = entry.options.get(CONF_FAKE_SIREN_HELPER)
-        self.fake_siren_helper = (
-            validate_fake_siren_helper(raw_helper)
-            if raw_helper is not None else None
-        )
-        if self.fake_siren_enabled and self.fake_siren_helper is None:
-            raise ValueError("Virtual siren requires an input_boolean helper")
-        self._fake_siren_retry_after = 0.0
         self.deterrent_enabled = entry.options.get(CONF_DETERRENT_ENABLED) is True
         self.deterrent_lights = tuple(entry.options.get(CONF_DETERRENT_LIGHTS, []))
         if any(
@@ -197,47 +186,6 @@ class AdaptiveAlarmController:
                 self._events(events)
             return events
 
-    async def _sync_fake_siren_state(self, *, force: bool = False) -> None:
-        """Opt-in and input_boolean-only siren test output.
-
-        Serialize with state commits; never send services to physical siren,
-        switch, light, RF or MQTT. Throttle retries if HA is not ready.
-        """
-        helper = self.fake_siren_helper
-        if not self.fake_siren_enabled or helper is None:
-            return
-        async with self._guard:
-            desired = fake_siren_target(self.machine.phase.value)
-            if self.hass.states.is_state(helper, desired):
-                self._fake_siren_retry_after = 0.0
-                return
-            now = time.time()
-            if not force and now < self._fake_siren_retry_after:
-                return
-            self._fake_siren_retry_after = now + 30
-            service = "turn_on" if desired == "on" else "turn_off"
-            try:
-                if not self.hass.services.has_service("input_boolean", service):
-                    raise RuntimeError("input_boolean service is unavailable")
-                if self.hass.states.get(helper) is None:
-                    raise RuntimeError("Configured virtual helper does not exist")
-                await self.hass.services.async_call(
-                    "input_boolean", service, {},
-                    target={"entity_id": helper},
-                    blocking=True,
-                )
-            except Exception:
-                _LOGGER.exception("Virtual siren helper update failed: %s", helper)
-                self._events([{
-                    "type": "fake_siren_request_failed",
-                    "helper": helper, "requested_state": desired,
-                }])
-            else:
-                self._events([{
-                    "type": "fake_siren_requested",
-                    "helper": helper, "requested_state": desired,
-                }])
-
     async def _request_physical_siren(
         self, *, activate: bool = False, force: bool = False,
         shutdown: bool = False,
@@ -305,7 +253,6 @@ class AdaptiveAlarmController:
     ) -> None:
         # Recheck phase under the output lock: never send late ON after disarm.
         await self._request_physical_siren(activate=triggered, force=force)
-        await self._sync_fake_siren_state(force=force)
 
     async def async_start(self) -> None:
         """Load persisted state, attach listeners, then reconcile faults."""
@@ -366,7 +313,7 @@ class AdaptiveAlarmController:
             await self._refresh_faults()
         if self.machine.phase == Phase.TRIGGERED:
             # An expired deadline after HA restart must never briefly turn
-            # the virtual siren ON before the first one-second timer tick.
+            # the physical siren ON before the first timer tick.
             await self.async_tick()
         # Never re-send a physical ON on Home Assistant restart.
         await self._sync_outputs(force=True)

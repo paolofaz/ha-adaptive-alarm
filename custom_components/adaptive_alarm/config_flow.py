@@ -24,7 +24,6 @@ from .const import (
     CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
     CONF_NOTIFY_ON_ARMED, CONF_NOTIFY_ON_DISARMED, CONF_NOTIFY_ON_TRIGGERED,
     CONF_NOTIFY_ON_REJECTED, CONF_NOTIFY_ON_PREALERT, CONF_NOTIFY_ON_FAULT,
-    CONF_FAKE_SIREN_ENABLED, CONF_FAKE_SIREN_HELPER,
     CONF_SIREN_OUTPUT_ENABLED,
     CONF_TRIGGER_DURATION, DEFAULT_TRIGGER_DURATION,
     DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
@@ -35,7 +34,6 @@ from .engine.configurable import AlternativeGroup, ProtectionRules, rules_for_co
 from .engine.presentation import group_summary, vibration_summary
 from .engine.vibration_links import VibrationConfigurationError, validated_vibration_links
 from .notifications import async_send_notification, validate_targets
-from .engine.fake_siren import validate_fake_siren_helper
 from .engine.siren_output import validate_real_siren
 
 
@@ -562,34 +560,24 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
         return self.async_abort(reason="notification_test_sent")
 
     async def async_step_siren(self, user_input: dict[str, Any] | None = None):
-        """Physical siren and optional helper output have separate settings."""
+        """Configure only the real siren entity with explicit output opt-in."""
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
                 update = self._with(siren=user_input.get("siren") or None)
-                enabled = user_input.get(CONF_FAKE_SIREN_ENABLED) is True
-                physical_enabled = user_input.get(CONF_SIREN_OUTPUT_ENABLED) is True
-                if physical_enabled:
+                enabled = user_input.get(CONF_SIREN_OUTPUT_ENABLED) is True
+                if enabled:
                     if not update.siren:
                         errors["base"] = "siren_entity_required"
                     else:
                         validate_real_siren(update.siren)
-                helper = user_input.get(CONF_FAKE_SIREN_HELPER) or None
-                if helper is not None:
-                    validate_fake_siren_helper(helper)
-                if enabled and helper is None:
-                    errors["base"] = "fake_siren_helper_required"
                 if not errors:
                     return self._save(
                         protection=update,
-                        other={
-                            CONF_SIREN_OUTPUT_ENABLED: physical_enabled,
-                            CONF_FAKE_SIREN_ENABLED: enabled,
-                            CONF_FAKE_SIREN_HELPER: helper,
-                        },
+                        other={CONF_SIREN_OUTPUT_ENABLED: enabled},
                     )
             except (ValueError, KeyError, TypeError):
-                errors["base"] = "invalid_fake_siren_helper"
+                errors["base"] = "invalid_rules"
         return self.async_show_form(
             step_id="siren", data_schema=self._siren_schema(),
             errors=errors,
@@ -601,21 +589,12 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             vol.Optional("siren", description={
                 "suggested_value": self._rules().siren
             }): selector.EntitySelector(selector.EntitySelectorConfig(
-                domain=["siren", "switch"]
+                domain="siren"
             )),
             vol.Required(
                 CONF_SIREN_OUTPUT_ENABLED,
                 default=opts.get(CONF_SIREN_OUTPUT_ENABLED, False),
             ): bool,
-            vol.Required(
-                CONF_FAKE_SIREN_ENABLED,
-                default=opts.get(CONF_FAKE_SIREN_ENABLED, False),
-            ): bool,
-            vol.Optional(CONF_FAKE_SIREN_HELPER, description={
-                "suggested_value": opts.get(CONF_FAKE_SIREN_HELPER),
-            }): selector.EntitySelector(selector.EntitySelectorConfig(
-                domain="input_boolean",
-            )),
         })
 
     async def async_step_timing(self, user_input: dict[str, Any] | None = None):

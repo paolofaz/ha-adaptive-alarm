@@ -31,12 +31,9 @@ class PackagingTests(unittest.TestCase):
             "lock.unlock",
         )
         controller = (DOMAIN / "controller.py").read_text()
-        self.assertEqual(controller.count("services.async_call("), 4)
+        self.assertEqual(controller.count("services.async_call("), 3)
         self.assertIn('"light", "turn_on"', controller)
-        self.assertIn('"input_boolean", service', controller)
         self.assertIn('blocking=True', controller)
-        self.assertIn('validate_fake_siren_helper(raw_helper)', controller)
-        self.assertIn('if not self.fake_siren_enabled', controller)
         self.assertIn('self.siren_output_enabled', controller)
         self.assertIn('if activate and phase != Phase.TRIGGERED', controller)
         self.assertIn('not activate and not force', controller)
@@ -70,7 +67,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_physical_siren_output_opt_in(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "1.0.0")
+        self.assertEqual(manifest["version"], "1.0.1")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": self.controller.siren_output_enabled', panel)

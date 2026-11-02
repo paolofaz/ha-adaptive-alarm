@@ -29,7 +29,7 @@
           "notifications": "Notifiche sul telefono (App HA, Telegram, altri)",
           "notification_events": "Eventi da notificare",
           "notification_test": "Verifica destinatari notifiche",
-          "siren": "Sirena e indicatore",
+          "siren": "Sirena Zigbee2MQTT",
           "timing": "Tempi inserimento e conferma vibrazioni"
         },
         "description": "Configura protezione, vibrazioni, notifiche, tempi, luci e sirena. Le uscite fisiche richiedono un'abilitazione esplicita.",
@@ -41,7 +41,7 @@
           "notifications": "Scegli destinatari notify di Home Assistant, attivazione volontaria. Telegram Bot usa le entità notify.",
           "notification_events": "Attiva o disattiva ogni evento indipendentemente. I destinatari restano quelli scelti in Notifiche sul telefono.",
           "notification_test": "Invia un messaggio di verifica ai destinatari configurati.",
-          "siren": "Configurazione sirena e indicatore. La sirena fisica richiede un'abilitazione esplicita.",
+          "siren": "Configura la sirena siren.* e il comando reale, disattivato per impostazione predefinita.",
           "timing": "Imposta ritardo di inserimento, filtro colpi, finestra e soglia 2 o 3. La protezione dal ritorno online aperto è automatica."
         }
       },
@@ -89,13 +89,11 @@
         }
       },
       "siren": {
-        "title": "Sirena e indicatore",
-        "description": "Seleziona la sirena Zigbee2MQTT. Abilita il comando fisico solo dopo avere verificato il limite di autospegnimento sul dispositivo. La sirena si accende allo scatto e si spegne al disinserimento o al termine della durata configurata. Il comando fisico è disabilitato per impostazione predefinita. Puoi selezionare anche un helper input_boolean come indicatore ON/OFF.",
+        "title": "Sirena Zigbee2MQTT",
+        "description": "Seleziona la tua entità siren.* esposta da Zigbee2MQTT. Abilita il comando fisico soltanto dopo aver verificato l’autospegnimento configurato sul dispositivo. Il sistema invia siren.turn_on quando scatta e siren.turn_off al disinserimento o al termine del timer. Predefinito: disabilitato.",
         "data": {
-          "siren": "Sirena Zigbee2MQTT (entità siren o switch)",
-          "fake_siren_enabled": "Abilita indicatore su helper",
-          "fake_siren_helper": "Helper indicatore (input_boolean)",
-          "siren_output_enabled": "Abilita comando fisico sirena"
+          "siren": "Sirena Zigbee2MQTT (siren.*)",
+          "siren_output_enabled": "Abilita comando sirena reale"
         }
       },
       "timing": {
@@ -213,8 +211,6 @@
       "notification_no_targets": "Scegli almeno un destinatario per abilitare le notifiche.",
       "notification_service_missing": "Il servizio notify selezionato non è disponibile.",
       "invalid_notification_target": "Destinatario non valido: sono ammessi solo servizi/entità notify.",
-      "fake_siren_helper_required": "Se abiliti l'indicatore, seleziona l'helper input_boolean.",
-      "invalid_fake_siren_helper": "È ammesso soltanto un helper input_boolean valido.",
       "siren_entity_required": "Se abiliti la sirena, seleziona prima la sua entità."
     },
     "abort": {

@@ -1,4 +1,4 @@
-"""Adaptive Alarm: simulated security, with optional explicitly enabled lights."""
+"""Adaptive Alarm integration and optional frontend card resource."""
 
 from __future__ import annotations
 
@@ -19,6 +19,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
     platforms = (Platform.ALARM_CONTROL_PANEL, Platform.BINARY_SENSOR, Platform.SENSOR)
+    obsolete = {"fake_siren_enabled", "fake_siren_helper"}
+    if obsolete.intersection(entry.options):
+        options = {k: v for k, v in entry.options.items() if k not in obsolete}
+        hass.config_entries.async_update_entry(entry, options=options)
     controller = AdaptiveAlarmController(hass, entry)
     await controller.async_start()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = controller
@@ -28,15 +32,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await controller.async_stop()
         hass.data[DOMAIN].pop(entry.entry_id, None)
         raise
-    # Lovelace dashboard is created idempotently. A dashboard failure must
-    # never prevent the alarm engine from operating.
-    from .dashboard import async_ensure_dashboard
+    # Register a reusable Lovelace card resource; do not create dashboards.
+    # YAML dashboards keep their own resources and card declarations.
+    from .frontend import async_register_card
     try:
-        await async_ensure_dashboard(hass, entry.entry_id)
+        await async_register_card(hass)
     except Exception:
         import logging
         logging.getLogger(__name__).exception(
-            "Adaptive Alarm dashboard could not be installed; alarm is unaffected"
+            "Adaptive Alarm card registration failed; the alarm is unaffected"
         )
     entry.async_on_unload(entry.add_update_listener(async_update_options))
     return True
