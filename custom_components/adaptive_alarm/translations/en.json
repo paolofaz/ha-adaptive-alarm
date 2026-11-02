@@ -22,34 +22,30 @@
       "init": {
         "title": "Adaptive Alarm configuration",
         "menu_options": {
-          "mandatory": "Mandatory contacts and optional lock",
-          "group": "Add or edit a required group (alternatives)",
-          "remove_group": "Remove a required group",
+          "protection": "Required contacts and groups",
           "optional": "Optional contacts",
           "vibrations": "Vibration sensors (any number)",
-          "siren": "Optional siren (INERT / DISABLED)",
-          "timing": "Arming timing and vibration confirmation",
           "deterrent": "Deterrent lights on first hit (optional)",
           "notifications": "Phone notifications (HA App, Telegram, others)",
-          "notification_test": "Send test notification"
+          "notification_test": "Send test notification",
+          "siren": "Optional siren (INERT / DISABLED)",
+          "timing": "Arming timing and vibration confirmation"
         },
         "description": "Choose a section. The siren stays disabled. Real deterrent lighting is possible only after explicitly enabling it in its own settings.",
         "menu_option_descriptions": {
-          "mandatory": "Set required contacts and an optional lock.",
-          "group": "EVERY group is required; one closed contact within each group is enough.",
-          "remove_group": "Delete an existing required group.",
+          "protection": "View and manage required contacts and all groups together.",
           "optional": "Add contacts that do not block arming.",
           "vibrations": "Add, edit, or remove any number of sensors, each with its own physical contact.",
-          "siren": "Optional siren selection, without any actuation.",
-          "timing": "Set exit delay, debounce, window and hit threshold 2 or 3. Protected contacts returning open trigger automatically.",
           "deterrent": "OFF by default: physical lighting only after explicit opt-in.",
           "notifications": "Choose explicit HA notify targets. Telegram Bot uses notify entities.",
-          "notification_test": "Only sends a message to configured targets, without triggering the alarm."
+          "notification_test": "Only sends a message to configured targets, without triggering the alarm.",
+          "siren": "Optional siren selection, without any actuation.",
+          "timing": "Set exit delay, debounce, window and hit threshold 2 or 3. Protected contacts returning open trigger automatically."
         }
       },
       "mandatory": {
         "title": "Mandatory contacts and optional lock",
-        "description": "Every contact below is mandatory. The lock is optional, but if selected must be locked. **Every alternative group is also required**: at least ONE contact in each group must be closed.\n\n**Configured groups (read-only):** {groups_summary}\n\nTo add or edit a group return to the menu and choose Add or edit required group. Do not duplicate group members in the mandatory contacts list.",
+        "description": "Every contact in this list is mandatory. The optional lock must be locked if selected.\\n\\n**Configured alternative groups:** {groups_summary}\\n\\nManage groups from Required contacts and groups; do not duplicate group contacts here.",
         "data": {
           "mandatory": "Required binary contacts (all closed)",
           "lock": "Optional door lock (must be locked)"
@@ -61,7 +57,7 @@
       },
       "group": {
         "title": "Add or edit a required group (alternatives)",
-        "description": "This is a REQUIRED group. At least one of its contacts must be closed to arm. ALL groups must be satisfied together. Reuse the name to edit.",
+        "description": "Create a required OR group: one closed contact is enough to satisfy this group. Use Edit existing group to change its membership.",
         "data": {
           "name": "Group name (same name edits)",
           "contacts": "Alternative contacts (at least one closed)"
@@ -69,14 +65,14 @@
       },
       "remove_group": {
         "title": "Remove a required group",
-        "description": "Remove the selected OR group.",
+        "description": "Select a group to delete. Its contacts leave the protection configuration; unlink any associated vibration sensors first.",
         "data": {
           "name": "Group to remove"
         }
       },
       "optional": {
         "title": "Optional contacts",
-        "description": "Optional contacts do not prevent arming, but closed ones are frozen into the protected session.",
+        "description": "Optional contacts do not block arming. Closed ones are protected. Unknown/unavailable ones are Pending: first CLOSED enrolls, first OPEN excludes. Contacts already OPEN stay excluded for that session.",
         "data": {
           "optional": "Other monitored contacts (not required to arm)"
         }
@@ -162,6 +158,29 @@
           "notifications_enabled": "Enable phone notifications",
           "notification_entities": "Notify entities (Telegram Bot, etc.)",
           "notification_services": "Notify actions (phone app, legacy providers)"
+        }
+      },
+      "protection": {
+        "title": "Required contacts and groups",
+        "description": "Every required contact must be closed. Every alternative group is required too, but ONE closed contact per group is enough.\\n\\n**Configured groups:** {groups_summary}\\n\\nEdit required contacts, add, edit or remove groups here. Changes are blocked while armed.",
+        "menu_options": {
+          "mandatory": "Edit mandatory contacts and lock",
+          "group": "Add a group",
+          "group_edit": "Edit an existing group",
+          "remove_group": "Delete a group"
+        },
+        "menu_option_descriptions": {
+          "mandatory": "Edit the always-required contacts.",
+          "group": "Create a new OR group.",
+          "group_edit": "Choose a group and change its contacts.",
+          "remove_group": "Select a group to remove."
+        }
+      },
+      "group_edit": {
+        "title": "Choose a group to edit",
+        "description": "The selected group's name and contacts are pre-filled in the next form.",
+        "data": {
+          "name": "Group to edit"
         }
       }
     },

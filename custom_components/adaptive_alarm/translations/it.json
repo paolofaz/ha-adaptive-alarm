@@ -22,34 +22,30 @@
       "init": {
         "title": "Configurazione Adaptive Alarm",
         "menu_options": {
-          "mandatory": "Contatti obbligatori e serratura facoltativa",
-          "group": "Aggiungi o modifica gruppo obbligatorio (alternative)",
-          "remove_group": "Rimuovi un gruppo obbligatorio",
+          "protection": "Contatti obbligatori e gruppi",
           "optional": "Contatti opzionali",
           "vibrations": "Sensori di vibrazione (numero libero)",
-          "siren": "Sirena opzionale (INATTIVA)",
-          "timing": "Tempi inserimento e conferma vibrazioni",
           "deterrent": "Luci deterrenti al primo colpo (opzionali)",
           "notifications": "Notifiche sul telefono (App HA, Telegram, altri)",
-          "notification_test": "Invia una notifica di prova"
+          "notification_test": "Invia una notifica di prova",
+          "siren": "Sirena opzionale (INATTIVA)",
+          "timing": "Tempi inserimento e conferma vibrazioni"
         },
         "description": "Scegli una sezione. La sirena resta inattiva. Le luci deterrenti possono essere accese realmente soltanto dopo attivazione esplicita nelle loro opzioni.",
         "menu_option_descriptions": {
-          "mandatory": "Definisci i contatti sempre obbligatori e l'eventuale serratura.",
-          "group": "OGNI gruppo è obbligatorio: al suo interno basta almeno un contatto chiuso.",
-          "remove_group": "Elimina un gruppo obbligatorio esistente.",
+          "protection": "Visualizza e gestisci i contatti e tutti i gruppi nello stesso menu.",
           "optional": "Aggiungi contatti che non impediscono l'inserimento.",
           "vibrations": "Aggiungi, modifica o rimuovi un numero qualsiasi di sensori, ognuno con il contatto fisico associato.",
-          "siren": "Selezione facoltativa, senza comandare la sirena.",
-          "timing": "Imposta ritardo di inserimento, filtro colpi, finestra e soglia 2 o 3. La protezione dal ritorno online aperto è automatica.",
           "deterrent": "Per impostazione predefinita OFF: accensione reale solo dopo consenso esplicito.",
           "notifications": "Scegli destinatari notify di Home Assistant, attivazione volontaria. Telegram Bot usa le entità notify.",
-          "notification_test": "Invia soltanto un messaggio ai destinatari configurati, senza avviare l'allarme."
+          "notification_test": "Invia soltanto un messaggio ai destinatari configurati, senza avviare l'allarme.",
+          "siren": "Selezione facoltativa, senza comandare la sirena.",
+          "timing": "Imposta ritardo di inserimento, filtro colpi, finestra e soglia 2 o 3. La protezione dal ritorno online aperto è automatica."
         }
       },
       "mandatory": {
         "title": "Contatti obbligatori e serratura facoltativa",
-        "description": "Tutti i contatti indicati sotto sono obbligatori. La serratura è facoltativa ma, se selezionata, deve essere bloccata. **Anche tutti i gruppi sono obbligatori**: in ciascun gruppo basta almeno UN contatto chiuso.\n\n**Gruppi già configurati (sola lettura):** {groups_summary}\n\nPer aggiungere o modificare un gruppo torna al menu e scegli «Aggiungi o modifica gruppo obbligatorio». Non è necessario duplicare i contatti dei gruppi nell'elenco dei contatti obbligatori.",
+        "description": "Tutti i contatti di questo elenco sono obbligatori. La serratura, se configurata, deve essere bloccata.\\n\\n**Gruppi alternativi configurati:** {groups_summary}\\n\\nPuoi gestire i gruppi dalla sezione «Contatti obbligatori e gruppi». Non duplicare i loro contatti in questo elenco.",
         "data": {
           "mandatory": "Contatti sempre obbligatori (tutti chiusi)",
           "lock": "Serratura facoltativa (deve essere bloccata)"
@@ -61,7 +57,7 @@
       },
       "group": {
         "title": "Aggiungi o modifica gruppo obbligatorio (alternative)",
-        "description": "Questo è un gruppo OBBLIGATORIO. Per inserire l'allarme, almeno un contatto del gruppo deve essere chiuso. Tutti i gruppi devono essere soddisfatti contemporaneamente. Usa lo stesso nome per modificarlo.",
+        "description": "Crea un gruppo obbligatorio di contatti alternativi: ne basta uno chiuso per permettere l'inserimento. Per modificare un gruppo esistente usa «Modifica gruppo esistente».",
         "data": {
           "name": "Nome gruppo (stesso nome = modifica)",
           "contacts": "Contatti alternativi (almeno uno chiuso)"
@@ -69,14 +65,14 @@
       },
       "remove_group": {
         "title": "Rimuovi un gruppo obbligatorio",
-        "description": "Elimina il gruppo di alternative selezionato.",
+        "description": "Seleziona il gruppo da eliminare. Le relative protezioni verranno rimosse dalla configurazione; scollega prima eventuali sensori di vibrazione associati.",
         "data": {
           "name": "Gruppo da rimuovere"
         }
       },
       "optional": {
         "title": "Contatti opzionali",
-        "description": "I contatti opzionali non impediscono l'inserimento; quelli chiusi al termine sono protetti per tutta la sessione.",
+        "description": "I contatti opzionali non impediscono l'inserimento. Se chiusi diventano protetti. Se unknown/unavailable entrano in attesa: primo ritorno chiuso = protetti, primo ritorno aperto = esclusi. Quelli già aperti restano esclusi per la sessione.",
         "data": {
           "optional": "Altri contatti monitorati (non obbligatori)"
         }
@@ -162,6 +158,29 @@
           "notifications_enabled": "Abilita notifiche push dal sistema",
           "notification_entities": "Destinatari come entità notify (Telegram Bot, ecc.)",
           "notification_services": "Servizi notify (app telefono, provider legacy)"
+        }
+      },
+      "protection": {
+        "title": "Contatti obbligatori e gruppi",
+        "description": "I contatti obbligatori devono essere tutti chiusi. Ogni gruppo è obbligatorio, ma al suo interno basta UN contatto chiuso.\\n\\n**Gruppi configurati:** {groups_summary}\\n\\nPuoi modificare i contatti, aggiungere, modificare o eliminare un gruppo da questo menu. Le modifiche sono bloccate a sistema inserito.",
+        "menu_options": {
+          "mandatory": "Modifica contatti obbligatori e serratura",
+          "group": "Aggiungi gruppo",
+          "group_edit": "Modifica gruppo esistente",
+          "remove_group": "Elimina gruppo"
+        },
+        "menu_option_descriptions": {
+          "mandatory": "Modifica i contatti sempre obbligatori.",
+          "group": "Crea un nuovo gruppo di alternative.",
+          "group_edit": "Scegli un gruppo e cambia i suoi contatti.",
+          "remove_group": "Seleziona il gruppo da eliminare."
+        }
+      },
+      "group_edit": {
+        "title": "Scegli il gruppo da modificare",
+        "description": "I dati del gruppo selezionato saranno precompilati nella schermata successiva.",
+        "data": {
+          "name": "Gruppo da modificare"
         }
       }
     },
