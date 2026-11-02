@@ -1,3 +1,26 @@
+# Adaptive Alarm test plan — current v0.8.0
+
+## Current v0.8.0 acceptance (simulation only)
+
+1. Configure → Contatti obbligatori e gruppi must show every configured
+   group and its friendly contact names. Verify adding and editing a group
+   (fields pre-filled), and safely deleting a disposable test group. Group
+   actions must not appear as separate top-level menu items. Do not delete
+   any real required group during a live alarm.
+2. Restart Home Assistant while armed and Zigbee2MQTT sensors briefly return
+   `unknown` or `unavailable`: protected zones remain protected; Health may
+   show `degraded`, then `ok`. The Health attribute
+   `protected_zone_problem_states` identifies the actual raw reason.
+3. Arm with an optional contact initially `unknown`: verify Pending →
+   Protected when first CLOSED, then opening triggers. New session:
+   Pending → Excluded when first OPEN. Both match `unavailable` behavior.
+4. A protected contact recovering OPEN must trigger a simulated alarm;
+   an unreadable mandatory contact still blocks arming at the deadline.
+5. Re-test notifications, light activation and conservative auto-off, same
+   sensor vibration threshold 2/3, and confirm the siren remains inert.
+
+## Historical test plans (older versions)
+
 # Generic protection alpha — safe test plan
 
 Leave the old hardware-controlling YAML alarm disarmed while physically opening its contacts. **Do not connect the simulated event bus to a siren.**

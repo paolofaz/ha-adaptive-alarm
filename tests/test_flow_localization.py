@@ -10,9 +10,10 @@ INTEGRATION = ROOT / "custom_components" / "adaptive_alarm"
 FLOW = INTEGRATION / "config_flow.py"
 
 EXPECTED_STEPS = (
-    "mandatory", "group", "remove_group", "optional",
-    "vibrations", "deterrent", "notifications", "notification_test", "siren", "timing",
+    "protection", "optional", "vibrations", "deterrent",
+    "notifications", "notification_test", "siren", "timing",
 )
+PROTECTION_STEPS = ("mandatory", "group", "group_edit", "remove_group")
 
 
 class FlowLocalizationTests(unittest.TestCase):
@@ -62,12 +63,19 @@ class FlowLocalizationTests(unittest.TestCase):
                     self.assertIn("data", options[step])
                     self.assertTrue(options[step]["title"])
                 self.assertIn("data", options["deterrent"])
+                self.assertEqual(set(options["protection"]["menu_options"]), set(PROTECTION_STEPS))
+                self.assertEqual(set(options["protection"]["menu_option_descriptions"]), set(PROTECTION_STEPS))
+                self.assertIn("{groups_summary}", options["protection"]["description"])
+                self.assertIn("data", options["group_edit"])
+                self.assertNotIn("remove_group", options["init"]["menu_options"])
+                self.assertNotIn("group", options["init"]["menu_options"])
 
     def test_recovery_choice_removed_from_user_timing_flow(self):
         flow = FLOW.read_text()
         self.assertNotIn('translation_key="recovery_policy"', flow)
         self.assertNotIn("vol.Required(CONF_RECOVERY_POLICY", flow)
         self.assertIn('"groups_summary": group_summary(', flow)
+        self.assertIn('options.remove("remove_group")', flow)
         self.assertIn("NumberSelectorMode.BOX", flow)
         for language in ("it", "en"):
             tr = json.loads(

@@ -33,9 +33,7 @@ from .notifications import async_send_notification, validate_targets
 
 
 OPTIONS_MENU_STEPS = (
-    "mandatory",
-    "group",
-    "remove_group",
+    "protection",
     "optional",
     "vibrations",
     "deterrent",
@@ -44,6 +42,8 @@ OPTIONS_MENU_STEPS = (
     "siren",
     "timing",
 )
+
+PROTECTION_MENU_STEPS = ("mandatory", "group", "group_edit", "remove_group")
 
 
 def _contacts(*, multiple: bool = True):
@@ -137,6 +137,25 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             menu_options=list(OPTIONS_MENU_STEPS),
         )
 
+    async def async_step_protection(self, user_input: dict[str, Any] | None = None):
+        """One place for required contacts, current groups and their actions."""
+        rules = self._rules()
+        language = self.hass.config.language
+        options = list(PROTECTION_MENU_STEPS)
+        if not rules.groups:
+            options.remove("group_edit")
+            options.remove("remove_group")
+        return self.async_show_menu(
+            step_id="protection",
+            menu_options=options,
+            description_placeholders={
+                "groups_summary": group_summary(
+                    rules.groups, self._friendly_name,
+                    alternative_word="oppure" if language.startswith("it") else "or",
+                ),
+            },
+        )
+
     async def async_step_mandatory(self, user_input: dict[str, Any] | None = None):
         rule = self._rules()
         errors: dict[str, str] = {}
@@ -167,17 +186,52 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             }),
         )
 
+    async def async_step_group_edit(self, user_input: dict[str, Any] | None = None):
+        """Select the group before editing, pre-filling its current contents."""
+        rules = self._rules()
+        if not rules.groups:
+            return self.async_abort(reason="no_groups")
+        if user_input is not None:
+            selected = str(user_input["name"])
+            if selected not in {group.name for group in rules.groups}:
+                return self.async_abort(reason="no_groups")
+            self._editing_group_name = selected
+            return await self.async_step_group()
+        return self.async_show_form(
+            step_id="group_edit",
+            data_schema=vol.Schema({
+                vol.Required("name"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[group.name for group in rules.groups],
+                    ),
+                ),
+            }),
+        )
+
     async def async_step_group(self, user_input: dict[str, Any] | None = None):
         rule = self._rules()
+        editing_name = getattr(self, "_editing_group_name", None)
+        editing = next(
+            (group for group in rule.groups if group.name == editing_name), None
+        )
         errors: dict[str, str] = {}
         if user_input is not None:
             name = str(user_input.get("name", "")).strip()
             contacts = tuple(user_input.get("contacts", []))
             try:
                 group = AlternativeGroup(name=name, contacts=contacts)
-                # Same name edits a group. Other group names stay untouched.
+                # A rename may not overwrite another existing group.
+                if editing and any(
+                    other.name.casefold() == name.casefold()
+                    and other.name != editing.name
+                    for other in rule.groups
+                ):
+                    raise ValueError("Duplicate group name")
+                removed_names = {name.casefold()}
+                if editing:
+                    removed_names.add(editing.name.casefold())
                 updated_groups = [
-                    g for g in rule.groups if g.name.casefold() != name.casefold()
+                    g for g in rule.groups if g.name.casefold() not in removed_names
                 ] + [group]
                 update = self._with(groups=[
                     {"name": g.name, "contacts": list(g.contacts)}
@@ -190,8 +244,10 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="group", errors=errors,
             data_schema=vol.Schema({
-                vol.Required("name"): str,
-                vol.Required("contacts"): _contacts(),
+                vol.Required("name", default=editing.name if editing else ""): str,
+                vol.Required(
+                    "contacts", default=list(editing.contacts) if editing else []
+                ): _contacts(),
             }),
         )
 

@@ -1,17 +1,17 @@
-# Safety — v0.5.0 alpha
+# Safety — v0.8.0 alpha
 
 ## Real outputs
 
-**Only one type of physical output is implemented:** an opt-in `light.turn_on` request on the first valid protected vibration prealert.
+Only explicit opt-in real lighting is implemented: `light.turn_on` on the first valid protected vibration prealert, and a separately enabled conservative `light.turn_off` timer. Selected Home Assistant notify providers may also send push alerts.
 
 - OFF by default; a user must explicitly select `light.` entities **and** enable the feature.
 - Only while the machine is fully `armed_away` and a configured vibration sensor is linked to a contact included in the frozen protected session.
 - Once per armed session, not on every edge; one concurrent disarm cannot make this trigger after disarming, because conditions are rechecked under the controller state guard.
-- No brightness, color or flashing effects are sent. No `light.turn_off`; lights remain on after disarm, expiry, HA restart or simulated trigger.
-- `light.turn_on` is sent as a nonblocking request; the event `deterrent_lights_requested` does **not** prove the physical device responded.
+- No brightness, color or flashing effects are sent. `light.turn_off` is restricted to safely owned, unchanged lights; it is suspended during a triggered alarm and skipped after HA restart.
+- The event `deterrent_lights_requested` does **not** prove the light actually turned on.
 - Do not select a light entity that operates a physical siren, dangerous relay or unsafe load.
 
-**No other output is implemented.** The optional siren is **still inert**. No siren, switch, lock, RF, MQTT or notify services are invoked by this preview. Do not use the preview event bus for physical alarm actuation.
+**The siren remains completely inert.** No siren, switch, lock, RF or MQTT actuation is performed. Notifications are allowed only through explicitly configured HA notify entities/services and their success does not prove delivery. Do not connect the simulated event bus to physical sirens.
 
 ## Trigger conditions
 
@@ -23,7 +23,7 @@
 - The old storm-grace and cross-sensor confirmation logic has been retired.
 - Protected contact opening still causes the existing simulated trigger, independently of vibrations.
 
-An empty protection rule set must never arm. A 60-second exit countdown is not protection until commit; if minimum requirements fail then the alarm remains disarmed. Excluded sensors never dynamically re-enroll. Changes to options are rejected while arming/armed/triggered. Saved protected zones persist across restarts.
+An empty protection rule set cannot arm. The exit countdown (60 s default) is not protection until the required routes are validated. Already-open Excluded contacts never dynamically re-enroll, but initially unreadable Pending contacts can join on their first CLOSED observation. Options changes are blocked during arming/armed/triggered; saved Protected zones persist over restart.
 
 This is an early preview, **not a certified or operational security alarm**. Keep the existing physical security system in charge of any siren.
 
@@ -72,3 +72,10 @@ field retain their original exclusion set. A mandatory contact or minimum
 group that cannot be covered without an unavailable sensor STILL blocks arm.
 The old UI return-online policy is removed because the safer fixed behavior
 cannot be downgraded. Siren remains entirely simulated.
+
+## v0.8.0 — Diagnostics and protection editor
+
+Health distinguishes `unknown`, `unavailable`, `missing`, `open` and
+`unexpected` protected contact states. This never demotes a Protected sensor.
+Both `unknown` and `unavailable` are unreadable for security. The unified
+group editor remains blocked while a session is arming or active.

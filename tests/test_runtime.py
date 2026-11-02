@@ -5,7 +5,7 @@ import unittest
 
 from custom_components.adaptive_alarm.engine import MinimumPaths, ZoneState
 from custom_components.adaptive_alarm.engine.runtime import AlarmMachine, Phase
-from custom_components.adaptive_alarm.engine.model import RecoveryPolicy
+from custom_components.adaptive_alarm.engine.model import RecoveryPolicy, contact_state_from_raw
 
 C = ZoneState.CLOSED
 O = ZoneState.OPEN
@@ -29,6 +29,44 @@ def armed(**kwargs):
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_raw_unknown_is_unreadable_and_does_not_demote_protected(self):
+        self.assertEqual(contact_state_from_raw("off"), C)
+        self.assertEqual(contact_state_from_raw("on"), O)
+        for raw in ("unknown", "unavailable", None, "unexpected"):
+            with self.subTest(raw=raw):
+                unreadable = contact_state_from_raw(raw)
+                self.assertEqual(unreadable, U)
+                alarm = armed()
+                self.assertEqual(alarm.observed("entry", C, unreadable, now=200), [])
+                self.assertIn("entry", alarm.session.protected_zones)
+                self.assertEqual(alarm.observed("entry", unreadable, C, now=201), [])
+                self.assertEqual(
+                    alarm.observed("entry", C, O, now=202),
+                    [{"type": "triggered", "cause": "entry"}],
+                )
+
+    def test_raw_unknown_pending_first_known_state(self):
+        for raw in ("unknown", "unavailable"):
+            with self.subTest(raw=raw):
+                unreadable = contact_state_from_raw(raw)
+                alarm = armed(studio=unreadable)
+                self.assertIn("studio", alarm.session.pending_zones)
+                self.assertEqual(
+                    alarm.observed("studio", unreadable, C, now=200),
+                    [{"type": "zone_enrolled", "zone": "studio"}],
+                )
+                self.assertEqual(
+                    alarm.observed("studio", C, O, now=201),
+                    [{"type": "triggered", "cause": "studio"}],
+                )
+                other = armed(studio=unreadable)
+                self.assertEqual(
+                    other.observed("studio", unreadable, O, now=200),
+                    [{"type": "zone_excluded", "zone": "studio", "reason": "first_known_open"}],
+                )
+                self.assertIn("studio", other.session.excluded_zones)
+
+
     def test_all_minimum_combinations(self):
         names = ["entry", "sh_sala", "sh_bagno", "w_sala", "w_bagno"]
         for values in itertools.product((C, O, U), repeat=5):

@@ -34,6 +34,7 @@ from .const import (
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DOMAIN, EVENT_ADAPTIVE_ALARM,
 )
 from .engine import ZoneState, evaluate_eligibility
+from .engine.model import contact_state_from_raw
 from .engine.configurable import rules_for_config
 from .engine.runtime import AlarmMachine, Phase
 from .engine.presentation import prealert_text, trigger_text, fault_text
@@ -48,14 +49,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def _contact_state(state: Any) -> ZoneState:
     """Binary contact: off=closed, on=open; missing/unknown always unsafe."""
-    if state is None:
-        return ZoneState.UNAVAILABLE
-    value = getattr(state, "state", None)
-    if value == "off":
-        return ZoneState.CLOSED
-    if value == "on":
-        return ZoneState.OPEN
-    return ZoneState.UNAVAILABLE
+    return contact_state_from_raw(getattr(state, "state", None))
 
 
 class AdaptiveAlarmController:

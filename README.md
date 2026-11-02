@@ -1,4 +1,4 @@
-# Adaptive Alarm — v0.6.0-alpha
+# Adaptive Alarm — v0.8.0-alpha
 
 Configurable Home Assistant intruder-alarm engine, with HACS support. **The alarm and siren remain simulated**, and supports explicitly opted-in **real deterrent lighting** and **Home Assistant push notifications**. Sirens and locking hardware are still inert.
 
@@ -15,7 +15,7 @@ The integration respects existing rules and frozen sessions from v0.3.x and v0.4
 
 - **Mandatory contacts**: ALL must be closed.
 - **Mandatory alternative groups**: ALL groups must be satisfied; within each group, at least ONE contact must be closed. The existing setup migrates to mandatory entry contact + optional required lock + OR group Sala + OR group Bagno.
-- **Optional contacts**: they never block arming. Contacts closed at the end of the exit countdown become protected; contacts open/unavailable at the deadline stay excluded for the entire session, even if they later close.
+- **Optional contacts**: they never block arming. Contacts CLOSED when the countdown ends become protected. Contacts already OPEN stay excluded for that session. Contacts UNKNOWN/UNAVAILABLE become Pending and are enrolled if their first known state is CLOSED; otherwise they are excluded.
 - **Lock**: optional entity; if configured, it must be locked.
 
 Exit delay defaults to 60 s. If positive, requirements are checked only at the deadline. With delay 0 they are checked immediately. The alarm is not armed during the countdown. Protected opening triggers a **simulated** alarm.
@@ -82,8 +82,8 @@ All notification targets and lighting outputs default to disabled on existing in
 - The **mandatory contacts** configuration form now also shows **every configured required alternative group** and its member contacts, using Home Assistant friendly names where available. This summary is read-only: use the separate group editor to change memberships. Do **not** list group contacts twice.
 - Home Assistant push messages for **vibration prealerts** now name the protected physical contact (e.g. **Finestra Sala**) and the reporting vibration source (e.g. **Vibrazione Sala**), rather than showing raw `binary_sensor.*` IDs when a friendly name exists.
 - **Simulated trigger notifications identify the cause**: opening of a protected contact, confirmed repeated vibration from a particular sensor and linked window, or manual test. Source IDs are preserved internally for diagnostics; only display text changes.
-- **Offline contact faults** now also send phone notifications when external notifications are enabled. The offline recovery option **notify** means *report a recovered-but-open protected contact without triggering*, not "configure phone push". **trigger** means *raise simulated alarm if a protected contact returns online already open*. Ordinary `closed → open` on a protected contact still triggers regardless of this option.
-- Timing fields have visible numeric inputs, with explanations for debounce, the hit confirmation window, the 2-or-3 threshold, and the offline-return policy. Recovery choices are localized in IT/EN while their stored identifiers remain unchanged.
+- **Historical v0.6.1 behavior (retired):** the old offline recovery choice `notify` vs `trigger` no longer exists. Since v0.7.0 a protected sensor returning OPEN always triggers a simulated alarm, even after restart.
+- Timing fields have numeric inputs for debounce, confirmation window and the 2-or-3 threshold. Offline recovery is automatic, not a user-selectable option.
 - No physical siren, switch, lock, RF or MQTT actions are added; lighting and push remain opt-in as in v0.6.0.
 
 ## v0.6.2 — delayed light-state acknowledgement bug fix
@@ -152,3 +152,30 @@ A restored protected contact that is already OPEN before the HA listener is
 registered is detected by a post-start reconciliation and notified. Periodic
 reconciliation also prevents lost state-change events from silently leaving
 a protected zone open. Physical siren remains **inert**.
+
+## v0.8.0 — unified group editor and Health diagnostics
+
+Open **Configure → Required contacts and groups** to see existing groups in a single
+native Home Assistant menu and manage required contacts, add groups, edit selected
+groups (pre-filled current members) or delete them. Group controls have been
+removed from the top-level menu. Changes are blocked while arming or armed.
+
+Adaptive Alarm Health values:
+- `ready`: disarmed; minimum requirements met.
+- `not_ready`: disarmed; minimum requirements not met.
+- `ok`: armed and all protected contact states are closed.
+- `degraded`: armed, but at least one protected contact is not currently
+  readable/closed. It does not drop monitoring or impose a fixed restart delay.
+- `triggered`: simulated alarm triggered.
+- `critical`: internal saved-session/configuration fault.
+
+After restarting Home Assistant or Zigbee2MQTT, `degraded` can be normal for
+a short time while protected sensors report `unknown` or `unavailable`.
+Check the `protected_zone_problem_states` Health attribute for each affected
+contact (`unknown`, `unavailable`, `missing`, `open`, `unexpected`). The attributes
+`protected_zones_unreadable`, `protected_zones_open` and `pending_zones` provide
+additional context. Pending contacts do not themselves cause `degraded`.
+
+Both `unknown` and `unavailable` still count as unreadable in the alarm logic.
+No siren, light, notification, threshold or session-policy behavior was changed
+in this release.
