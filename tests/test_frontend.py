@@ -24,6 +24,9 @@ class FrontendTests(unittest.TestCase):
         self.assertIn('excluded_zones', card)
         self.assertIn('siren_entity', card)
         self.assertIn('textContent', card)
+        self.assertIn(".alarm-state-icon.is-triggered", card)
+        self.assertIn("prefers-reduced-motion", card)
+        self.assertNotIn(".alarm-state-icon.is-armed", card)
         self.assertNotIn('callService(', card)
 
     def test_no_virtual_siren_remains(self):

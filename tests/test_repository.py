@@ -18,6 +18,28 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue((DOMAIN / "alarm_control_panel.py").is_file())
         self.assertTrue((DOMAIN / "engine" / "runtime.py").is_file())
 
+    def test_hacs_submission_structure_and_strict_actions(self):
+        hacs = json.loads((ROOT / "hacs.json").read_text())
+        self.assertEqual(hacs["name"], "Adaptive Alarm")
+        self.assertTrue(hacs.get("render_readme"))
+        self.assertTrue((ROOT / "LICENSE").is_file())
+        self.assertTrue((DOMAIN / "brand" / "icon.png").is_file())
+        self.assertTrue((ROOT / "CONTRIBUTING.md").is_file())
+        self.assertTrue((ROOT / "SECURITY.md").is_file())
+        self.assertTrue((ROOT / "docs" / "HACS_PUBLICATION.md").is_file())
+        integrations = [p.name for p in (ROOT / "custom_components").iterdir()
+                        if p.is_dir()]
+        self.assertEqual(integrations, ["adaptive_alarm"])
+        validator = (ROOT / ".github" / "workflows" / "validate.yml").read_text()
+        self.assertIn("hacs/action@main", validator)
+        self.assertIn("home-assistant/actions/hassfest", validator)
+        self.assertNotIn("ignore:", validator)
+        publisher = (ROOT / ".github" / "workflows" / "release.yml").read_text()
+        self.assertIn("workflow_run:", publisher)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", publisher)
+        self.assertIn("python -m unittest discover -s tests -v", publisher)
+        self.assertIn('gh release create "v', publisher)
+
     def test_translations_load(self):
         for locale in ("en", "it"):
             translation = json.loads((DOMAIN / "translations" / f"{locale}.json").read_text())
@@ -69,7 +91,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_physical_siren_output_opt_in(self):
         manifest = json.loads((DOMAIN / "manifest.json").read_text())
-        self.assertEqual(manifest["version"], "1.0.2")
+        self.assertEqual(manifest["version"], "1.0.3")
         panel = (DOMAIN / "alarm_control_panel.py").read_text()
         controller = (DOMAIN / "controller.py").read_text()
         self.assertIn('"siren_enabled": self.controller.siren_output_enabled', panel)

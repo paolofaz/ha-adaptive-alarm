@@ -9,6 +9,7 @@ class FakeElement {
   set textContent(value){this._text=String(value);this.children=[];}
   get textContent(){return this._text+this.children.map(c=>c.textContent).join("");}
   appendChild(el){this.children.push(el);return el;}
+  setAttribute(name,value){this.attributes??={};this.attributes[name]=String(value);}
   replaceChildren(...nodes){this.children=nodes;}
   addEventListener(name,fn){this.listeners[name]=fn;}
   attachShadow(){this.shadowRoot=new FakeElement("shadow");return this.shadowRoot;}
@@ -56,10 +57,34 @@ for(const text of ["Antifurto","Inserito","Finestra Sala","Persiana Sala",
   "unavailable","Sirena"]){
   assert.ok(rendered.includes(text), "Missing: "+text);
 }
+const stateIcon=card.shadowRoot.children[1].children[0].children[1].children[0];
+assert.equal(stateIcon.tagName,"ha-icon");
+assert.equal(stateIcon.attributes.icon,"mdi:shield-lock");
+assert.ok(!stateIcon.className.includes("is-triggered"));
+for(const [state,expectedIcon,animated] of [
+  ["disarmed","mdi:shield-off",false],
+  ["arming","mdi:shield-sync",false],
+  ["armed_away","mdi:shield-lock",false],
+  ["triggered","mdi:shield-alert",true],
+]){
+  card.hass={
+    states:{...card._hass.states,
+      "alarm_control_panel.adaptive_alarm":{
+        ...card._hass.states["alarm_control_panel.adaptive_alarm"],state
+      }},
+  };
+  const icon=card.shadowRoot.children[1].children[0].children[1].children[0];
+  assert.equal(icon.attributes.icon,expectedIcon);
+  assert.equal(icon.className.includes("is-triggered"),animated);
+}
+const style=card.shadowRoot.children[0].textContent;
+assert.ok(style.includes(".alarm-state-icon.is-triggered"));
+assert.ok(style.includes("@media (prefers-reduced-motion:reduce)"));
+assert.ok(!style.includes(".alarm-state-icon.armed"));
 assert.equal(window.customCards.length,1);
 const second=new Card();
 second.setConfig({entity:"alarm_control_panel.adaptive_alarm"});
 second.hass=card._hass;
-assert.ok(second.shadowRoot.textContent.includes("Inserito"));
+assert.ok(second.shadowRoot.textContent.includes("ALLARME SCATTATO"));
 assert.throws(()=>second.setConfig({entity:"switch.unsafe"}), /alarm_control_panel/);
 console.log("Adaptive Alarm Lovelace card: runtime and health rendering OK");

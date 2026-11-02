@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.3 — HACS submission preparation
+
+- Lovelace card: stable icon when disarmed, arming or armed; flashes only in `triggered`
+- Honors reduced-motion accessibility preferences
+- Removes ignored HACS Action checks and keeps hassfest validation mandatory
+- Defers GitHub Releases until the validation workflow and regression tests pass
+- Adds maintainer documentation, issue template and HACS submission checklist
+- Alarm engine, HomeKit state machine and real siren output unchanged
+
 ## v1.0.2 — final stable
 
 - Correzione sirena allo scatto rilevato durante il ripristino di `armed_away`
