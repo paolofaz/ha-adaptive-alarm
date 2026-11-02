@@ -29,6 +29,80 @@ def armed(**kwargs):
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_trigger_returns_armed_on_timer_preserving_protected_session(self):
+        alarm = armed()
+        episode = alarm.session.identifier
+        alarm.observed("entry", C, O, now=200)
+        self.assertEqual(alarm.phase, Phase.TRIGGERED)
+        self.assertEqual(alarm.triggered_until, 500)
+        self.assertEqual(alarm.tick(snapshot(entry=O), locked=True, now=499), [])
+        self.assertEqual(alarm.phase, Phase.TRIGGERED)
+        self.assertEqual(
+            alarm.tick(snapshot(entry=O), locked=True, now=500),
+            [{"type": "trigger_timeout_rearmed"}],
+        )
+        self.assertEqual(alarm.phase, Phase.ARMED_AWAY)
+        self.assertEqual(alarm.session.identifier, episode)
+        self.assertIn("entry", alarm.session.protected_zones)
+        self.assertEqual(alarm.reconcile(snapshot(entry=O), now=501), [])
+        self.assertEqual(alarm.observed("entry", O, O, now=502), [])
+        alarm.observed("entry", O, C, now=503)
+        self.assertEqual(alarm.observed("entry", C, O, now=504), [
+            {"type": "triggered", "cause": "entry"}
+        ])
+
+    def test_trigger_timer_disarm_cancels_and_does_not_rearm(self):
+        alarm = armed()
+        alarm.trigger("manual_test", now=200)
+        self.assertEqual(alarm.disarm(), [{"type": "disarmed"}])
+        self.assertIsNone(alarm.triggered_until)
+        self.assertEqual(alarm.tick(snapshot(), locked=True, now=1000), [])
+        self.assertEqual(alarm.phase, Phase.DISARMED)
+
+    def test_trigger_timer_restart_keeps_deadline_and_held_open(self):
+        alarm = armed()
+        alarm.observed("entry", C, O, now=200)
+        restored = AlarmMachine(PATHS, ZONES)
+        self.assertEqual(
+            restored.restore(alarm.snapshot()),
+            [{"type": "triggered_restored"}],
+        )
+        self.assertEqual(restored.triggered_until, 500)
+        self.assertEqual(restored.tick(snapshot(entry=O), locked=True, now=500), [
+            {"type": "trigger_timeout_rearmed"}
+        ])
+        self.assertEqual(restored.reconcile(snapshot(entry=O), now=501), [])
+        roundtrip = AlarmMachine(PATHS, ZONES)
+        roundtrip.restore(restored.snapshot())
+        self.assertEqual(roundtrip.reconcile(snapshot(entry=O), now=502), [])
+        self.assertEqual(roundtrip.phase, Phase.ARMED_AWAY)
+
+    def test_legacy_trigger_snapshot_starts_new_timer_on_first_tick(self):
+        alarm = armed()
+        alarm.trigger("manual_test")
+        snap = alarm.snapshot()
+        snap.pop("triggered_until")
+        snap.pop("trigger_cause")
+        snap.pop("held_open_zones")
+        restored = AlarmMachine(PATHS, ZONES)
+        restored.restore(snap)
+        self.assertIsNone(restored.triggered_until)
+        self.assertEqual(restored.tick(snapshot(), locked=True, now=1000), [])
+        self.assertEqual(restored.triggered_until, 1300)
+        self.assertEqual(restored.phase, Phase.TRIGGERED)
+
+    def test_pending_zones_still_enroll_after_timeout(self):
+        alarm = armed(studio=U)
+        alarm.trigger("manual_test", now=300)
+        self.assertEqual(alarm.tick(snapshot(studio=C), locked=True, now=600), [
+            {"type": "trigger_timeout_rearmed"}
+        ])
+        self.assertEqual(alarm.reconcile(snapshot(studio=C), now=601), [
+            {"type": "zone_enrolled", "zone": "studio"}
+        ])
+        self.assertIn("studio", alarm.session.protected_zones)
+
+
     def test_raw_unknown_is_unreadable_and_does_not_demote_protected(self):
         self.assertEqual(contact_state_from_raw("off"), C)
         self.assertEqual(contact_state_from_raw("on"), O)

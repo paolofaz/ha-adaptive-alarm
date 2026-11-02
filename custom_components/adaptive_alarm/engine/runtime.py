@@ -32,9 +32,15 @@ class AlarmMachine:
 
     paths: MinimumPaths | ProtectionRules
     zones: frozenset[str]
+    trigger_duration: int = 300
     phase: Phase = Phase.DISARMED
     session: Session | None = None
     arming_until: float | None = None
+    triggered_until: float | None = None
+    trigger_cause: str | None = None
+    # Suppress only contacts already open during the previous trigger;
+    # they must be observed CLOSED again before a new opening can trigger.
+    held_open_zones: set[str] = field(default_factory=set)
     fault: str = ""
     vibration_hits: list[tuple[float, str]] = field(default_factory=list)
     vibration_last: dict[str, float] = field(default_factory=dict)
@@ -44,6 +50,8 @@ class AlarmMachine:
     deterrent_requested: bool = False
 
     def __post_init__(self) -> None:
+        if not 30 <= self.trigger_duration <= 3600:
+            raise ValueError("Trigger duration must be between 30 and 3600 seconds")
         required = (
             set(self.paths.known_contacts)
             if isinstance(self.paths, ProtectionRules)
@@ -77,6 +85,9 @@ class AlarmMachine:
                 return [{"type": "arm_rejected", "problems": list(eligibility.problems)}]
         self.fault = ""
         self.deterrent_requested = False
+        self.triggered_until = None
+        self.trigger_cause = None
+        self.held_open_zones.clear()
         self.phase = Phase.ARMING
         self.arming_until = now + delay
         self._clear_vibration()
@@ -117,6 +128,25 @@ class AlarmMachine:
                         "pending": sorted(self.session.pending_zones),
                         "excluded": sorted(self.session.excluded_zones),
                     })
+        if self.phase == Phase.TRIGGERED:
+            if self.triggered_until is None:
+                # Migrated v0.9.x triggered sessions have no saved deadline.
+                # Begin one full period on the first tick after upgrade.
+                self.triggered_until = now + self.trigger_duration
+            elif now >= self.triggered_until:
+                self.phase = Phase.ARMED_AWAY
+                self.triggered_until = None
+                self.trigger_cause = None
+                # A contact already open at expiry must not cause an
+                # infinite TRIGGERED -> ARMED -> TRIGGERED loop.
+                if self.session is not None:
+                    for zone in self.session.protected_zones:
+                        if states.get(zone) == ZoneState.OPEN:
+                            self.held_open_zones.add(zone)
+                    for zone in tuple(self.held_open_zones):
+                        if states.get(zone) == ZoneState.CLOSED:
+                            self.held_open_zones.discard(zone)
+                events.append({"type": "trigger_timeout_rearmed"})
         self._expire_vibrations(now, events, window=vibration_window)
         return events
 
@@ -132,6 +162,10 @@ class AlarmMachine:
         it permanently (exactly like contacts already OPEN at commit).
         """
         if zone not in self.zones or self.phase != Phase.ARMED_AWAY or self.session is None:
+            return []
+        if zone in self.held_open_zones:
+            if current == ZoneState.CLOSED:
+                self.held_open_zones.discard(zone)
             return []
         if zone in self.session.pending_zones:
             if current == ZoneState.UNAVAILABLE:
@@ -154,7 +188,7 @@ class AlarmMachine:
             recovery_policy=recovery_policy,
         )
         if action == EventAction.TRIGGER:
-            return self.trigger(zone)
+            return self.trigger(zone, now=now)
         if action == EventAction.CRITICAL_NOTICE:
             return [{"type": "zone_fault", "zone": zone, "state": current.value}]
         return []
@@ -175,16 +209,27 @@ class AlarmMachine:
             if state != ZoneState.UNAVAILABLE:
                 events.extend(self.observed(zone, ZoneState.UNAVAILABLE, state, now=now))
         for zone in sorted(self.session.protected_zones):
-            if states.get(zone, ZoneState.UNAVAILABLE) == ZoneState.OPEN:
-                events.extend(self.trigger(zone))
+            current = states.get(zone, ZoneState.UNAVAILABLE)
+            if zone in self.held_open_zones:
+                if current == ZoneState.CLOSED:
+                    self.held_open_zones.discard(zone)
+                continue
+            if current == ZoneState.OPEN:
+                events.extend(self.trigger(zone, now=now))
                 break
         return events
 
-    def trigger(self, cause: str) -> list[dict[str, Any]]:
-        """Trigger once per episode and never activate a physical output."""
+    def trigger(self, cause: str, *, now: float | None = None) -> list[dict[str, Any]]:
+        """Trigger once; keep a wall-clock deadline without actuating sirens."""
         if self.phase != Phase.ARMED_AWAY:
             return []
         self.phase = Phase.TRIGGERED
+        self.trigger_cause = cause
+        self.triggered_until = (
+            now + self.trigger_duration if now is not None else None
+        )
+        if self.session is not None and cause in self.session.protected_zones:
+            self.held_open_zones.add(cause)
         self._clear_vibration()
         return [{"type": "triggered", "cause": cause}]
 
@@ -195,6 +240,9 @@ class AlarmMachine:
         self.phase = Phase.DISARMED
         self.session = None
         self.arming_until = None
+        self.triggered_until = None
+        self.trigger_cause = None
+        self.held_open_zones.clear()
         self.fault = ""
         self.deterrent_requested = False
         self._clear_vibration()
@@ -236,7 +284,7 @@ class AlarmMachine:
                 "threshold": threshold,
             })
         elif n >= threshold:
-            events.extend(self.trigger(f"vibration:{zone}"))
+            events.extend(self.trigger(f"vibration:{zone}", now=now))
         else:
             events.append({
                 "type": "vibration_progress",
@@ -274,6 +322,9 @@ class AlarmMachine:
                 "initial_routes": list(self.session.initial_routes),
             },
             "arming_until": self.arming_until,
+            "triggered_until": self.triggered_until,
+            "trigger_cause": self.trigger_cause,
+            "held_open_zones": sorted(self.held_open_zones),
             "fault": self.fault,
             "deterrent_requested": self.deterrent_requested,
         }
@@ -344,11 +395,23 @@ class AlarmMachine:
                         initial_routes=validity.routes,
                         pending_zones=session.pending_zones,
                     )
+            held = set(data.get("held_open_zones", []))
+            if session is not None and not held.issubset(session.protected_zones):
+                raise ValueError("Invalid held-open zone catalogue")
+            deadline = data.get("triggered_until") if phase == Phase.TRIGGERED else None
+            if deadline is not None and not isinstance(deadline, (float, int)):
+                raise ValueError("Invalid trigger deadline")
             if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) and session is None:
                 raise ValueError("Active state without a session")
             if phase in (Phase.DISARMED, Phase.ARMING) and session is not None:
                 raise ValueError("Unexpected stored session")
             self.session = session
+            self.held_open_zones = held if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) else set()
+            self.triggered_until = float(deadline) if deadline is not None else None
+            self.trigger_cause = (
+                str(data["trigger_cause"]) if phase == Phase.TRIGGERED
+                and data.get("trigger_cause") else None
+            )
             self.deterrent_requested = (
                 bool(data.get("deterrent_requested", False))
                 if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) else False
@@ -373,5 +436,8 @@ class AlarmMachine:
             self.deterrent_requested = False
             self.session = None
             self.arming_until = None
+            self.triggered_until = None
+            self.trigger_cause = None
+            self.held_open_zones.clear()
             self.fault = f"Invalid stored session: {exc}"
             return [{"type": "startup_fault", "reason": self.fault}]

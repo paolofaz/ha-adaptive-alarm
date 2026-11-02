@@ -61,3 +61,15 @@ DEFAULT_DETERRENT_OFF_DELAY = 120
 CONF_NOTIFY_ENABLED = "notifications_enabled"
 CONF_NOTIFY_ENTITIES = "notification_entities"
 CONF_NOTIFY_SERVICES = "notification_services"
+
+# Opt-in notification events use the existing shared recipient configuration.
+CONF_NOTIFY_ON_ARMED = "notify_on_armed"
+CONF_NOTIFY_ON_DISARMED = "notify_on_disarmed"
+CONF_NOTIFY_ON_TRIGGERED = "notify_on_triggered"
+CONF_NOTIFY_ON_REJECTED = "notify_on_rejected"
+CONF_NOTIFY_ON_PREALERT = "notify_on_prealert"
+CONF_NOTIFY_ON_FAULT = "notify_on_fault"
+
+# Duration of the triggered phase, NOT a physical siren activation.
+CONF_TRIGGER_DURATION = "trigger_duration"
+DEFAULT_TRIGGER_DURATION = 300

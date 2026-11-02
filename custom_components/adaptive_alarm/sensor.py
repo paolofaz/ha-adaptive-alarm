@@ -88,6 +88,9 @@ class AdaptiveDiagnostic(SensorEntity):
             return {
                 "fault": self.controller.machine.fault or None,
                 "simulation_only": True,
+                "triggered_until": self.controller.machine.triggered_until,
+                "trigger_cause": self.controller.machine.trigger_cause,
+                "held_open_zones": sorted(self.controller.machine.held_open_zones),
                 "siren_configured": bool(self.controller.siren_entity),
                 "siren_enabled": False,
                 "deterrent_enabled": self.controller.deterrent_enabled,
