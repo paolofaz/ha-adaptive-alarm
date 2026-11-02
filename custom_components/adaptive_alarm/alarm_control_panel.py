@@ -48,7 +48,7 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
             "identifiers": {(DOMAIN, controller.entry.entry_id)},
             "name": "Adaptive Alarm",
             "manufacturer": "Adaptive Alarm (community)",
-            "model": "Dry-run preview",
+            "model": "Beta — siren disabled",
         }
 
     async def async_added_to_hass(self) -> None:
@@ -69,6 +69,8 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
             "siren_configured": bool(self.controller.siren_entity),
             "siren_enabled": False,
             "fault": self.controller.machine.fault or None,
+            "triggered_until": self.controller.machine.triggered_until,
+            "trigger_cause": self.controller.machine.trigger_cause,
             "minimum_routes": list(session.initial_routes) if session else [],
             "protected_zones": sorted(session.protected_zones) if session else [],
             "pending_zones": sorted(session.pending_zones) if session else [],

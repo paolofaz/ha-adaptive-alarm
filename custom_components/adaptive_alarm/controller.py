@@ -28,6 +28,9 @@ from .const import (
     CONF_DETERRENT_ENABLED, CONF_DETERRENT_LIGHTS,
     CONF_DETERRENT_AUTO_OFF, CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY,
     CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
+    CONF_NOTIFY_ON_ARMED, CONF_NOTIFY_ON_DISARMED, CONF_NOTIFY_ON_TRIGGERED,
+    CONF_NOTIFY_ON_REJECTED, CONF_NOTIFY_ON_PREALERT, CONF_NOTIFY_ON_FAULT,
+    CONF_TRIGGER_DURATION, DEFAULT_TRIGGER_DURATION,
     CONF_WINDOW_BATH, CONF_WINDOW_LIVING,
     VIBRATION_ASSIGNMENTS,
     DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
@@ -37,7 +40,9 @@ from .engine import ZoneState, evaluate_eligibility
 from .engine.model import contact_state_from_raw
 from .engine.configurable import rules_for_config
 from .engine.runtime import AlarmMachine, Phase
-from .engine.presentation import prealert_text, trigger_text, fault_text
+from .engine.presentation import (
+    prealert_text, trigger_text, fault_text, arm_rejected_text, armed_text,
+)
 from .engine.light_expiry import (
     LIGHT_ACK_TIMEOUT, LightLease, PendingLight, confirm_transition, may_turn_off,
 )
@@ -82,6 +87,19 @@ class AdaptiveAlarmController:
             entry.options.get(CONF_NOTIFY_SERVICES, []),
         )
 
+        self.notify_events = {
+            "armed": entry.options.get(CONF_NOTIFY_ON_ARMED, False) is True,
+            "disarmed": entry.options.get(CONF_NOTIFY_ON_DISARMED, False) is True,
+            "triggered": entry.options.get(CONF_NOTIFY_ON_TRIGGERED, True) is True,
+            "arm_rejected": entry.options.get(CONF_NOTIFY_ON_REJECTED, True) is True,
+            "vibration_prealert": entry.options.get(CONF_NOTIFY_ON_PREALERT, True) is True,
+            "zone_fault": entry.options.get(CONF_NOTIFY_ON_FAULT, True) is True,
+        }
+        self.trigger_duration = int(entry.options.get(
+            CONF_TRIGGER_DURATION, DEFAULT_TRIGGER_DURATION
+        ))
+        if not 30 <= self.trigger_duration <= 3600:
+            raise ValueError("Invalid trigger duration")
         self.zones = self.paths.known_contacts
         if "vibration_links" in entry.options:
             links = (
@@ -98,7 +116,9 @@ class AdaptiveAlarmController:
         self.vibration_zone_map = validated_vibration_links(links, self.zones)
         self.vibrations = frozenset(self.vibration_zone_map)
         self.storm_entity = entry.options.get(CONF_STORM_SENSOR)
-        self.machine = AlarmMachine(self.paths, self.zones)
+        self.machine = AlarmMachine(
+            self.paths, self.zones, trigger_duration=self.trigger_duration
+        )
         self._store: Store[dict[str, Any]] = Store(
             hass, 1, f"{DOMAIN}.{entry.entry_id}"
         )
@@ -354,7 +374,20 @@ class AdaptiveAlarmController:
         """Send understandable, reason-specific alerts to selected phones."""
         for event in events:
             kind = event.get("type")
-            if kind == "vibration_prealert":
+            if kind in self.notify_events and not self.notify_events[kind]:
+                continue
+            if kind == "armed":
+                await self._notify_text(armed_text(
+                    event.get("protected", []), event.get("excluded", []),
+                    event.get("pending", []),
+                ))
+            elif kind == "disarmed":
+                await self._notify_text("ALLARME DISINSERITO.")
+            elif kind == "arm_rejected":
+                await self._notify_text(arm_rejected_text(
+                    event.get("problems", []), self.paths, self._friendly_name
+                ))
+            elif kind == "vibration_prealert":
                 await self._notify_text(prealert_text(
                     event["zone"], event["protected_contact"],
                     self._friendly_name,
@@ -365,9 +398,7 @@ class AdaptiveAlarmController:
                     self.vibration_zone_map, self._friendly_name,
                 ))
             elif kind == "zone_fault":
-                # The policy named "notify" means no auto-trigger on a
-                # recovered-but-open contact; now also notify the phone
-                # when a notification destination is configured.
+                # Legacy recovery policy no longer applies.
                 await self._notify_text(fault_text(
                     event["zone"], event["state"], self._friendly_name,
                 ))
@@ -510,7 +541,10 @@ class AdaptiveAlarmController:
         notices: list[str] = []
         events: list[dict[str, Any]] = []
         async with self._guard:
-            if self.machine.phase == Phase.TRIGGERED:
+            if (
+                self.machine.phase == Phase.TRIGGERED
+                or self.machine.deterrent_hold_after_trigger
+            ):
                 return
             now = time.time()
             session = self.machine.session
@@ -602,17 +636,24 @@ class AdaptiveAlarmController:
         await self._expire_deterrent_lights()
 
     async def async_arm(self) -> list[dict[str, Any]]:
-        return await self._apply(
+        events = await self._apply(
             lambda: self.machine.arm(
                 self._states(), locked=self._locked(), now=time.time(),
                 delay=int(self.entry.options.get(CONF_ARMING_DELAY, DEFAULT_ARMING_DELAY)),
             )
         )
+        # Essential for zero-delay arming; delayed arming is notified on tick.
+        await self._notify_events(events)
+        return events
 
     async def async_disarm(self) -> list[dict[str, Any]]:
-        return await self._apply(self.machine.disarm)
+        events = await self._apply(self.machine.disarm)
+        await self._notify_events(events)
+        return events
 
     async def async_trigger(self) -> list[dict[str, Any]]:
-        events = await self._apply(lambda: self.machine.trigger("manual_test"))
+        events = await self._apply(
+            lambda: self.machine.trigger("manual_test", now=time.time())
+        )
         await self._notify_events(events)
         return events

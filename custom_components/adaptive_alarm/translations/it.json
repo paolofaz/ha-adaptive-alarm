@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Adaptive Alarm — nuova configurazione",
-        "description": "Inserisci soltanto il nome dell'integrazione. Dopo la creazione, apri Configura per scegliere contatti obbligatori, gruppi alternativi, sensori opzionali, vibrazioni e sirena inattiva. Nessun comando fisico verrà inviato.",
+        "description": "Crea Adaptive Alarm. Successivamente potrai configurare contatti obbligatori, gruppi alternativi, sensori opzionali, vibrazioni, notifiche e tempi. La sirena fisica è disabilitata.",
         "data": {
           "name": "Nome dell'integrazione"
         }
@@ -27,19 +27,21 @@
           "vibrations": "Sensori di vibrazione (numero libero)",
           "deterrent": "Luci deterrenti al primo colpo (opzionali)",
           "notifications": "Notifiche sul telefono (App HA, Telegram, altri)",
+          "notification_events": "Eventi da notificare",
           "notification_test": "Invia una notifica di prova",
-          "siren": "Sirena opzionale (INATTIVA)",
+          "siren": "Sirena (uscita disabilitata)",
           "timing": "Tempi inserimento e conferma vibrazioni"
         },
-        "description": "Scegli una sezione. La sirena resta inattiva. Le luci deterrenti possono essere accese realmente soltanto dopo attivazione esplicita nelle loro opzioni.",
+        "description": "Configura protezione, vibrazioni, notifiche e tempi. La sirena fisica è disabilitata in questa beta; le luci deterrenti sono comandate solo se abilitate.",
         "menu_option_descriptions": {
           "protection": "Visualizza e gestisci i contatti e tutti i gruppi nello stesso menu.",
           "optional": "Aggiungi contatti che non impediscono l'inserimento.",
           "vibrations": "Aggiungi, modifica o rimuovi un numero qualsiasi di sensori, ognuno con il contatto fisico associato.",
           "deterrent": "Per impostazione predefinita OFF: accensione reale solo dopo consenso esplicito.",
           "notifications": "Scegli destinatari notify di Home Assistant, attivazione volontaria. Telegram Bot usa le entità notify.",
+          "notification_events": "Attiva o disattiva ogni evento indipendentemente. I destinatari restano quelli scelti in Notifiche sul telefono.",
           "notification_test": "Invia soltanto un messaggio ai destinatari configurati, senza avviare l'allarme.",
-          "siren": "Selezione facoltativa, senza comandare la sirena.",
+          "siren": "Dispositivo sirena configurabile; uscita fisica disabilitata.",
           "timing": "Imposta ritardo di inserimento, filtro colpi, finestra e soglia 2 o 3. La protezione dal ritorno online aperto è automatica."
         }
       },
@@ -72,7 +74,7 @@
       },
       "optional": {
         "title": "Contatti opzionali",
-        "description": "I contatti opzionali non impediscono l'inserimento. Se chiusi diventano protetti. Se unknown/unavailable entrano in attesa: primo ritorno chiuso = protetti, primo ritorno aperto = esclusi. Quelli già aperti restano esclusi per la sessione.",
+        "description": "I contatti opzionali non impediscono l'inserimento. Quelli chiusi vengono protetti; quelli inizialmente non disponibili possono entrare in protezione al primo ritorno chiuso. I contatti aperti restano esclusi per la sessione.",
         "data": {
           "optional": "Altri contatti monitorati (non obbligatori)"
         }
@@ -87,26 +89,28 @@
         }
       },
       "siren": {
-        "title": "Sirena opzionale (INATTIVA)",
-        "description": "Memorizza una sirena o uno switch per una release futura. NON sarà inviato alcun comando, neppure allo scatto simulato. Durante le prove lascialo vuoto.",
+        "title": "Sirena (uscita disabilitata)",
+        "description": "Seleziona il dispositivo da usare in futuro. Nella beta l'uscita sirena resta disabilitata: Adaptive Alarm non invia comandi di accensione né spegnimento alla sirena.",
         "data": {
-          "siren": "Sirena facoltativa (solo configurazione, MAI attivata)"
+          "siren": "Dispositivo sirena (non comandato)"
         }
       },
       "timing": {
-        "title": "Tempi inserimento e conferma vibrazioni",
-        "description": "I colpi sono indipendenti per sensore: 1 colpo genera il preallarme; 2 o 3 sullo STESSO sensore entro la finestra generano l'allarme simulato.\\n\\n**Protezione dei sensori offline (automatica):** un contatto protetto rimane protetto anche se Zigbee2MQTT o Home Assistant lo rende temporaneamente non disponibile, incluso dopo riavvio. Se torna CHIUSO la sessione continua; se torna APERTO scatta l'allarme simulato. Contatti non disponibili all'inserimento rimangono IN ATTESA: al primo ritorno CHIUSI vengono protetti; se APERTI vengono esclusi per l'intera sessione. Contatti obbligatori e gruppi minimi devono essere soddisfatti all'inserimento. Non serve configurare una politica di recupero.",
+        "title": "Tempi dell'allarme e conferma vibrazioni",
+        "description": "Imposta ritardo di uscita e durata dello stato di allarme. Dopo lo scatto, allo scadere del timer torna automaticamente inserito senza perdere i sensori protetti. Configura anche la conferma dei colpi di vibrazione. I sensori offline mantengono la protezione e quelli inizialmente non disponibili restano in attesa.",
         "data": {
           "arming_delay": "Ritardo inserimento (secondi)",
           "vibration_debounce": "Filtro colpi ripetuti (secondi)",
           "vibration_window": "Tempo massimo per confermare i colpi (secondi)",
-          "vibration_threshold": "Colpi dello stesso sensore per l'allarme (2 o 3)"
+          "vibration_threshold": "Colpi dello stesso sensore per l'allarme (2 o 3)",
+          "trigger_duration": "Durata dello stato di allarme (secondi, 30–3600)"
         },
         "data_description": {
           "arming_delay": "Tempo di uscita prima che vengano verificati i contatti obbligatori; 0 = verifica immediata.",
           "vibration_threshold": "2 o 3 colpi validi sullo stesso sensore. La soglia 1 non è consentita.",
           "vibration_debounce": "Secondi minimi tra due segnali dello stesso sensore: quelli più ravvicinati vengono scartati (es. 3 s).",
-          "vibration_window": "Tempo entro cui devono arrivare 2 o 3 colpi validi dello stesso sensore (es. 20 s)."
+          "vibration_window": "Tempo entro cui devono arrivare 2 o 3 colpi validi dello stesso sensore (es. 20 s).",
+          "trigger_duration": "Al termine torna in armed_away senza perdere la sessione. Ritorno automatico anche dopo un riavvio. Non aziona ancora la sirena fisica."
         }
       },
       "vibration_add": {
@@ -181,6 +185,18 @@
         "description": "I dati del gruppo selezionato saranno precompilati nella schermata successiva.",
         "data": {
           "name": "Gruppo da modificare"
+        }
+      },
+      "notification_events": {
+        "title": "Eventi da notificare",
+        "description": "Scegli quali eventi di Adaptive Alarm inviare tramite Home Assistant ai destinatari configurati in «Notifiche sul telefono». Disabilita gli eventi già notificati da Apple Casa per evitare doppioni. Le notifiche native HomeKit restano indipendenti da queste scelte.",
+        "data": {
+          "notify_on_armed": "Inserimento riuscito",
+          "notify_on_disarmed": "Disinserimento",
+          "notify_on_triggered": "Allarme scattato",
+          "notify_on_rejected": "Inserimento rifiutato (con motivi)",
+          "notify_on_prealert": "Preallarme vibrazioni",
+          "notify_on_fault": "Anomalie sensori"
         }
       }
     },

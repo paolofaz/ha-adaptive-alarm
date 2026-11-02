@@ -1,6 +1,6 @@
-# Adaptive Alarm — v0.9.1-alpha
+# Adaptive Alarm — v0.10.0 beta 1
 
-Configurable Home Assistant intruder-alarm engine, with HACS support. **The alarm and siren remain simulated**, and supports explicitly opted-in **real deterrent lighting** and **Home Assistant push notifications**. Sirens and locking hardware are still inert.
+Configurable Home Assistant intruder-alarm engine, with HACS support. **The physical siren remains disabled while the alarm state machine is operational**, and supports explicitly opted-in **real deterrent lighting** and **Home Assistant push notifications**. Sirens and locking hardware are still inert.
 
 ## Install and upgrade
 
@@ -193,3 +193,60 @@ are **never changed or deleted**. Earlier `presence_*` options are safely
 ignored if they remain in stored config; unrelated protection, notifications,
 and deterrent options are preserved. The one `armed_away` mode, protected /
 pending / excluded zones and physical siren inertness are unchanged.
+
+## v0.10.0 beta 1 — HomeKit-first notifications and timed alarm cycle
+
+### HomeKit / iPhone
+
+Keep exposing **only the existing `alarm_control_panel`** from Adaptive Alarm
+through Home Assistant's HomeKit Bridge. No second panel, fake sensor, invented
+HomeKit modes or new HomeKit dependency is required. The panel still supports
+only `armed_away`; there is no night mode. Apple Home can continue handling
+the family's normal armed/disarmed/triggered notifications. No PIN has been
+introduced or changed in this beta.
+
+**Configure → Phone notifications** is still the single source for Home
+Assistant app/Telegram recipient destinations. The new **Configure →
+Notification events** submenu allows separate switches for:
+successful arming, disarming, triggering, rejected arming, vibration prealerts
+and sensor fault events. On existing installations, triggered alerts, prealerts
+and sensor faults keep their previous enabled default. Successful arming and
+disarming default OFF to avoid duplicate Apple Home alerts; rejected arming
+defaults ON (it cannot be reliably represented by HomeKit because the panel
+remains disarmed). The global notifications switch still controls all
+Home Assistant push delivery. HomeKit notifications are independent.
+
+A rejected arming attempt reports the failing mandatory contacts, required OR
+groups (with friendly member names) and configured lock when applicable.
+Immediate zero-delay rejection and delayed rejection are both reported.
+
+### Trigger expiry
+
+**Configure → Timing** has a 30–3600 second triggered duration, default 300
+seconds. When the timer expires, the panel returns from `triggered` to
+`armed_away` without disarming or resetting the Protected/Pending/Excluded
+session. Manual disarming always cancels the timer. The wall-clock deadline is
+saved and restored through HA restarts; sessions stored by previous versions
+without a deadline receive one full fresh period after startup.
+
+Contacts still OPEN at timeout are held until they are next explicitly seen
+CLOSED; only a subsequent new OPEN can trigger again, preventing repeated
+alarms every second. Other sensors and optional Pending enrollment continue
+normally. These held-open contacts **remain protected**, never become
+Excluded. Once triggering occurred, the existing conservative deterrent-light
+automatic OFF stays suspended until manual disarm, even after the timed
+return to armed_away.
+
+### Physical outputs and home automations
+
+**Physical siren remains disabled**: the configured siren/switch is not
+actuated. The timed triggered state is intended to support a future
+separately reviewed siren safety adapter, not itself a real alarm sound.
+Deterrent light opt-in behavior is unchanged.
+
+Keep Shelly LED, household presence alerts, Telegram camera snapshots and
+RF remote support in separate Home Assistant automations. Review RF
+fixed-code replay risk and GPS-dependent automatic disarming before putting
+a physical siren into service. Test this beta alongside the existing
+operational alarm, not as a replacement.
+

@@ -22,6 +22,9 @@ from .const import (
     CONF_DETERRENT_ENABLED, CONF_DETERRENT_LIGHTS,
     CONF_DETERRENT_AUTO_OFF, CONF_DETERRENT_OFF_DELAY, DEFAULT_DETERRENT_OFF_DELAY,
     CONF_NOTIFY_ENABLED, CONF_NOTIFY_ENTITIES, CONF_NOTIFY_SERVICES,
+    CONF_NOTIFY_ON_ARMED, CONF_NOTIFY_ON_DISARMED, CONF_NOTIFY_ON_TRIGGERED,
+    CONF_NOTIFY_ON_REJECTED, CONF_NOTIFY_ON_PREALERT, CONF_NOTIFY_ON_FAULT,
+    CONF_TRIGGER_DURATION, DEFAULT_TRIGGER_DURATION,
     DEFAULT_ARMING_DELAY, DEFAULT_VIBRATION_DEBOUNCE,
     DEFAULT_VIBRATION_PROFILE, DEFAULT_VIBRATION_WINDOW, DEFAULT_NAME, DOMAIN,
     VIBRATION_ASSIGNMENTS,
@@ -38,6 +41,7 @@ OPTIONS_MENU_STEPS = (
     "vibrations",
     "deterrent",
     "notifications",
+    "notification_events",
     "notification_test",
     "siren",
     "timing",
@@ -498,6 +502,31 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             }),
         )
 
+    async def async_step_notification_events(
+        self, user_input: dict[str, Any] | None = None,
+    ):
+        """Independent event preferences; recipient routing stays shared."""
+        opts = self.config_entry.options
+        defaults = {
+            CONF_NOTIFY_ON_ARMED: False,
+            CONF_NOTIFY_ON_DISARMED: False,
+            CONF_NOTIFY_ON_TRIGGERED: True,
+            CONF_NOTIFY_ON_REJECTED: True,
+            CONF_NOTIFY_ON_PREALERT: True,
+            CONF_NOTIFY_ON_FAULT: True,
+        }
+        if user_input is not None:
+            return self._save(other={
+                key: user_input.get(key) is True for key in defaults
+            })
+        return self.async_show_form(
+            step_id="notification_events",
+            data_schema=vol.Schema({
+                vol.Required(key, default=opts.get(key, default)): bool
+                for key, default in defaults.items()
+            }),
+        )
+
     async def async_step_notification_test(
         self, user_input: dict[str, Any] | None = None,
     ):
@@ -560,6 +589,9 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_ARMING_DELAY, default=opts.get(
                     CONF_ARMING_DELAY, DEFAULT_ARMING_DELAY
                 )): vol.All(number(0, 600), vol.Coerce(int)),
+                vol.Required(CONF_TRIGGER_DURATION, default=opts.get(
+                    CONF_TRIGGER_DURATION, DEFAULT_TRIGGER_DURATION
+                )): vol.All(number(30, 3600), vol.Coerce(int)),
                 vol.Required(CONF_VIBRATION_THRESHOLD, default=opts.get(
                     CONF_VIBRATION_THRESHOLD,
                     3 if opts.get(CONF_VIBRATION_PROFILE) in ("cautious", "cross")

@@ -1,4 +1,4 @@
-# Architecture — v0.8.0 (adaptive protection)
+# Architecture — v0.10.0 beta 1 (adaptive protection)
 
 The deterministic engine accepts `ProtectionRules`: a list of mandatory binary contacts, named groups of alternatives, optional contacts, optional lock and inert siren metadata.
 
@@ -27,3 +27,26 @@ Health reports `degraded` while protected contacts are unreadable, including
 observational: it cannot change Protected/Pending/Excluded membership. A
 separate pure helper preserves the raw diagnosis while the security policy
 normalizes unknown and unavailable to the same unreadable domain state.
+
+## v0.10.0 beta — timed trigger lifecycle and external automations
+
+`triggered_until` (UTC epoch seconds), `trigger_cause`,
+`held_open_zones` and `deterrent_hold_after_trigger` are persisted in
+the state-machine snapshot. On triggering, the configured duration gives a
+fixed wall-clock expiry; on timeout, the machine re-enters `armed_away`
+without allocating a new session. Open protected contacts are held until a
+valid CLOSED observation. On contact closure the hold is removed, so the
+next OPEN can trigger. The held-open set is **not** the excluded set.
+Other protected contacts continue being checked and remain protected across
+startup and unknown/unavailable transitions.
+
+A v0.9.1 triggered snapshot missing the deadline starts a new full configured
+duration on the first tick after restart, preserving safety and compatibility.
+
+Notification event gates live exclusively in the HA controller. They affect
+outbound requests, not the state machine's event bus or Apple Home notifications.
+One shared recipient list and global notify opt-in remain in place.
+The HomeKit Bridge consumes the original `alarm_control_panel` unchanged;
+there is still only the `armed_away` arming mode and no integration-level PIN.
+Shelly LED, presence, Telegram photos and any RF handling stay external to
+this engine. The physical siren is inert.
