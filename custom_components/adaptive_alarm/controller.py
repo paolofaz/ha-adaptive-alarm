@@ -684,10 +684,8 @@ class AdaptiveAlarmController:
                     )
                 else:
                     events.append({"type": "deterrent_light_off_requested", "light": entity})
-                    notices.append(
-                        f"Luci deterrenti: richiesta spegnimento per {entity} "
-                        f"dopo {self.deterrent_off_delay} secondi."
-                    )
+                    # Routine cleanup stays on the HA event bus only.
+                    # A successful automatic OFF must not notify per light.
             if events:
                 await self._light_store.async_save({
                     "leases": [v.to_dict() for v in self._light_leases.values()]

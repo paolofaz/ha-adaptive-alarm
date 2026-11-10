@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.7**
+**Home Assistant security integration — v1.0.8**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -85,6 +85,11 @@ The deterrent-light output is distinct from the siren. Choose only safe
 automatic OFF if desired. Safe OFF is suspended after triggering until manual
 disarm and may be skipped if HA cannot verify ownership.
 
+A successful scheduled deterrent-light auto-off produces an internal
+`deterrent_light_off_requested` event, **not a phone notification for each light**.
+Vibration prealerts and genuine safety warnings (failed, skipped or unconfirmed
+light operations) remain notifiable.
+
 In **Phone notifications**, choose the HA Companion app `notify.mobile_app_*`
 service, Telegram Bot `notify` entities or other trusted notify targets.
 In **Notification events**, independently choose which events to send to
@@ -162,7 +167,7 @@ The JS module is served automatically at:
 /adaptive_alarm/adaptive-alarm-card.js
 ```
 
-**JavaScript loading in v1.0.7:** In the normal Home Assistant-managed
+**JavaScript loading in v1.0.8:** In the normal Home Assistant-managed
 **storage** resource mode, the integration registers the JavaScript module
 once as a Lovelace resource (type `module`), allowing the dashboard to
 import it **after Home Assistant has initialized**. It does *not* also
