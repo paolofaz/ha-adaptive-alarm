@@ -229,15 +229,15 @@ class AdaptiveAlarmOptionsFlow(config_entries.OptionsFlow):
             try:
                 group = AlternativeGroup(name=name, contacts=contacts)
                 # A rename may not overwrite another existing group.
-                if editing and any(
+                if any(
                     other.name.casefold() == name.casefold()
-                    and other.name != editing.name
+                    and (not editing or other.name != editing.name)
                     for other in rule.groups
                 ):
                     raise ValueError("Duplicate group name")
-                removed_names = {name.casefold()}
-                if editing:
-                    removed_names.add(editing.name.casefold())
+                removed_names = (
+                    {editing.name.casefold()} if editing else set()
+                )
                 updated_groups = [
                     g for g in rule.groups if g.name.casefold() not in removed_names
                 ] + [group]

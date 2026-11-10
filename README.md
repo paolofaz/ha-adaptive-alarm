@@ -1,6 +1,6 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.8**
+**Home Assistant security integration — v1.0.9**
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -88,7 +88,9 @@ disarm and may be skipped if HA cannot verify ownership.
 A successful scheduled deterrent-light auto-off produces an internal
 `deterrent_light_off_requested` event, **not a phone notification for each light**.
 Vibration prealerts and genuine safety warnings (failed, skipped or unconfirmed
-light operations) remain notifiable.
+light operations) remain notifiable. On Home Assistant restart, stale light
+ownership is cleared; only lights still reported ON after startup stabilization
+produce a single combined manual-check notice.
 
 In **Phone notifications**, choose the HA Companion app `notify.mobile_app_*`
 service, Telegram Bot `notify` entities or other trusted notify targets.
@@ -96,6 +98,17 @@ In **Notification events**, independently choose which events to send to
 those same destinations. Native Apple Casa / HomeKit notifications remain
 independent: you can leave armed/disarmed/triggered OFF in HA to avoid duplicates
 while keeping rejected/prealert/sensor anomalies ON.
+
+**Anti-spam diagnostics (v1.0.9):** temporary `unknown` / `unavailable`
+states of protected contacts and an unlocked/unavailable configured lock do
+not generate immediate messages. A diagnostic must persist for 60 seconds,
+and no such message is sent within the first 120 seconds of starting the
+integration. New faults are bundled for 10 seconds, not repeated while they
+stay unresolved, and consecutive summaries are spaced by at least 5 minutes.
+A corrupted saved alarm session that leaves the integration in `FAULT`
+produces one critical notification after the initial startup grace.
+These rules do **not** delay real contact-opening alarms, vibration prealerts,
+confirmed vibration triggers or physical siren requests.
 
 ### Physical siren — read before enabling
 
@@ -167,7 +180,7 @@ The JS module is served automatically at:
 /adaptive_alarm/adaptive-alarm-card.js
 ```
 
-**JavaScript loading in v1.0.8:** In the normal Home Assistant-managed
+**JavaScript loading in v1.0.9:** In the normal Home Assistant-managed
 **storage** resource mode, the integration registers the JavaScript module
 once as a Lovelace resource (type `module`), allowing the dashboard to
 import it **after Home Assistant has initialized**. It does *not* also

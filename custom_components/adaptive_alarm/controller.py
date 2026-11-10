@@ -44,6 +44,7 @@ from .engine.runtime import AlarmMachine, Phase
 from .engine.presentation import (
     prealert_text, trigger_text, fault_text, arm_rejected_text, armed_text,
 )
+from .engine.diagnostic_notices import DiagnosticNoticeGate
 from .engine.light_expiry import (
     LIGHT_ACK_TIMEOUT, LightLease, PendingLight, confirm_transition, may_turn_off,
 )
@@ -142,6 +143,9 @@ class AdaptiveAlarmController:
         self._guard = asyncio.Lock()
         self._remove_callbacks: list[Any] = []
         self._active_faults: set[str] = set()
+        self._diagnostic_gate = DiagnosticNoticeGate(started_at=time.monotonic())
+        self._startup_fault_reported = False
+        self._unclaimed_lights: tuple[str, ...] = ()
 
     @property
     def signal(self) -> str:
@@ -272,10 +276,16 @@ class AdaptiveAlarmController:
             # After any restart/reload we cannot establish who controls a
             # physical light. Never issue automatic OFF from stale metadata.
             await self._light_store.async_save({"leases": []})
-            await self._notify_text(
-                "Riavvio: spegnimento automatico luci sospeso per sicurezza. "
-                "Controlla e spegni manualmente le luci deterrenti rimaste accese."
-            )
+            # Restart invalidates OFF ownership. Do not push immediately when
+            # Zigbee lights are still restoring their state. Check once after
+            # stabilization, and warn only if a light is confirmed ON.
+            self._unclaimed_lights = tuple(sorted({
+                lease["entity_id"]
+                for lease in old_leases["leases"]
+                if isinstance(lease, dict)
+                and isinstance(lease.get("entity_id"), str)
+                and lease["entity_id"].startswith("light.")
+            }))
             self._events([{"type": "deterrent_lights_restart_unclaimed"}])
         # Interrupted arming must not reappear as arming after another restart.
         if stored is not None and self.machine.snapshot() != stored:
@@ -716,6 +726,70 @@ class AdaptiveAlarmController:
             if events:
                 self._events(events)
 
+
+    async def _notify_persistent_diagnostics(self) -> None:
+        """Report only sustained faults; never gate contact/vibration alarms."""
+        now = time.monotonic()
+        problems: dict[str, str] = {}
+        async with self._guard:
+            phase = self.machine.phase
+            fault = self.machine.fault
+            if phase in (Phase.ARMED_AWAY, Phase.TRIGGERED) and self.machine.session:
+                # OPEN protected contacts are genuine alarm events, not
+                # informational sensor-unavailable notifications.
+                for zone in self.machine.session.protected_zones:
+                    if _contact_state(self.hass.states.get(zone)) == ZoneState.UNAVAILABLE:
+                        problems[zone] = "sensore non disponibile"
+                if self.lock_entity and not self._locked():
+                    state = self.hass.states.get(self.lock_entity)
+                    problems[self.lock_entity] = (
+                        "serratura non disponibile"
+                        if state is None or state.state in ("unknown", "unavailable")
+                        else "serratura non bloccata"
+                    )
+
+        if self.notify_events.get("zone_fault", True):
+            due = self._diagnostic_gate.poll(now=now, problems=problems)
+            if due:
+                details = "; ".join(
+                    f"{self._friendly_name(entity)} ({reason})"
+                    for entity, reason in due.items()
+                )
+                await self._notify_text(
+                    "AVVISO PROTEZIONE: anomalie persistenti: " + details
+                    + ". Verifica i dispositivi."
+                )
+            if (
+                phase == Phase.FAULT
+                and now >= self._diagnostic_gate.startup_deadline
+                and not self._startup_fault_reported
+            ):
+                self._startup_fault_reported = True
+                await self._notify_text(
+                    "ADAPTIVE ALARM NON OPERATIVO: errore di ripristino della "
+                    f"sessione ({fault or 'stato non valido'}). "
+                    "Controlla l'integrazione in Home Assistant."
+                )
+        else:
+            # No backlog if this notification category is disabled.
+            self._diagnostic_gate.poll(now=now, problems={})
+
+        # Stale light ownership is never recovered after a restart. Avoid
+        # sending a misleading message if all previously owned lights are OFF.
+        if self._unclaimed_lights and now >= self._diagnostic_gate.startup_deadline:
+            lights = self._unclaimed_lights
+            self._unclaimed_lights = ()
+            still_on = [
+                entity for entity in lights
+                if self.hass.states.is_state(entity, "on")
+            ]
+            if still_on:
+                await self._notify_text(
+                    "Luci deterrenti dopo il riavvio: spegnimento automatico "
+                    "sospeso; controlla quelle ancora accese: "
+                    + ", ".join(still_on) + "."
+                )
+
     async def async_tick(self) -> None:
         """Handle countdown and prealarm expiry; session zones remain frozen."""
         states = self._states()
@@ -738,6 +812,7 @@ class AdaptiveAlarmController:
         )
         await self._notify_events(events)
         await self._refresh_faults()
+        await self._notify_persistent_diagnostics()
         await self._expire_deterrent_lights()
 
     async def async_arm(self) -> list[dict[str, Any]]:
@@ -753,6 +828,7 @@ class AdaptiveAlarmController:
 
     async def async_disarm(self) -> list[dict[str, Any]]:
         events = await self._apply(self.machine.disarm)
+        self._diagnostic_gate.clear()
         await self._sync_outputs(force=True)
         await self._notify_events(events)
         return events
