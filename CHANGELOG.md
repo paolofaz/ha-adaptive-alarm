@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.0.9 — quiet, persistent diagnostics after HA/Zigbee restarts
+
+- Introduce a 120-second startup grace and 60-second continuous-fault
+  requirement for protected sensor and configured lock diagnostic notices
+- Batch new problems for 10 seconds, suppress duplicate reports for the
+  same ongoing fault, and enforce a five-minute minimum between summaries
+- Notify once if a corrupt stored alarm session leaves the panel in FAULT
+  after startup grace, without notifying for transient Zigbee reconnection
+- Postpone stale deterrent-light warnings until after startup; warn once
+  only for previously owned lights confirmed still ON
+- Reject duplicate alternative-group names instead of replacing an
+  existing group silently
+- Leave real intrusion detection, vibration prealerts, siren operation and
+  physical light behavior unchanged; add behavioural anti-spam tests
+
 ## v1.0.8 — silence routine deterrent auto-off notifications
 
 - Suppress phone/Telegram notifications for each successful scheduled
