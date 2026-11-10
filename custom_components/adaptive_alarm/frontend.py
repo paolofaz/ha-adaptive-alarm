@@ -15,7 +15,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 CARD_PATH = "/adaptive_alarm/adaptive-alarm-card.js"
-CARD_RESOURCE = f"{CARD_PATH}?v=1.0.7"
+CARD_RESOURCE = f"{CARD_PATH}?v=1.0.8"
 CARD_FILE = Path(__file__).parent / "www" / "adaptive-alarm-card.js"
 _STATIC_READY = "_card_static_ready"
 _EXTRA_MODULE_REGISTERED = "_card_extra_module_registered"

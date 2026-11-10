@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.8 — silence routine deterrent auto-off notifications
+
+- Suppress phone/Telegram notifications for each successful scheduled
+  deterrent-light switch-off after a vibration prealert
+- Preserve `deterrent_light_off_requested` HA events for diagnostics and
+  the actual automatic turn-off behaviour
+- Keep vibration prealert, alarm and safety/failure notifications unchanged
+- Add behavioural regressions covering multiple lights and failure cases
+
 ## v1.0.7 — Home Assistant frontend custom-element registry race
 
 - Fixed a potential race where an extra-module registers a card before
