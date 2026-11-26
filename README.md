@@ -1,6 +1,8 @@
 # Adaptive Alarm
 
-**Home Assistant security integration — v1.0.9**
+**Home Assistant security integration**
+
+[![Release](https://img.shields.io/github/v/release/paolofaz/ha-adaptive-alarm)](https://github.com/paolofaz/ha-adaptive-alarm/releases/latest)
 
 Adaptive Alarm manages a protected home using configurable required contacts,
 alternative groups, optional contacts and per-window vibration sensors.
@@ -109,6 +111,8 @@ A corrupted saved alarm session that leaves the integration in `FAULT`
 produces one critical notification after the initial startup grace.
 These rules do **not** delay real contact-opening alarms, vibration prealerts,
 confirmed vibration triggers or physical siren requests.
+
+**Output reliability (v1.0.10):** individual physical siren and light service requests have a five-second timeout. A siren ON request may be retried after a definite preflight failure, only while the alarm remains triggered. An uncertain actuation is not blindly replayed. These changes do not alter the explicit output opt-in; physical validation remains necessary.
 
 ### Physical siren — read before enabling
 
