@@ -75,6 +75,8 @@ class AdaptiveAlarmController:
         )
         if self.siren_output_enabled:
             validate_real_siren(self.siren_entity)
+        self._siren_on_retry_after = 0.0
+        self._siren_on_pending = False
         self._siren_off_retry_after = 0.0
         # OFF retries begin only on explicit disarm or trigger timeout.
         self._siren_off_pending = False
@@ -208,11 +210,17 @@ class AdaptiveAlarmController:
             phase = self.machine.phase
             if activate:
                 if phase != Phase.TRIGGERED:
+                    self._siren_on_pending = False
+                    self._siren_on_retry_after = 0.0
+                    return
+                if self._siren_on_pending and time.time() < self._siren_on_retry_after:
                     return
                 self._siren_off_pending = False
             else:
                 if phase == Phase.TRIGGERED:
                     return
+                self._siren_on_pending = False
+                self._siren_on_retry_after = 0.0
                 if force:
                     self._siren_off_pending = True
                 if not self._siren_off_pending:
@@ -228,12 +236,14 @@ class AdaptiveAlarmController:
             if not activate:
                 self._siren_off_retry_after = now + 30
             service = "turn_on" if activate else "turn_off"
+            sent = False
             try:
                 state = self.hass.states.get(entity)
                 if state is None or state.state in ("unknown", "unavailable"):
                     raise RuntimeError("Configured siren is unavailable")
                 if not self.hass.services.has_service(domain, service):
                     raise RuntimeError("Siren service is unavailable")
+                sent = True
                 async with asyncio.timeout(5):
                     await self.hass.services.async_call(
                         domain, service, {},
@@ -242,6 +252,11 @@ class AdaptiveAlarmController:
             except Exception as exc:
                 _LOGGER.exception("Siren %s request failed: %s", service, entity)
                 action = "on" if activate else "off"
+                if activate:
+                    # A preflight rejection cannot have actuated the siren.
+                    # Do not replay a potentially delivered physical ON.
+                    self._siren_on_pending = not sent
+                    self._siren_on_retry_after = now + 30 if not sent else 0.0
                 self.siren_last_error = f"{entity}: {action} ({type(exc).__name__})"
                 self._events([{
                     "type": "siren_request_failed", "siren": entity,
@@ -255,6 +270,9 @@ class AdaptiveAlarmController:
                             f"({self._friendly_name(entity)}). Controlla Zigbee2MQTT."
                         ))
             else:
+                if activate:
+                    self._siren_on_pending = False
+                    self._siren_on_retry_after = 0.0
                 self.siren_last_error = None
                 self._siren_reported_failures.discard("on" if activate else "off")
                 self._events([{
@@ -810,7 +828,7 @@ class AdaptiveAlarmController:
         # Reconciling OPEN protected contacts also recovers a missed state
         # event, including right after a restart. Physical siren is opt-in.
         await self._sync_outputs(
-            triggered=any(event.get("type") == "triggered" for event in events),
+            triggered=self._siren_on_pending or any(event.get("type") == "triggered" for event in events),
             force=any(event.get("type") == "trigger_timeout_rearmed" for event in events),
         )
         await self._notify_events(events)
