@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.10 — 2026-11-26
+
+- Bound blocking siren and light service calls to five seconds each.
+- Retry siren ON only when a preflight failure proves no physical command was submitted, and only while triggered.
+
+
 ## v1.0.9 — quiet, persistent diagnostics after HA/Zigbee restarts
 
 - Introduce a 120-second startup grace and 60-second continuous-fault
