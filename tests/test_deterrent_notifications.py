@@ -87,6 +87,7 @@ def load_expiry_method():
     )
     module = ast.fix_missing_locations(ast.Module(body=[method], type_ignores=[]))
     namespace = {
+        "asyncio": asyncio,
         "Phase": Phase,
         "time": time,
         "may_turn_off": may_turn_off,
