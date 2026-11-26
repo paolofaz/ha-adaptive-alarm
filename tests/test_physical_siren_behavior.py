@@ -55,6 +55,8 @@ class FakeController:
         self.siren_output_enabled = True
         self.machine = SimpleNamespace(phase=phase)
         self._guard = asyncio.Lock()
+        self._siren_on_retry_after = 0.0
+        self._siren_on_pending = False
         self._siren_off_retry_after = 0.0
         self._siren_off_pending = False
         self._siren_reported_failures = set()
@@ -75,7 +77,7 @@ def load_siren_method():
               if isinstance(n, ast.AsyncFunctionDef)
               and n.name == "_request_physical_siren")
     module = ast.fix_missing_locations(ast.Module(body=[fn], type_ignores=[]))
-    namespace = {"Phase": Phase, "time": SimpleNamespace(time=lambda: 5000),
+    namespace = {"asyncio": asyncio, "Phase": Phase, "time": SimpleNamespace(time=lambda: 5000),
                  "_LOGGER": logging.getLogger(__name__)}
     exec(compile(module, "<real-physical-siren-method>", "exec"), namespace)
     return namespace["_request_physical_siren"]
@@ -123,6 +125,26 @@ class SirenServiceBehaviorTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(controller.siren_last_error)
         self.assertTrue(any(e["type"] == "siren_request_failed"
                             for e in controller.events))
+
+    async def test_preflight_on_failure_retries_only_while_triggered(self):
+        controller = FakeController(phase=Phase.TRIGGERED, device="unavailable")
+        await self.request(controller, activate=True)
+        self.assertTrue(controller._siren_on_pending)
+        self.assertEqual(controller.hass.services.calls, [])
+        controller.hass.states.value = "off"
+        await self.request(controller, activate=True)
+        self.assertEqual(controller.hass.services.calls, [])
+        controller._siren_on_retry_after = 0
+        await self.request(controller, activate=True)
+        self.assertEqual(len(controller.hass.services.calls), 1)
+        self.assertFalse(controller._siren_on_pending)
+
+    async def test_ambiguous_on_failure_does_not_retry(self):
+        controller = FakeController(phase=Phase.TRIGGERED, device="off")
+        controller.hass.services.fail = True
+        await self.request(controller, activate=True)
+        self.assertFalse(controller._siren_on_pending)
+        self.assertEqual(len(controller.hass.services.calls), 1)
 
     async def test_physical_siren_requires_explicit_opt_in(self):
         controller = FakeController(device="on")
