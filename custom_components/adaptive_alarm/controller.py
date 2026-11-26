@@ -234,10 +234,11 @@ class AdaptiveAlarmController:
                     raise RuntimeError("Configured siren is unavailable")
                 if not self.hass.services.has_service(domain, service):
                     raise RuntimeError("Siren service is unavailable")
-                await self.hass.services.async_call(
-                    domain, service, {},
-                    target={"entity_id": entity}, blocking=True,
-                )
+                async with asyncio.timeout(5):
+                    await self.hass.services.async_call(
+                        domain, service, {},
+                        target={"entity_id": entity}, blocking=True,
+                    )
             except Exception as exc:
                 _LOGGER.exception("Siren %s request failed: %s", service, entity)
                 action = "on" if activate else "off"
@@ -562,9 +563,10 @@ class AdaptiveAlarmController:
                 if baseline is None or baseline.state != "off":
                     continue
                 try:
-                    await self.hass.services.async_call(
-                        "light", "turn_on", {"entity_id": light}, blocking=True,
-                    )
+                    async with asyncio.timeout(5):
+                        await self.hass.services.async_call(
+                            "light", "turn_on", {"entity_id": light}, blocking=True,
+                        )
                 except Exception:
                     _LOGGER.exception("Deterrent light-on request failed: %s", light)
                     failed.append(light)
@@ -683,9 +685,10 @@ class AdaptiveAlarmController:
                     )
                     continue
                 try:
-                    await self.hass.services.async_call(
-                        "light", "turn_off", {"entity_id": entity}, blocking=True,
-                    )
+                    async with asyncio.timeout(5):
+                        await self.hass.services.async_call(
+                            "light", "turn_off", {"entity_id": entity}, blocking=True,
+                        )
                 except Exception:
                     _LOGGER.exception("Deterrent light-off request failed: %s", entity)
                     events.append({"type": "deterrent_light_off_failed", "light": entity})
