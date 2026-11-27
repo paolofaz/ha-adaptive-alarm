@@ -59,6 +59,8 @@ class AdaptiveAlarmPanel(AlarmControlPanelEntity):
 
     @property
     def alarm_state(self) -> AlarmControlPanelState | None:
+        # HA has no native FAULT enum. Keep the entity available so the
+        # explicit disarm action can recover from a corrupted saved session.
         return MAP.get(self.controller.machine.phase)
 
     @property
