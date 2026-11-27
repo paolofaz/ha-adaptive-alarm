@@ -7,7 +7,7 @@ const STATE_NAMES = {
   disarmed: "Disinserito", arming: "Inserimento in corso",
   armed_away: "Inserito", triggered: "ALLARME SCATTATO",
   pending: "In attesa", unavailable: "Non disponibile",
-  unknown: "Sconosciuto"
+  unknown: "Sconosciuto", fault: "GUASTO — NON OPERATIVO"
 };
 
 class AdaptiveAlarmCard extends HTMLElement {
@@ -157,17 +157,19 @@ class AdaptiveAlarmCard extends HTMLElement {
     this._add(name,"h2","",this._config.title||"Adaptive Alarm");
     this._add(name,"div","subtitle","Riepilogo protezione in tempo reale");
     const status=this._add(header,"div","state");
-    status.classList.add(alarm.state==="triggered"?"alarm":
-      alarm.state==="armed_away"?"armed":"disarmed");
+    const displayState = attrs.fault ? "fault" : alarm.state;
+    status.classList.add(["triggered", "fault", "unknown", "unavailable"].includes(displayState) ? "alarm" :
+      displayState==="armed_away"?"armed":"disarmed");
     const statusIcon=this._add(status,"ha-icon","alarm-state-icon");
     const icons={
       disarmed:"mdi:shield-off", arming:"mdi:shield-sync",
       armed_away:"mdi:shield-lock", triggered:"mdi:shield-alert",
+      fault:"mdi:shield-alert", unknown:"mdi:shield-alert-outline", unavailable:"mdi:shield-alert-outline",
     };
-    statusIcon.setAttribute("icon",icons[alarm.state]||"mdi:shield-outline");
+    statusIcon.setAttribute("icon",icons[displayState]||"mdi:shield-outline");
     // Do not animate arming or armed states; only a genuine alarm.
     if(alarm.state==="triggered")statusIcon.classList.add("is-triggered");
-    this._add(status,"span","state-label",STATE_NAMES[alarm.state]||alarm.state);
+    this._add(status,"span","state-label",STATE_NAMES[displayState]||displayState);
 
     const protectedZones=attrs.protected_zones||[];
     const pendingZones=attrs.pending_zones||[];
