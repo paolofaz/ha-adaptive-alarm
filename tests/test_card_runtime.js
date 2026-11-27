@@ -90,6 +90,15 @@ for(const [state,expectedIcon,animated] of [
   assert.equal(icon.attributes.icon,expectedIcon);
   assert.equal(icon.className.includes("is-triggered"),animated);
 }
+const previousAlarm = card._hass.states["alarm_control_panel.adaptive_alarm"];
+card.hass={states:{...card._hass.states,
+  "alarm_control_panel.adaptive_alarm":{...previousAlarm,state:"unknown",
+    attributes:{...previousAlarm.attributes,fault:"Invalid stored session"}}
+}};
+assert.ok(card.shadowRoot.textContent.includes("GUASTO — NON OPERATIVO"));
+assert.ok(card.shadowRoot.textContent.includes("Invalid stored session"));
+assert.ok(!card.shadowRoot.children[1].children[0].children[1].className.includes("disarmed"));
+card.hass={states:{...card._hass.states,"alarm_control_panel.adaptive_alarm":previousAlarm}};
 const style=card.shadowRoot.children[0].textContent;
 assert.ok(style.includes(".alarm-state-icon.is-triggered"));
 assert.ok(style.includes("@media (prefers-reduced-motion:reduce)"));
