@@ -143,6 +143,7 @@ class AdaptiveAlarmController:
         self._light_leases: dict[str, LightLease] = {}
         self._light_pending: dict[str, PendingLight] = {}
         self._guard = asyncio.Lock()
+        self._tick_task: asyncio.Task | None = None
         self._remove_callbacks: list[Any] = []
         self._active_faults: set[str] = set()
         self._diagnostic_gate = DiagnosticNoticeGate(started_at=time.monotonic())
@@ -369,10 +370,13 @@ class AdaptiveAlarmController:
         for unsubscribe in self._remove_callbacks:
             unsubscribe()
         self._remove_callbacks.clear()
+        if self._tick_task is not None and not self._tick_task.done():
+            await self._tick_task
 
     @callback
     def _on_timer(self, _now: Any) -> None:
-        self.hass.async_create_task(self.async_tick())
+        if self._tick_task is None or self._tick_task.done():
+            self._tick_task = self.hass.async_create_task(self.async_tick())
 
     @callback
     def _on_state_event(self, event: Event) -> None:
@@ -572,11 +576,18 @@ class AdaptiveAlarmController:
             if not lights_off:
                 self._events([{"type": "deterrent_lights_already_on_or_unavailable"}])
                 return "già accese o non disponibili"
-            requested: list[str] = []
-            failed: list[str] = []
-            now = time.time()
             session_id = session.identifier
-            for light in lights_off:
+        requested: list[str] = []
+        failed: list[str] = []
+        for light in lights_off:
+            # Release the state lock between lights; recheck the episode
+            # before every physical request, including after a disarm.
+            async with self._guard:
+                session = self.machine.session
+                if (self.machine.phase != Phase.ARMED_AWAY or session is None
+                        or session.identifier != session_id):
+                    break
+                now = time.time()
                 baseline = self.hass.states.get(light)
                 if baseline is None or baseline.state != "off":
                     continue
@@ -628,6 +639,7 @@ class AdaptiveAlarmController:
                         "type": "deterrent_light_tracking_cancelled",
                         "light": light,
                     }])
+        async with self._guard:
             if self._light_leases:
                 await self._light_store.async_save({
                     "leases": [v.to_dict() for v in self._light_leases.values()]
@@ -674,17 +686,20 @@ class AdaptiveAlarmController:
         notices: list[str] = []
         events: list[dict[str, Any]] = []
         async with self._guard:
-            if (
-                self.machine.phase == Phase.TRIGGERED
-                or self.machine.deterrent_hold_after_trigger
-            ):
-                return
-            now = time.time()
-            session = self.machine.session
-            episode = session.identifier if session and self.machine.phase == Phase.ARMED_AWAY else None
-            for entity, lease in list(self._light_leases.items()):
-                if now < lease.deadline:
+            candidates = list(self._light_leases.items())
+        for entity, lease in candidates:
+            # A contact event or disarm can run between requests; never
+            # reuse the previous iteration's phase or lease ownership.
+            async with self._guard:
+                if (self.machine.phase == Phase.TRIGGERED
+                        or self.machine.deterrent_hold_after_trigger):
+                    break
+                if self._light_leases.get(entity) is not lease:
                     continue
+                if time.time() < lease.deadline:
+                    continue
+                session = self.machine.session
+                episode = session.identifier if session and self.machine.phase == Phase.ARMED_AWAY else None
                 state = self.hass.states.get(entity)
                 allowed = may_turn_off(
                     lease, state=state.state if state else None,
@@ -717,6 +732,7 @@ class AdaptiveAlarmController:
                     events.append({"type": "deterrent_light_off_requested", "light": entity})
                     # Routine cleanup stays on the HA event bus only.
                     # A successful automatic OFF must not notify per light.
+        async with self._guard:
             if events:
                 await self._light_store.async_save({
                     "leases": [v.to_dict() for v in self._light_leases.values()]
@@ -828,7 +844,9 @@ class AdaptiveAlarmController:
         # Reconciling OPEN protected contacts also recovers a missed state
         # event, including right after a restart. Physical siren is opt-in.
         await self._sync_outputs(
-            triggered=self._siren_on_pending or any(event.get("type") == "triggered" for event in events),
+            triggered=(self.machine.phase == Phase.TRIGGERED and (
+                self._siren_on_pending or any(event.get("type") == "triggered" for event in events)
+            )),
             force=any(event.get("type") == "trigger_timeout_rearmed" for event in events),
         )
         await self._notify_events(events)
