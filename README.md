@@ -50,6 +50,8 @@ must always be closed.
 
 ## Installation / upgrading
 
+The declared supported Home Assistant baseline is **2026.11.0**. Earlier versions are not certified; the compatibility workflow checks imports against the declared Core version.
+
 1. In **HACS**, add this repository as a Custom repository of type
    **Integration**: `https://github.com/paolofaz/ha-adaptive-alarm`.
 2. Install or update **Adaptive Alarm**, then restart Home Assistant.
@@ -111,6 +113,8 @@ A corrupted saved alarm session that leaves the integration in `FAULT`
 produces one critical notification after the initial startup grace.
 These rules do **not** delay real contact-opening alarms, vibration prealerts,
 confirmed vibration triggers or physical siren requests.
+
+**Maintenance (v1.0.11):** the timer coalesces overlapping ticks, and light requests release the state lock between devices with a fresh phase and ownership check before each command. The custom card explicitly shows FAULT as **GUASTO — NON OPERATIVO**. The native panel remains `unknown` in FAULT so explicit disarm can recover it; it never reports a fault as disarmed. Physical output still needs hardware verification.
 
 **Output reliability (v1.0.10):** individual physical siren and light service requests have a five-second timeout. A siren ON request may be retried after a definite preflight failure, only while the alarm remains triggered. An uncertain actuation is not blindly replayed. These changes do not alter the explicit output opt-in; physical validation remains necessary.
 
