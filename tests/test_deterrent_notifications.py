@@ -135,6 +135,24 @@ class DeterrentNotificationTests(unittest.IsolatedAsyncioTestCase):
             controller.events,
         )
 
+    async def test_trigger_waiting_for_lock_prevents_next_light_off(self):
+        controller = FakeController(["light.portico", "light.ingresso"])
+        original = controller.hass.services.async_call
+        tasks = []
+        async def trigger():
+            async with controller._guard:
+                controller.machine.phase = Phase.TRIGGERED
+        async def service(*args, **kwargs):
+            await original(*args, **kwargs)
+            tasks.append(asyncio.create_task(trigger()))
+            # Put the state transition in the lock queue before returning.
+            await asyncio.sleep(0)
+        controller.hass.services.async_call = service
+        await self.expire(controller)
+        await asyncio.gather(*tasks)
+        self.assertEqual(len(controller.hass.services.calls), 1)
+        self.assertIn("light.ingresso", controller._light_leases)
+
     async def test_modified_light_skips_off_and_warns(self):
         controller = FakeController(["light.portico"])
         controller.states["light.portico"].last_updated = UPDATED + timedelta(seconds=5)
