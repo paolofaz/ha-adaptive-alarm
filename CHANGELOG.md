@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.11 — 2026-11-27
+
+- Coalesce timer callbacks to at most one outstanding tick.
+- Release the state lock between deterrent-light requests; recheck phase and ownership before each command.
+- Show a clear FAULT warning in the custom card; keep the native panel available for explicit disarm/recovery.
+- Keep siren OFF handling at trigger timeout even if an ON preflight retry was pending.
+- Declare Home Assistant 2026.11.0 as the conservative maintained compatibility baseline; older versions are not certified.
+
 ## 1.0.10 — 2026-11-26
 
 - Bound blocking siren and light service calls to five seconds each.
